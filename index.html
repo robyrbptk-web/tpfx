@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="id"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TPFX Sales Workspace</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f4f5f8;--card:#fff;--ink:#141a2e;--mut:#6b7286;--line:#e6e8ef;--pri:#2743d6;
+--new:#8a93a8;--contacted:#2f7bea;--warm:#f08a1c;--hot:#e53935;--followup:#7c4dff;--deal:#1f9d55;--lost:#4a5060;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1220;--card:#171d31;--ink:#eef0f7;--mut:#98a0b6;--line:#262d45;--pri:#6b83ff}}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 'Plus Jakarta Sans',system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+#app{max-width:720px;margin:0 auto;padding:16px 16px 110px}
+h1{font-size:22px;font-weight:800;letter-spacing:-.02em}
+h2{font-size:15px;font-weight:800;margin:20px 0 10px}
+.mut{color:var(--mut);font-size:12.5px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px}
+.row{display:flex;align-items:center;gap:10px}.sp{justify-content:space-between}
+button{font:inherit;cursor:pointer;border:0;color:inherit;background:none}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--pri);outline-offset:2px}
+.btn{background:var(--pri);color:#fff;font-weight:700;border-radius:12px;padding:11px 16px}
+.btn.sec{background:var(--bg);color:var(--ink);border:1px solid var(--line)}
+.btn.wa{background:#1f9d55}.btn.big{width:100%;padding:15px;font-size:15px;border-radius:14px}
+.badge{display:inline-block;font-size:11px;font-weight:800;color:#fff;border-radius:99px;padding:2px 9px}
+.s-new{background:var(--new)}.s-contacted{background:var(--contacted)}.s-warm{background:var(--warm)}.s-hot{background:var(--hot)}.s-followup{background:var(--followup)}.s-deal{background:var(--deal)}.s-lost{background:var(--lost)}
+.prog{height:10px;border-radius:9px;background:var(--line);overflow:hidden;margin-top:10px}
+.prog i{display:block;height:100%;background:var(--pri);border-radius:9px;transition:width .4s}
+.big-n{font-size:34px;font-weight:800;letter-spacing:-.03em;line-height:1}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{text-align:left;width:100%;border-left:4px solid var(--c)}.stat b{font-size:24px;display:block;font-weight:800}
+.qa{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.qa button{flex:none;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 13px;font-weight:600;white-space:nowrap}
+.lead{display:block;width:100%;text-align:left;margin-bottom:10px;border-left:4px solid var(--c)}
+.lead .n{font-weight:800;font-size:15px}
+.lead .meta{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin:8px 0;font-size:12.5px}
+.lead .meta span:nth-child(odd){color:var(--mut)}
+.note{font-style:italic;color:var(--mut);font-size:12.5px}
+.chips{display:flex;gap:6px;overflow-x:auto;margin:10px 0;scrollbar-width:none}
+.chip{flex:none;padding:6px 13px;border-radius:99px;border:1px solid var(--line);background:var(--card);font-weight:600;font-size:12.5px}
+.chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+input,select,textarea{font:inherit;width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink)}
+label{display:block;font-weight:700;font-size:12.5px;margin:12px 0 5px}
+.kan{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:8px;margin:0 -16px;padding:0 16px}
+.col{flex:none;width:260px;scroll-snap-align:start;background:var(--line);border-radius:16px;padding:10px}
+.col .lead{padding:10px}
+.nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:6px 0 calc(6px + env(safe-area-inset-bottom,0px));z-index:5}
+.nav div{max-width:720px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr)}
+.nav button{padding:6px 0;font-size:11px;font-weight:600;color:var(--mut);display:flex;flex-direction:column;align-items:center;gap:1px}
+.nav button span{font-size:20px}.nav button.on{color:var(--pri)}
+.fab{position:fixed;right:18px;bottom:calc(78px + env(safe-area-inset-bottom,0px));width:56px;height:56px;border-radius:50%;background:var(--pri);color:#fff;font-size:30px;box-shadow:0 6px 18px rgba(39,67,214,.4);z-index:6}
+.ov{position:fixed;inset:0;background:rgba(10,14,30,.5);z-index:9;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--bg);width:100%;max-width:720px;max-height:92vh;overflow:auto;border-radius:22px 22px 0 0;padding:18px 16px calc(20px + env(safe-area-inset-bottom,0px));animation:up .22s ease}
+@keyframes up{from{transform:translateY(40px);opacity:0}}
+@media(prefers-reduced-motion:reduce){.sheet{animation:none}.prog i{transition:none}}
+.opt{width:100%;text-align:left;padding:14px;background:var(--card);border:1px solid var(--line);border-radius:14px;margin-top:8px;font-weight:700}
+.bars{display:flex;align-items:flex-end;gap:5px;height:70px;margin-top:10px}
+.bars div{flex:1;background:var(--pri);border-radius:5px 5px 0 0;min-height:3px;opacity:.85}
+.act{display:flex;gap:10px;padding:11px 0;border-bottom:1px solid var(--line)}
+.act img{width:56px;height:56px;object-fit:cover;border-radius:10px}
+.empty{text-align:center;padding:28px 10px;color:var(--mut)}
+.toast{position:fixed;left:50%;bottom:150px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:99px;font-weight:700;z-index:20}
+.tl{border-left:2px solid var(--line);padding-left:12px;margin-left:4px}.tl p{margin-bottom:8px;font-size:12.5px}
+</style></head><body>
+<div id="app"></div>
+<div class="nav"><div id="nav"></div></div>
+<button class="fab" id="fab" aria-label="Tambah">+</button>
+<div id="layer"></div>
+<script>
+const ST={new:'New Lead',contacted:'Contacted',warm:'Warm Lead',hot:'HOT LEAD',followup:'Follow Up',deal:'Deposit',lost:'Lost'};
+const COL={new:'--new',contacted:'--contacted',warm:'--warm',hot:'--hot',followup:'--followup',deal:'--deal',lost:'--lost'};
+const SRC=['WhatsApp','Facebook','Instagram','TikTok','Telegram','YouTube','Referral','Webinar/Event','Posting pribadi','Lainnya'];
+const ACT={call:'📞 Telepon',wa:'💬 Chat WhatsApp',meet:'🤝 Bertemu',post:'🔗 Posting',shot:'📸 Screenshot'};
+const $=s=>document.querySelector(s);
+const lday=x=>x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');const iso=(d=0)=>{const x=new Date();x.setDate(x.getDate()+d);return lday(x)};
+const fmt=d=>d?new Date(d+'T00:00').toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}):'-';
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let S,tab='home',flt='all',srt='new',q='',per='hari';
+function seed(){return{name:'Sales',target:10,leads:[],acts:[]}}
+S=seed();let TOK='',t,ROLE='';
+try{TOK=localStorage.getItem('swt')||''}catch(e){}
+const API='https://script.google.com/macros/s/AKfycbwqwJtBb2UHnWwZcrM_J7f07X3a4onCbgkpT2nTbuLJb2R8d7gO7WAx8sTFwvkCxNL6/exec';
+const rpc=async(fn,...a)=>{if(API.indexOf('PASTE')==0)throw new Error('API URL belum diisi di index.html');
+const r=await fetch(API,{method:'POST',body:JSON.stringify({fn,args:a})}),j=await r.json();if(j.error)throw new Error(j.error);return j.result};
+const save=()=>{if(!TOK)return;clearTimeout(t);t=setTimeout(()=>rpc('saveState',TOK,JSON.stringify(S)).then(r=>{if(r&&r.err)logout()}).catch(()=>toast('Gagal sinkron')),600)};
+async function boot(){if(!TOK)return loginView();try{const r=await rpc('loadState',TOK);if(r.err)return logout();S=r.state&&r.state.leads?r.state:seed();S.name=r.name;ROLE=r.role;document.querySelector('.nav').style.display='';$('#fab').style.display=ROLE=='DM'?'none':'';if(ROLE=='DM')await loadTeam();render()}catch(e){loginView(String((e&&e.message)||e).replace(/^Error:\s*/,''))}}
+function loginView(m){document.querySelector('.nav').style.display='none';$('#fab').style.display='none';$('#app').innerHTML=`<div style="padding-top:12vh"><h1>TPFX Sales Workspace</h1><div class="mut">Masuk dengan akun sales Anda</div><div class="card" style="margin-top:16px"><label style="margin-top:0">Username</label><input id="lu" autocapitalize="off" autocomplete="username"><label>Password</label><input id="lp" type="password" autocomplete="current-password" onkeydown="if(event.key=='Enter')doLogin()"><div id="le" style="color:var(--hot);margin-top:8px;font-weight:600">${m||''}</div><button class="btn big" style="margin-top:10px" onclick="doLogin()">Masuk</button></div></div>`}
+async function doLogin(){const u=$('#lu').value.trim(),p=$('#lp').value;if(!u||!p){$('#le').textContent='Isi username dan password';return}
+try{const r=await rpc('login',u,p);if(r.err){$('#le').textContent='Username atau password salah';return}TOK=r.token;try{localStorage.setItem('swt',TOK)}catch(e){}boot()}catch(e){$('#le').textContent=String((e&&e.message)||e).replace(/^Error:\s*/,'')}}
+function logout(){if(TOK)rpc('logout',TOK).catch(()=>{});TOK='';S=seed();try{localStorage.removeItem('swt')}catch(e){}loginView()}
+function toast(t){const e=document.createElement('div');e.className='toast';e.textContent=t;document.body.append(e);setTimeout(()=>e.remove(),1800)}
+const wa=p=>{p=String(p).replace(/\D/g,'');if(p[0]=='0')p='62'+p.slice(1);return 'https://wa.me/'+p};
+const openWA=id=>{const l=S.leads.find(x=>x.id==id);addAct('wa','Chat WhatsApp ke '+l.name,l.id,true);window.open(wa(l.phone),'_blank')};
+function addAct(type,text,leadId,silent,extra={}){S.acts.unshift({id:Date.now(),type,text,leadId,ts:Date.now(),...extra});save();if(!silent)render()}
+const todayActs=()=>S.acts.filter(a=>new Date(a.ts).toISOString().slice(0,10)==iso(0)||new Date(a.ts).toDateString()==new Date().toDateString());
+const dueFU=()=>S.leads.filter(l=>l.next&&l.next<=iso(0)&&!['deal','lost'].includes(l.status));
+function leadCard(l){return `<div class="card lead" style="--c:var(${COL[l.status]})"><div onclick="detail(${l.id})" role="button" tabindex="0">
+<div class="row sp"><span class="n">${l.status=='hot'?'🔥 ':''}${esc(l.name)}</span><span class="badge s-${l.status}">${ST[l.status]}</span></div>
+<div class="meta"><span>📱</span><span>${esc(l.phone)}</span><span>Minat</span><span>${esc(l.product)||'-'}</span><span>Kontak</span><span>${fmt(l.last)}</span><span>Follow up</span><span>${l.next==iso(0)?'<b>Hari ini</b>':fmt(l.next)}</span></div>
+${l.notes?`<div class="note">“${esc(l.notes)}”</div>`:''}</div>
+<div class="row" style="margin-top:10px"><button class="btn wa" onclick="openWA(${l.id})">WhatsApp</button><button class="btn sec" onclick="detail(${l.id})">Detail</button></div></div>`}
+function home(){const n=todayActs().length,t=S.target,fu=dueFU();const st=(k,v,c,f)=>`<button class="card stat" style="--c:var(${c})" onclick="go('leads','${f}')"><b>${v}</b><span class="mut">${k}</span></button>`;
+const h=new Date().getHours(),g=h<11?'Good Morning':h<15?'Good Afternoon':h<19?'Good Evening':'Good Night';
+return `<div class="row sp"><div><h1>${g}, ${esc(S.name)} 👋</h1><div class="mut">${new Date().toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div></div></div>
+<div class="card" style="margin-top:14px"><div class="mut">Today's progress</div><div class="row sp" style="margin-top:4px"><div><span class="big-n">${n} / ${t}</span> <span class="mut">activity hari ini</span></div><span style="font-size:26px">${n>=t?'🎉':'💪'}</span></div><div class="prog"><i style="width:${Math.min(100,n/t*100)}%"></i></div></div>
+<div class="grid" style="margin-top:10px">${st('Leads Baru',S.leads.filter(l=>l.status=='new').length,'--new','new')}${st('Follow Up Hari Ini',fu.length,'--followup','due')}${st('Hot Leads',S.leads.filter(l=>l.status=='hot').length,'--hot','hot')}${st('Deposit',S.leads.filter(l=>l.status=='deal').length,'--deal','deal')}</div>
+<button class="btn big" style="margin-top:14px" onclick="leadForm()">+ Tambah Lead</button>
+<div class="qa" style="margin-top:10px"><button onclick="leadForm()">📱 Tambah Kontak</button><button onclick="go('leads','hot')">🔥 Hot Lead</button><button onclick="actForm('shot')">📸 Upload Activity</button><button onclick="actForm('post')">🔗 Posting Link</button><button onclick="go('leads','due')">📋 Follow Up</button></div>
+<h2>Follow up hari ini (${fu.length})</h2>${fu.length?fu.sort((a,b)=>(b.status=='hot')-(a.status=='hot')).map(leadCard).join(''):'<div class="card empty">Tidak ada follow up tertunda. Tambah lead baru atau posting promosi.</div>'}`}
+function leads(){let L=S.leads.filter(l=>flt=='all'||(flt=='due'?dueFU().includes(l):l.status==flt)).filter(l=>!q||(l.name+l.phone+l.product).toLowerCase().includes(q.toLowerCase()));
+const sorts={new:(a,b)=>b.c.localeCompare(a.c)||b.id-a.id,last:(a,b)=>(b.last||'').localeCompare(a.last||''),fu:(a,b)=>(a.next||'9').localeCompare(b.next||'9'),hot:(a,b)=>(b.status=='hot')-(a.status=='hot'),pot:(a,b)=>['Rendah','Sedang','Tinggi'].indexOf(b.interest)-['Rendah','Sedang','Tinggi'].indexOf(a.interest)};
+L.sort(sorts[srt]);
+const fs=[['all','Semua'],['new','New'],['contacted','Contacted'],['warm','Warm'],['hot','HOT'],['followup','Follow Up'],['deal','Deposit'],['lost','Lost'],['due','Hari Ini']];
+return `<h1>Leads</h1><input id="q" placeholder="Cari nama, nomor HP, produk..." value="${esc(q)}" oninput="q=this.value;keep()" style="margin-top:12px">
+<div class="chips">${fs.map(f=>`<button class="chip ${flt==f[0]?'on':''}" onclick="flt='${f[0]}';render()">${f[1]}</button>`).join('')}</div>
+<select onchange="srt=this.value;render()" aria-label="Urutkan">${[['new','Terbaru'],['last','Terakhir dihubungi'],['fu','Follow Up terdekat'],['hot','HOT Lead'],['pot','Potensi terbesar']].map(s=>`<option value="${s[0]}" ${srt==s[0]?'selected':''}>Urutkan: ${s[1]}</option>`).join('')}</select>
+<div style="margin-top:12px">${L.length?L.map(leadCard).join(''):'<div class="card empty">Belum ada lead di sini. Tekan + untuk menambah.</div>'}</div>`}
+function keep(){const p=$('#q').selectionStart;render();const e=$('#q');e.focus();e.setSelectionRange(p,p)}
+function pipeline(){const tot=S.leads.length||1;return `<h1>Pipeline</h1><div class="mut">${S.leads.length} lead · geser ke samping</div><div class="kan" style="margin-top:12px">${Object.keys(ST).map(k=>{const L=S.leads.filter(l=>l.status==k);return `<div class="col"><div class="row sp" style="margin-bottom:8px"><span class="badge s-${k}">${ST[k]}</span><b>${L.length}</b></div>${L.map(l=>`<div class="card lead" style="--c:var(${COL[k]})" onclick="detail(${l.id})"><div class="n">${esc(l.name)}</div><div class="mut">${esc(l.product)}</div></div>`).join('')||'<div class="mut" style="padding:8px">Kosong</div>'}</div>`}).join('')}</div>
+<div class="card" style="margin-top:14px"><b>Konversi</b><div class="prog"><i style="width:${S.leads.filter(l=>l.status=='deal').length/tot*100}%;background:var(--deal)"></i></div><div class="mut" style="margin-top:6px">${S.leads.filter(l=>l.status=='deal').length} deposit dari ${S.leads.length} lead</div></div>`}
+function activity(){const days=per=='hari'?1:per=='minggu'?7:30,since=Date.now()-days*864e5;const A=S.acts.filter(a=>per=='hari'?new Date(a.ts).toDateString()==new Date().toDateString():a.ts>=since);
+const nb=Math.min(days,14),b=[];for(let i=nb-1;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);b.push(S.acts.filter(a=>new Date(a.ts).toDateString()==d.toDateString()).length)}const mx=Math.max(1,...b);
+return `<h1>Activity</h1><div class="chips">${['hari','minggu','bulan'].map(p=>`<button class="chip ${per==p?'on':''}" onclick="per='${p}';render()">${p[0].toUpperCase()+p.slice(1)} ini</button>`).join('')}</div>
+<div class="card"><span class="big-n">${A.length}</span> <span class="mut">aktivitas · ${A.filter(a=>a.type=='post').length} posting · ${A.filter(a=>a.img).length} bukti</span>${nb>1?`<div class="bars">${b.map(v=>`<div style="height:${v/mx*100}%" title="${v}"></div>`).join('')}</div>`:''}</div>
+<div class="card" style="margin-top:10px">${A.length?A.map(a=>`<div class="act">${a.img?`<img src="${a.img}" alt="Bukti aktivitas">`:''}<div style="flex:1"><b>${ACT[a.type]}</b><div>${esc(a.text)}</div>${a.link?`<a href="${esc(a.link)}" target="_blank" rel="noopener" class="mut">${esc(a.link.slice(0,40))}</a>`:''}<div class="mut">${new Date(a.ts).toLocaleString('id-ID',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div></div><button onclick="delAct(${a.id})" aria-label="Hapus" class="mut">✕</button></div>`).join(''):'<div class="empty">Belum ada aktivitas. Tekan + lalu Tambah Activity.</div>'}</div>`}
+const delAct=id=>{S.acts=S.acts.filter(a=>a.id!=id);save();render()};
+function profile(){return `<h1>Profile</h1><div class="card" style="margin-top:12px"><label style="margin-top:0">Nama</label><input id="pn" value="${esc(S.name)}"><label>Target activity per hari</label><input id="pt" type="number" min="1" value="${S.target}"><button class="btn big" style="margin-top:14px" onclick="S.name=$('#pn').value||'Sales';S.target=Math.max(1,+$('#pt').value||10);save();render();toast('Tersimpan')">Simpan</button></div>
+<div class="card" style="margin-top:10px"><b>Data</b><div class="mut">Tersinkron otomatis ke Google Sheets. Ekspor untuk cadangan.</div><div class="row" style="margin-top:10px"><button class="btn sec" onclick="exp()">Ekspor CSV</button><button class="btn sec" onclick="logout()">Keluar</button><button class="btn sec" onclick="if(confirm('Hapus semua data Anda?')){S=seed();save();render()}">Reset</button></div></div>${pwCard()}`}
+function exp(){const r=[['Nama','HP','Produk','Sumber','Status','Minat','Kontak Terakhir','Next FU','Catatan'],...S.leads.map(l=>[l.name,l.phone,l.product,l.source,ST[l.status],l.interest,l.last,l.next,l.notes])];const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([r.map(x=>x.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\n')],{type:'text/csv'}));a.download='leads.csv';a.click()}
+function sheet(h){$('#layer').innerHTML=`<div class="ov" onclick="if(event.target==this)closeS()"><div class="sheet" role="dialog">${h}</div></div>`}
+const closeS=()=>$('#layer').innerHTML='';
+function menu(){sheet(`<h1>Aksi cepat</h1><button class="opt" onclick="leadForm()">👤 Tambah Lead</button><button class="opt" onclick="actForm('call')">✅ Tambah Activity</button><button class="opt" onclick="actForm('shot')">📸 Upload Screenshot</button><button class="opt" onclick="actForm('post')">🔗 Tambah Link Posting</button>`)}
+function leadForm(id){closeS();const l=S.leads.find(x=>x.id==id)||{status:'new',interest:'Sedang',source:'WhatsApp',last:iso(0),next:iso(1)};
+const o=(a,v)=>a.map(x=>`<option ${x==v?'selected':''}>${x}</option>`).join('');
+sheet(`<h1>${id?'Edit':'Tambah'} Lead</h1><label>Nama lengkap</label><input id="f_n" value="${esc(l.name)}"><label>Nomor WhatsApp</label><input id="f_p" type="tel" inputmode="tel" placeholder="08xxxxxxxxxx" value="${esc(l.phone)}"><label>Instrumen / minat</label><input id="f_pr" list="ins" placeholder="XAUUSD, Forex, Indeks..." value="${esc(l.product)}"><datalist id="ins"><option>XAUUSD (Emas)</option><option>Forex Major</option><option>Indeks</option><option>Komoditas</option><option>Kripto</option></datalist>
+<div class="grid"><div><label>Sumber lead</label><select id="f_s">${o(SRC,l.source)}</select></div><div><label>Ketertarikan</label><select id="f_i">${o(['Rendah','Sedang','Tinggi'],l.interest)}</select></div></div>
+<label>Status</label><select id="f_st">${Object.keys(ST).map(k=>`<option value="${k}" ${k==l.status?'selected':''}>${ST[k]}</option>`).join('')}</select>
+<div class="grid"><div><label>Kontak terakhir</label><input id="f_l" type="date" value="${l.last||''}"></div><div><label>Next follow up</label><input id="f_x" type="date" value="${l.next||''}"></div></div>
+<label>Catatan</label><textarea id="f_no" rows="2">${esc(l.notes)}</textarea><button class="btn big" style="margin-top:16px" onclick="saveLead(${id||0})">Simpan lead</button>`)}
+function saveLead(id){const n=$('#f_n').value.trim(),p=$('#f_p').value.trim();if(!n||!p){toast('Isi nama dan nomor WhatsApp');return}
+const d={name:n,phone:p,product:$('#f_pr').value,source:$('#f_s').value,interest:$('#f_i').value,status:$('#f_st').value,last:$('#f_l').value,next:$('#f_x').value,notes:$('#f_no').value};
+if(id){Object.assign(S.leads.find(l=>l.id==id),d)}else{S.leads.unshift({id:Date.now(),c:iso(0),log:[],...d});addAct('call','Lead baru: '+n,null,true)}
+save();closeS();render();toast('Lead disimpan')}
+function detail(id){const l=S.leads.find(x=>x.id==id);const A=S.acts.filter(a=>a.leadId==id).slice(0,8);
+sheet(`<div class="row sp"><h1>${esc(l.name)}</h1><span class="badge s-${l.status}">${ST[l.status]}</span></div><div class="mut">${esc(l.phone)} · ${esc(l.source)} · minat ${l.interest.toLowerCase()}</div>
+<div class="card" style="margin-top:12px"><div class="mut">Produk</div><b>${esc(l.product)||'-'}</b><div class="mut" style="margin-top:8px">Kontak terakhir ${fmt(l.last)} · Follow up ${fmt(l.next)}</div>${l.notes?`<div class="note" style="margin-top:8px">“${esc(l.notes)}”</div>`:''}</div>
+<label>Ubah status</label><div class="chips" style="flex-wrap:wrap">${Object.keys(ST).map(k=>`<button class="chip ${l.status==k?'on':''}" onclick="setSt(${id},'${k}')">${ST[k]}</button>`).join('')}</div>
+<label>Catat komunikasi</label><textarea id="lg" rows="2" placeholder="Apa hasil komunikasi terakhir?"></textarea>
+<div class="row" style="margin-top:8px"><button class="btn sec" style="flex:1" onclick="logC(${id})">Simpan catatan</button><button class="btn sec" style="flex:1" onclick="snooze(${id})">Follow up besok</button></div>
+${A.length?`<h2>Riwayat</h2><div class="tl">${A.map(a=>`<p><b>${new Date(a.ts).toLocaleDateString('id-ID',{day:'numeric',month:'short'})}</b> ${esc(a.text)}</p>`).join('')}</div>`:''}
+<div class="row" style="margin-top:14px"><button class="btn wa" style="flex:1" onclick="openWA(${id})">WhatsApp</button><button class="btn sec" onclick="leadForm(${id})">Edit</button><button class="btn sec" onclick="if(confirm('Hapus lead ini?')){S.leads=S.leads.filter(x=>x.id!=${id});save();closeS();render()}">🗑</button></div>`)}
+function setSt(id,k){S.leads.find(l=>l.id==id).status=k;addAct('call',`Status ${S.leads.find(l=>l.id==id).name} → ${ST[k]}`,id,true);save();detail(id);render()}
+function logC(id){const t=$('#lg').value.trim();if(!t)return;const l=S.leads.find(x=>x.id==id);l.last=iso(0);l.notes=t;addAct('wa',t,id,true);save();detail(id);render();toast('Tercatat')}
+function snooze(id){const l=S.leads.find(x=>x.id==id);l.next=iso(1);save();detail(id);render();toast('Follow up diatur besok')}
+let img='';
+function actForm(type){closeS();img='';const leadsO=S.leads.map(l=>`<option value="${l.id}">${esc(l.name)}</option>`).join('');
+sheet(`<h1>${type=='shot'?'Upload Screenshot':type=='post'?'Link Posting':'Tambah Activity'}</h1><label>Jenis</label><select id="a_t" onchange="$('#a_lk').style.display=this.value=='post'?'block':'none';$('#a_im').style.display=this.value=='shot'?'block':'none'">${Object.keys(ACT).map(k=>`<option value="${k}" ${k==type?'selected':''}>${ACT[k]}</option>`).join('')}</select>
+<div id="a_lk" style="display:${type=='post'?'block':'none'}"><label>Link postingan</label><input id="a_l" type="url" placeholder="https://"></div>
+<div id="a_im" style="display:${type=='shot'?'block':'none'}"><label>Screenshot</label><input id="a_f" type="file" accept="image/*" onchange="pick(this)"><img id="pv" style="max-width:100%;border-radius:12px;margin-top:8px;display:none" alt="Pratinjau"></div>
+<label>Keterangan</label><input id="a_x" placeholder="Contoh: Posting promo di IG story"><label>Terkait lead (opsional)</label><select id="a_ld"><option value="">-</option>${leadsO}</select>
+<button class="btn big" style="margin-top:16px" onclick="saveAct()">Simpan activity</button>`)}
+function pick(el){const f=el.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const i=new Image();i.onload=()=>{const c=document.createElement('canvas'),s=Math.min(1,700/i.width);c.width=i.width*s;c.height=i.height*s;c.getContext('2d').drawImage(i,0,0,c.width,c.height);img=c.toDataURL('image/jpeg',.6);$('#pv').src=img;$('#pv').style.display='block'};i.src=r.result};r.readAsDataURL(f)}
+async function saveAct(){const t=$('#a_t').value,x=$('#a_x').value.trim(),lk=$('#a_l').value.trim();if(!x&&!lk&&!img){toast('Isi keterangan, link, atau screenshot');return}
+let u='';if(t=='shot'&&img){toast('Mengunggah...');try{u=await rpc('uploadImg',TOK,img)}catch(e){toast('Gagal unggah gambar');return}}addAct(t,x||(t=='post'?'Bagikan posting':'Activity'),+$('#a_ld').value||null,true,{link:t=='post'?lk:'',img:u});closeS();render();toast('Activity disimpan')}
+const pwCard=()=>`<div class="card" style="margin-top:10px"><b>Ubah password</b><label>Password lama</label><input id="pw0" type="password" autocomplete="current-password"><label>Password baru (min. 6 karakter)</label><input id="pw1" type="password" autocomplete="new-password"><button class="btn big" style="margin-top:12px" onclick="chPw()">Ubah password</button></div>`;
+async function chPw(){const a=$('#pw0').value,b=$('#pw1').value;if(!a||!b){toast('Isi kedua kolom');return}try{const r=await rpc('ubahPassword',TOK,a,b);if(r.err){toast(r.err);return}$('#pw0').value=$('#pw1').value='';toast('Password diubah')}catch(e){toast('Gagal terhubung')}}
+let TEAM=[],dmTab='dash',dmU='all',dmPer='hari',dmSt='all';
+async function loadTeam(){try{const r=await rpc('dashboardDM',TOK);if(!r.err)TEAM=r.rows}catch(e){toast('Gagal memuat data tim')}}
+const dmSince=()=>{const x=new Date();x.setHours(0,0,0,0);x.setDate(x.getDate()-(dmPer=='hari'?0:dmPer=='minggu'?6:29));return x.getTime()};
+const dmDays=()=>dmPer=='hari'?1:dmPer=='minggu'?7:30;
+const perChips=()=>`<div class="chips">${['hari','minggu','bulan'].map(p=>`<button class="chip ${dmPer==p?'on':''}" onclick="dmPer='${p}';render()">${p[0].toUpperCase()+p.slice(1)} ini</button>`).join('')}</div>`;
+const bduSel=()=>`<select onchange="dmU=this.value;render()" aria-label="Pilih BDO"><option value="all">Semua BDO</option>${TEAM.map(m=>`<option value="${esc(m.user)}" ${dmU==m.user?'selected':''}>${esc(m.nama)}</option>`).join('')}</select>`;
+const isDue=l=>l.next&&l.next<=iso(0)&&!['deal','lost'].includes(l.status);
+const byFU=(a,b)=>(a.next||'9').localeCompare(b.next||'9');
+function tstat(m){const L=m.state.leads,A=m.state.acts,sn=dmSince(),td=iso(0),sd=lday(new Date(sn));
+return{m,L,A,tg:m.state.target||10,act:A.filter(a=>a.ts>=sn).length,today:A.filter(a=>lday(new Date(a.ts))==td).length,newL:L.filter(l=>l.c>=sd).length,hot:L.filter(l=>l.status=='hot').length,dep:L.filter(l=>l.status=='deal').length,fu:L.filter(isDue).length}}
+const dmLC=l=>`<div class="card lead" style="--c:var(${COL[l.status]})"><div class="row sp"><span class="n">${l.status=='hot'?'🔥 ':''}${esc(l.name)}</span><span class="badge s-${l.status}">${ST[l.status]}</span></div><div class="meta"><span>BDO</span><span>${esc(l.by)}</span><span>📱</span><span>${esc(l.phone)}</span><span>Minat</span><span>${esc(l.product)||'-'}</span><span>Kontak</span><span>${fmt(l.last)}</span><span>Follow up</span><span>${isDue(l)?'<b>'+fmt(l.next)+'</b>':fmt(l.next)}</span></div>${l.notes?`<div class="note">“${esc(l.notes)}”</div>`:''}</div>`;
+const dmActRow=a=>`<div class="act">${a.img?`<a href="${esc(a.img)}" target="_blank" rel="noopener"><img src="${esc(a.img)}" alt="Bukti aktivitas"></a>`:''}<div style="flex:1"><b>${ACT[a.type]||esc(a.type)}</b> <span class="mut">· ${esc(a.by)}</span><div>${esc(a.text)}</div>${a.link?`<a href="${esc(a.link)}" target="_blank" rel="noopener" class="mut">${esc(a.link.slice(0,40))}</a>`:''}<div class="mut">${new Date(a.ts).toLocaleString('id-ID',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div></div></div>`;
+const dmBdo=x=>{const p=Math.min(100,x.act/(x.tg*dmDays())*100);return `<div class="card" style="margin-bottom:8px" role="button" tabindex="0" onclick="dmOpen('${esc(x.m.user)}')"><div class="row sp"><b>${esc(x.m.nama)}</b><span class="mut">${x.act} activity</span></div><div class="prog" style="margin-top:8px"><i style="width:${p}%"></i></div><div class="mut" style="margin-top:6px">${x.L.length} lead · ${x.hot} HOT · ${x.fu} FU tertunda · ${x.dep} deposit</div></div>`};
+const dmStat=(k,v,c)=>`<div class="card stat" style="--c:var(${c})"><b>${v}</b><span class="mut">${k}</span></div>`;
+const dmOpen=u=>{dmU=u;dmTab='tim';render();scrollTo(0,0)};
+function dmDash(T){const sum=k=>T.reduce((a,x)=>a+x[k],0),allL=T.flatMap(x=>x.L.map(l=>({...l,by:x.m.nama}))),mx=Math.max(1,allL.length),idle=T.filter(x=>x.today==0),hot=allL.filter(l=>l.status=='hot').sort(byFU).slice(0,5);
+return `<div class="row sp"><div><h1>Dashboard Tim</h1><div class="mut">${new Date().toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'})} · ${T.length} BDO</div></div><button class="btn sec" onclick="loadTeam().then(render)" aria-label="Muat ulang">↻</button></div>${perChips()}
+<div class="grid">${dmStat('Activity',sum('act'),'--pri')}${dmStat('Lead baru',sum('newL'),'--new')}${dmStat('HOT Lead',sum('hot'),'--hot')}${dmStat('Follow up tertunda',sum('fu'),'--followup')}</div>
+<div class="card" style="margin-top:10px;border-left:4px solid var(--deal)"><div class="row sp"><div><span class="big-n">${sum('dep')}</span> <span class="mut">deposit dari ${allL.length} lead</span></div><b>${Math.round(sum('dep')/mx*100)}%</b></div></div>
+${idle.length&&T.length?`<div class="card" style="margin-top:10px;border-left:4px solid var(--warm)"><b>Belum ada activity hari ini</b><div class="mut">${idle.map(x=>esc(x.m.nama)).join(', ')}</div></div>`:''}
+<h2>Kinerja BDO (${dmPer} ini)</h2>${T.length?[...T].sort((a,b)=>b.act-a.act).map(dmBdo).join(''):'<div class="card empty">Belum ada BDO aktif. Tambahkan akun di sheet Users.</div>'}
+<h2>Pipeline tim</h2><div class="card">${Object.keys(ST).map(k=>{const n=allL.filter(l=>l.status==k).length;return `<div class="row" style="margin-bottom:8px"><span class="badge s-${k}" style="width:92px;text-align:center">${ST[k]}</span><div class="prog" style="flex:1;margin:0"><i style="width:${n/mx*100}%;background:var(${COL[k]})"></i></div><b style="width:24px;text-align:right">${n}</b></div>`}).join('')}</div>
+<h2>HOT lead terdekat</h2>${hot.length?hot.map(dmLC).join(''):'<div class="card empty">Belum ada HOT lead.</div>'}`}
+function dmTim(T){if(dmU=='all')return `<h1>Tim BDO</h1>${perChips()}${T.length?T.map(dmBdo).join(''):'<div class="card empty">Belum ada BDO aktif.</div>'}`;
+const x=T.find(t=>t.m.user==dmU);if(!x){dmU='all';return dmTim(T)}
+const L=[...x.L].sort(byFU).map(l=>({...l,by:x.m.nama}));
+return `<button class="btn sec" onclick="dmU='all';render()">← Semua BDO</button><h1 style="margin-top:12px">${esc(x.m.nama)}</h1>${perChips()}
+<div class="grid">${dmStat('Activity ('+dmPer+')',x.act,'--pri')}${dmStat('Hari ini / target',x.today+' / '+x.tg,'--contacted')}${dmStat('HOT Lead',x.hot,'--hot')}${dmStat('Follow up tertunda',x.fu,'--followup')}</div>
+<h2>Leads (${L.length})</h2>${L.length?L.map(dmLC).join(''):'<div class="card empty">Belum ada lead.</div>'}
+<h2>Aktivitas terbaru</h2><div class="card">${x.A.slice(0,15).map(a=>dmActRow({...a,by:x.m.nama})).join('')||'<div class="empty">Belum ada aktivitas.</div>'}</div>`}
+function dmLeads(){const L=TEAM.flatMap(m=>m.state.leads.map(l=>({...l,by:m.nama,u:m.user}))).filter(l=>(dmU=='all'||l.u==dmU)&&(dmSt=='all'||(dmSt=='due'?isDue(l):l.status==dmSt))).sort(byFU);
+const fs=[['all','Semua'],...Object.keys(ST).map(k=>[k,ST[k]]),['due','Tertunda']];
+return `<h1>Semua Leads</h1><div style="margin-top:12px">${bduSel()}</div><div class="chips">${fs.map(f=>`<button class="chip ${dmSt==f[0]?'on':''}" onclick="dmSt='${f[0]}';render()">${f[1]}</button>`).join('')}</div>${L.length?L.map(dmLC).join(''):'<div class="card empty">Tidak ada lead untuk filter ini.</div>'}`}
+function dmAkt(){const sn=dmSince(),A=TEAM.flatMap(m=>m.state.acts.map(a=>({...a,by:m.nama,u:m.user}))).filter(a=>a.ts>=sn&&(dmU=='all'||a.u==dmU)).sort((a,b)=>b.ts-a.ts);
+return `<h1>Aktivitas Tim</h1>${perChips()}${bduSel()}<div class="card" style="margin-top:10px"><b>${A.length}</b> <span class="mut">aktivitas · ${A.filter(a=>a.type=='post').length} posting · ${A.filter(a=>a.img).length} bukti screenshot</span></div><div class="card" style="margin-top:10px">${A.slice(0,100).map(dmActRow).join('')||'<div class="empty">Belum ada aktivitas pada periode ini.</div>'}</div>`}
+const dmProf=()=>`<h1>Profile</h1><div class="card" style="margin-top:12px"><b>${esc(S.name)}</b><div class="mut">Division Manager</div><button class="btn sec" style="margin-top:12px" onclick="logout()">Keluar</button></div>${pwCard()}`;
+function renderDM(){const T=TEAM.map(tstat);$('#app').innerHTML=dmTab=='dash'?dmDash(T):dmTab=='tim'?dmTim(T):dmTab=='leads'?dmLeads():dmTab=='akt'?dmAkt():dmProf();
+$('#nav').innerHTML=[['dash','📊','Dashboard'],['tim','👥','Tim'],['leads','🔥','Leads'],['akt','✅','Aktivitas'],['profile','👤','Profile']].map(n=>`<button class="${dmTab==n[0]?'on':''}" onclick="dmU='all';dmTab='${n[0]}';render();scrollTo(0,0)"><span>${n[1]}</span>${n[2]}</button>`).join('')}
+function go(t,f){tab=t;if(f)flt=f;render();scrollTo(0,0)}
+function render(){if(ROLE=='DM')return renderDM();$('#app').innerHTML={home,leads,pipeline,activity,profile}[tab]();
+$('#nav').innerHTML=[['home','🏠','Home'],['leads','👥','Leads'],['pipeline','📊','Pipeline'],['activity','✅','Activity'],['profile','👤','Profile']].map(n=>`<button class="${tab==n[0]?'on':''}" onclick="go('${n[0]}')"><span>${n[1]}</span>${n[2]}</button>`).join('')}
+$('#fab').onclick=menu;boot();
+</script></body></html>
