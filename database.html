@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="id"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DATABASE CALON NASABAH TPFX</title>
+<style>
+:root{--bg:#f3f5f7;--card:#fff;--ink:#14212e;--mut:#5d6b78;--line:#dde3e8;--acc:#0b6b5c;--accink:#fff;--chip:#e6ecef;--ok:#0b6b5c;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e161d;--card:#16212b;--ink:#e8eef2;--mut:#90a0ad;--line:#26343f;--acc:#2fbf9f;--accink:#06231d;--chip:#1f2d38;--ok:#2fbf9f}}
+:root[data-theme="dark"]{--bg:#0e161d;--card:#16212b;--ink:#e8eef2;--mut:#90a0ad;--line:#26343f;--acc:#2fbf9f;--accink:#06231d;--chip:#1f2d38;--ok:#2fbf9f}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 "Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
+header{padding:18px 16px 10px;max-width:640px;margin:0 auto}
+h1{font-size:19px;margin:0;font-weight:800;letter-spacing:.2px}
+.sub{color:var(--mut);font-size:13px;margin-top:2px}
+.tabs{display:flex;gap:8px;overflow-x:auto;padding:4px 16px 10px;max-width:640px;margin:0 auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:none;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:9px 14px;font:inherit;font-weight:600;cursor:pointer}
+.tab[aria-selected=true]{background:var(--acc);color:var(--accink);border-color:var(--acc)}
+main{max-width:640px;margin:0 auto;padding:0 16px 40px}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);padding:6px 0 8px;z-index:2}
+.prog{height:6px;background:var(--chip);border-radius:9px;overflow:hidden;margin:2px 0 6px}
+.prog i{display:block;height:100%;background:var(--acc);width:0;transition:width .3s}
+.stat{font-size:13px;color:var(--mut);margin-bottom:8px}
+input[type=search]{width:100%;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:11px 12px;font:inherit}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-top:8px;scrollbar-width:none}
+.chip{flex:none;border:0;background:var(--chip);color:var(--ink);border-radius:8px;padding:7px 11px;font:inherit;font-size:13px;cursor:pointer}
+.chip[aria-pressed=true]{background:var(--ink);color:var(--bg)}
+.item{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:8px;display:grid;grid-template-columns:1fr auto;gap:8px 10px;align-items:center}
+.item.done{opacity:.72}
+.no{color:var(--mut);font-size:12px}
+.tel{font-weight:700;font-size:17px;letter-spacing:.3px}
+.job{font-size:13px;color:var(--mut)}
+.wa{grid-row:1/3;grid-column:2;background:var(--acc);color:var(--accink);text-decoration:none;font-weight:700;border-radius:10px;padding:12px 16px;text-align:center}
+select{grid-column:1/3;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:8px;font:inherit;font-size:14px}
+details{margin-top:10px;font-size:13px;color:var(--mut)}
+summary{cursor:pointer}
+textarea{width:100%;margin-top:6px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:10px;font:inherit;min-height:84px}
+.empty{text-align:center;color:var(--mut);padding:30px 0}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+</style></head><body>
+<header><h1>DATABASE CALON NASABAH TPFX</h1><div class="sub">Pilih nama BDO, lalu ketuk tombol WhatsApp untuk menghubungi.</div></header>
+<div class="tabs" id="tabs" role="tablist"></div>
+<main>
+<div class="bar"><div class="prog"><i id="pb"></i></div><div class="stat" id="stat"></div>
+<input type="search" id="q" placeholder="Cari nomor atau pekerjaan" aria-label="Cari">
+<div class="chips" id="chips"></div></div>
+<details><summary>Ubah pesan pembuka</summary><textarea id="tpl" aria-label="Pesan pembuka"></textarea></details>
+<div id="list"></div>
+</main>
+<script>
+const DATA=[{"n": "Teresia Nila Juwita Sari", "r": [[1, "Pegawai Negeri Sipil", "6287721911278"], [2, "BUMN/BUMD", "6282253343559"], [3, "Guru / Dosen", "6281261397209"], [4, "Pengusaha", "6283135027502"], [5, "Pegawai Negeri Sipil", "628989850906"], [6, "BUMN/BUMD", "6285352399300"], [7, "Guru / Dosen", "6282351994976"], [8, "Pengusaha", "6285388474923"], [9, "Pegawai Negeri Sipil", "6281256486080"], [10, "BUMN/BUMD", "628115757599"], [11, "Guru / Dosen", "6281256146871"], [12, "Pengusaha", "6289646449418"], [13, "Pegawai Negeri Sipil", "6285252009691"], [14, "BUMN/BUMD", "6281346430339"], [15, "Guru / Dosen", "6289580676916"], [16, "Pengusaha", "628990984201"], [17, "Pegawai Negeri Sipil", "6282159622131"], [18, "BUMN/BUMD", "6281345198213"], [19, "Guru / Dosen", "6281222518291"], [20, "Pengusaha", "6285752845440"], [21, "Pegawai Negeri Sipil", "6285650902403"], [22, "BUMN/BUMD", "6285754654260"], [23, "Guru / Dosen", "6285820985167"], [24, "Pengusaha", "6285820329459"], [25, "Pegawai Negeri Sipil", "6281349411075"], [26, "BUMN/BUMD", "62887716236300"], [27, "Guru / Dosen", "6285970709072"], [28, "Pengusaha", "6285787271634"], [29, "Pegawai Negeri Sipil", "6282150626286"], [30, "Guru / Dosen", "6289664588661"], [31, "Pengusaha", "6285654878344"], [32, "Pengusaha", "6281345757951"], [33, "Pengusaha", "6289611050677"], [34, "Pengusaha", "6285654302769"], [35, "Pengusaha", "6285750578745"], [36, "Pengusaha", "6282149433879"], [37, "Pengusaha", "6281258087734"], [38, "Pengusaha", "6285821394866"], [39, "Pengusaha", "6281243336588"], [40, "Pengusaha", "6282254078354"], [41, "Pengusaha", "6283164158317"], [42, "Pengusaha", "6289531478970"], [43, "Pengusaha", "6282254244478"], [44, "Pengusaha", "6289506815966"], [45, "Pengusaha", "6289518939589"]]}, {"n": "Sophian Rahardi", "r": [[1, "Pegawai Negeri Sipil", "6282150678822"], [2, "BUMN/BUMD", "628125423568"], [3, "Guru / Dosen", "6282148849281"], [4, "Pengusaha", "6289883380834"], [5, "Pegawai Negeri Sipil", "6285710210271"], [6, "BUMN/BUMD", "6281351349663"], [7, "Guru / Dosen", "6282122706472"], [8, "Pengusaha", "628990794963"], [9, "Pegawai Negeri Sipil", "6281352039919"], [10, "BUMN/BUMD", "628125628057"], [11, "Guru / Dosen", "6289505597142"], [12, "Pengusaha", "6281545405308"], [13, "Pegawai Negeri Sipil", "6281345737654"], [14, "BUMN/BUMD", "6282350160909"], [15, "Guru / Dosen", "6281345229797"], [16, "Pengusaha", "628164981470"], [17, "Pegawai Negeri Sipil", "6281352646158"], [18, "BUMN/BUMD", "62895327395313"], [19, "Guru / Dosen", "6285245696999"], [20, "Pengusaha", "6282155942313"], [21, "Pegawai Negeri Sipil", "6281257921829"], [22, "BUMN/BUMD", "6289651663910"], [23, "Guru / Dosen", "6282154439201"], [24, "Pengusaha", "6289688810203"], [25, "Pegawai Negeri Sipil", "6281258330333"], [26, "BUMN/BUMD", "6283140246360"], [27, "Guru / Dosen", "6285388565226"], [28, "Pengusaha", "6281545185281"], [29, "Pegawai Negeri Sipil", "6282150937808"], [30, "Guru / Dosen", "628996053677"], [31, "Pengusaha", "6289673954116"], [32, "Pengusaha", "6285245254784"], [33, "Pengusaha", "6285822919605"], [34, "Pengusaha", "62895702146137"], [35, "Pengusaha", "6281521558341"], [36, "Pengusaha", "6281257434848"], [37, "Pengusaha", "6285252424770"], [38, "Pengusaha", "6281254540580"], [39, "Pengusaha", "6285245229707"], [40, "Pengusaha", "628990858900"], [41, "Pengusaha", "6283842715321"], [42, "Pengusaha", "6283128836846"], [43, "Pengusaha", "6281256962184"], [44, "Pengusaha", "6285750101412"], [45, "Pengusaha", "6281521713461"]]}, {"n": "Widi Eka Putri", "r": [[1, "Pegawai Negeri Sipil", "62895388035566"], [2, "BUMN/BUMD", "6285245782587"], [3, "Guru / Dosen", "6289664933536"], [4, "Pengusaha", "6285387975449"], [5, "Pegawai Negeri Sipil", "6281549081582"], [6, "BUMN/BUMD", "6281345108918"], [7, "Guru / Dosen", "6282154775642"], [8, "Pengusaha", "6283141732800"], [9, "Pegawai Negeri Sipil", "6282255357374"], [10, "BUMN/BUMD", "6289694496257"], [11, "Guru / Dosen", "628125692634"], [12, "Pengusaha", "6282252086935"], [13, "Pegawai Negeri Sipil", "6285750568599"], [14, "BUMN/BUMD", "6289694165119"], [15, "Guru / Dosen", "6282150488310"], [16, "Pengusaha", "6285750407611"], [17, "Pegawai Negeri Sipil", "6285245009630"], [18, "BUMN/BUMD", "6289537306302"], [19, "Guru / Dosen", "6289651302717"], [20, "Pengusaha", "6285849148712"], [21, "Pegawai Negeri Sipil", "62889560338375"], [22, "BUMN/BUMD", "62885347390288"], [23, "Guru / Dosen", "6285933590921"], [24, "Pengusaha", "6285828251956"], [25, "Pegawai Negeri Sipil", "6282148488744"], [26, "BUMN/BUMD", "6289508360208"], [27, "Guru / Dosen", "6281349330471"], [28, "Pengusaha", "6289629507500"], [29, "Pengusaha", "6281255337161"], [30, "Pengusaha", "6281345116994"], [31, "Pengusaha", "6287819099888"], [32, "Pengusaha", "6285654439916"], [33, "Pengusaha", "6289508455559"], [34, "Pengusaha", "6287747543673"], [35, "Pengusaha", "6285245335577"], [36, "Pengusaha", "628990804676"], [37, "Pengusaha", "6281351970258"], [38, "Pengusaha", "6289654550573"], [39, "Pengusaha", "6281549474533"], [40, "Pengusaha", "6281528717871"], [41, "Pengusaha", "6281349603464"], [42, "Pengusaha", "6282115161631"], [43, "Pengusaha", "6283125363131"]]}, {"n": "Ading Prayoga Ramadhana", "r": [[1, "Pegawai Negeri Sipil", "62821257919114"], [2, "BUMN/BUMD", "6281352372709"], [3, "Guru / Dosen", "6281258952191"], [4, "Pengusaha", "6285245699258"], [5, "Pegawai Negeri Sipil", "6281345723964"], [6, "BUMN/BUMD", "6285829047874"], [7, "Guru / Dosen", "628125617431"], [8, "Pengusaha", "6285975196231"], [9, "Pegawai Negeri Sipil", "6282148848067"], [10, "BUMN/BUMD", "6281345108878"], [11, "Guru / Dosen", "6289617271666"], [12, "Pengusaha", "6283134184910"], [13, "Pegawai Negeri Sipil", "6282524549450"], [14, "BUMN/BUMD", "6281251111886"], [15, "Guru / Dosen", "6285821012187"], [16, "Pengusaha", "6285750395097"], [17, "Pegawai Negeri Sipil", "62811577768"], [18, "BUMN/BUMD", "6282152582477"], [19, "Guru / Dosen", "628125611414"], [20, "Pengusaha", "6289604855108"], [21, "Pegawai Negeri Sipil", "628125689497"], [22, "BUMN/BUMD", "628115600567"], [23, "Guru / Dosen", "6285820262442"], [24, "Pengusaha", "6285750968552"], [25, "Pegawai Negeri Sipil", "628281345742133"], [26, "BUMN/BUMD", "6285559516080"], [27, "Guru / Dosen", "6289605741994"], [28, "Pengusaha", "6285822154657"], [29, "Pengusaha", "6281350116882"], [30, "Pengusaha", "6281345078646"], [31, "Pengusaha", "6289607036521"], [32, "Pengusaha", "6285245464177"], [33, "Pengusaha", "628125795101"], [34, "Pengusaha", "6285101549266"], [35, "Pengusaha", "628115731152"], [36, "Pengusaha", "6281256064464"], [37, "Pengusaha", "6281649455799"], [38, "Pengusaha", "62895612333865"], [39, "Pengusaha", "6285821450112"], [40, "Pengusaha", "6285393691998"], [41, "Pengusaha", "6281917193713"], [42, "Pengusaha", "62895616547010"], [43, "Pengusaha", "6289510555590"]]}];
+const ST=["Belum dihubungi","Sudah dichat","Menunggu balasan","Tertarik","Tidak tertarik","Closing"];
+const DEF="Halo, selamat siang. Saya {bdo} dari TPFX. Boleh minta waktu sebentar untuk memperkenalkan peluang investasi dari kami?";
+let cur=0,job="Semua",mem={};
+const K="tpfx-v1";
+try{mem=JSON.parse(localStorage.getItem(K)||"{}")}catch(e){}
+const save=()=>{try{localStorage.setItem(K,JSON.stringify(mem))}catch(e){}};
+mem.tpl=mem.tpl||DEF;mem.s=mem.s||{};
+const $=id=>document.getElementById(id);
+function fmt(n){return "+"+n.slice(0,2)+" "+n.slice(2,5)+"-"+n.slice(5,9)+"-"+n.slice(9)}
+function tabs(){$("tabs").innerHTML="";DATA.forEach((d,i)=>{const b=document.createElement("button");b.className="tab";b.setAttribute("role","tab");b.setAttribute("aria-selected",i==cur);b.textContent=d.n.split(" ").slice(0,2).join(" ");b.onclick=()=>{cur=i;job="Semua";render()};$("tabs").appendChild(b)})}
+function render(){
+ tabs();const d=DATA[cur],jobs=["Semua",...new Set(d.r.map(r=>r[1]))];
+ $("chips").innerHTML="";jobs.forEach(j=>{const b=document.createElement("button");b.className="chip";b.setAttribute("aria-pressed",j==job);b.textContent=j;b.onclick=()=>{job=j;render()};$("chips").appendChild(b)});
+ const key=r=>cur+"-"+r[0],st=r=>mem.s[key(r)]||0;
+ const done=d.r.filter(r=>st(r)>0).length;
+ $("pb").style.width=(done/d.r.length*100)+"%";$("stat").textContent=done+" dari "+d.r.length+" kontak sudah diproses";
+ const q=$("q").value.toLowerCase();
+ const rows=d.r.filter(r=>(job=="Semua"||r[1]==job)&&(r[1]+r[2]).toLowerCase().includes(q));
+ const L=$("list");L.innerHTML="";
+ if(!rows.length){L.innerHTML='<div class="empty">Tidak ada kontak yang cocok.</div>';return}
+ rows.forEach(r=>{
+  const el=document.createElement("div");el.className="item"+(st(r)>0?" done":"");
+  const msg=encodeURIComponent(mem.tpl.replace("{bdo}",d.n));
+  el.innerHTML='<div><div class="no">No. '+r[0]+' · '+r[1]+'</div><div class="tel">'+fmt(r[2])+'</div></div><a class="wa" target="_blank" rel="noopener" href="https://wa.me/'+r[2]+'?text='+msg+'">Chat WA</a>';
+  const s=document.createElement("select");s.setAttribute("aria-label","Status");
+  ST.forEach((t,i)=>{const o=new Option(t,i);o.selected=i==st(r);s.add(o)});
+  s.onchange=()=>{mem.s[key(r)]=+s.value;save();render()};
+  el.querySelector(".wa").onclick=()=>{if(!st(r)){mem.s[key(r)]=1;save();setTimeout(render,400)}};
+  el.appendChild(s);L.appendChild(el)})
+}
+$("tpl").value=mem.tpl;
+$("tpl").oninput=e=>{mem.tpl=e.target.value||DEF;save();render()};
+$("q").oninput=render;
+render();
+</script></body></html>
