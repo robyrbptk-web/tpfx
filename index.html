@@ -11,7 +11,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="apple-touch-icon" href="pwa-icon-192.png">
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <link rel="icon" type="image/jpeg" href="tpfxlogo.jpg">
 
 <style>
@@ -63,6 +65,103 @@ padding:20px 16px calc(110px + env(safe-area-inset-bottom,0px))
 #app.login-screen{
 max-width:none;
 padding:0
+}
+
+body.booting .nav,
+body.booting .fab{
+display:none
+}
+
+.boot-surface{
+max-width:900px;
+margin:0 auto;
+padding:20px 16px calc(110px + env(safe-area-inset-bottom,0px))
+}
+
+.boot-brand{
+display:flex;
+align-items:center;
+gap:12px;
+margin:4px 0 28px
+}
+
+.boot-brand img{
+width:112px;
+height:40px;
+object-fit:cover;
+border-radius:8px
+}
+
+.boot-copy{
+display:grid;
+gap:7px
+}
+
+.boot-copy b{font-size:14px}
+.boot-copy span{color:var(--mut);font-size:12px}
+
+.boot-title{
+width:min(68%,300px);
+height:25px;
+margin-bottom:8px
+}
+
+.boot-subtitle{
+width:min(88%,420px);
+height:14px;
+margin-bottom:20px
+}
+
+.boot-grid{
+display:grid;
+grid-template-columns:repeat(2,minmax(0,1fr));
+gap:10px
+}
+
+.boot-card{
+min-height:106px;
+padding:16px;
+border:1px solid var(--line);
+border-radius:18px;
+background:var(--card);
+box-shadow:var(--shadow)
+}
+
+.boot-card.wide{
+grid-column:1/-1;
+min-height:184px
+}
+
+.boot-line{
+height:12px;
+margin:9px 0;
+border-radius:8px
+}
+
+.boot-line.short{width:42%}
+.boot-line.medium{width:68%}
+.boot-line.long{width:90%}
+
+.boot-skeleton{
+background:linear-gradient(90deg,#eef1f7 25%,#f7f8fb 38%,#eef1f7 63%);
+background-size:400% 100%;
+animation:boot-shimmer 1.4s ease infinite
+}
+
+@keyframes boot-shimmer{
+0%{background-position:100% 0}
+100%{background-position:0 0}
+}
+
+@media(max-width:620px){
+.boot-surface{padding:16px 12px calc(100px + env(safe-area-inset-bottom,0px))}
+.boot-brand{margin-bottom:24px}
+.boot-brand img{width:76px;height:30px}
+.boot-card{min-height:92px;padding:13px}
+}
+
+@media(prefers-reduced-motion:reduce){
+.boot-skeleton{animation:none}
 }
 
 .app-topbar{
@@ -984,11 +1083,30 @@ box-shadow:0 14px 36px rgba(24,35,70,.09)
 </style>
 </head>
 
-<body>
+<body class="booting">
 
 <header id="appHeader" class="app-topbar" hidden></header>
 
-<div id="app"></div>
+<div id="app" aria-busy="true">
+<section class="boot-surface" aria-label="Memuat TPFX Sales Workspace">
+<div class="boot-brand">
+<img src="tpfxlogo.jpg" alt="">
+<div class="boot-copy"><b>Sales Workspace</b><span>Memuat ruang kerja Anda...</span></div>
+</div>
+<div class="boot-title boot-skeleton" aria-hidden="true"></div>
+<div class="boot-subtitle boot-skeleton" aria-hidden="true"></div>
+<div class="boot-grid" aria-hidden="true">
+<div class="boot-card"><div class="boot-line short boot-skeleton"></div><div class="boot-line medium boot-skeleton"></div></div>
+<div class="boot-card"><div class="boot-line short boot-skeleton"></div><div class="boot-line medium boot-skeleton"></div></div>
+<div class="boot-card wide">
+<div class="boot-line short boot-skeleton"></div>
+<div class="boot-line long boot-skeleton"></div>
+<div class="boot-line medium boot-skeleton"></div>
+<div class="boot-line long boot-skeleton"></div>
+</div>
+</div>
+</section>
+</div>
 
 <div class="nav">
 <div id="nav"></div>
@@ -1479,6 +1597,8 @@ ROLE=='BM'
 const manager=ROLE=='DM'||ROLE=='BM';
 if(manager)TEAM=[];
 render();
+$('#app').setAttribute('aria-busy','false');
+document.body.classList.remove('booting');
 
 if(manager){
 const bootToken=TOK;
@@ -1523,6 +1643,8 @@ msg
 // ============================================================
 
 function sessionError(m){
+
+document.body.classList.remove('booting');
 
 document
 .querySelector('.nav')
@@ -1599,6 +1721,8 @@ Keluar
 // ============================================================
 
 function loginView(m){
+
+document.body.classList.remove('booting');
 
 document
 .querySelector('.nav')
