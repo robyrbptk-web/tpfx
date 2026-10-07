@@ -72,23 +72,33 @@ textarea{display:block;margin-top:9px;min-height:100px;resize:vertical}
 </header>
 <main>
 <div class="page-heading">
-<div><h1>Database Calon Nasabah</h1><div class="sub">Pilih BDO, cari calon nasabah, lalu hubungi lewat WhatsApp.</div></div>
-<span class="chip" aria-label="Database publik">Database</span>
+<div><h1>Database Calon Nasabah</h1><div class="sub">Kontak dibagi merata ke seluruh BDO aktif. Pilih nama untuk melihat bagiannya.</div></div>
+<span class="chip" aria-label="Database tim">Database tim</span>
 </div>
 <div class="tabs" id="tabs" role="tablist" aria-label="Pilih BDO"></div>
 <section class="card bar" aria-label="Cari dan filter kontak">
 <div class="prog" aria-hidden="true"><i id="pb"></i></div><div class="stat" id="stat"></div>
-<input type="search" id="q" placeholder="Cari nomor atau pekerjaan" aria-label="Cari">
+<input type="search" id="q" placeholder="Cari kategori atau nomor kontak" aria-label="Cari">
 <div class="chips" id="chips"></div>
 <details><summary>Ubah pesan pembuka WhatsApp</summary><textarea id="tpl" aria-label="Pesan pembuka"></textarea></details>
 </section>
 <div id="statusMessage" class="status-message mut" role="status">Memuat database...</div>
-<h2 class="section-title">Daftar kontak</h2>
+<h2 class="section-title" id="contactHeading">Daftar kontak</h2>
 <div id="list"></div>
 </main>
 <script>
 let DATA=[];
 const ST=["Belum dihubungi","Sudah dichat","Menunggu balasan","Tertarik","Tidak tertarik","Closing"];
+const JOB_LABELS={
+ "pegawai negeri sipil":"PNS",
+ "pns":"PNS",
+ "bumn/bumd":"BUMN/BUMD",
+ "bumn":"BUMN",
+ "bumd":"BUMD",
+ "guru / dosen":"Guru / Dosen",
+ "guru/dosen":"Guru / Dosen",
+ "pengusaha":"Pengusaha"
+};
 const DEF="Halo, selamat siang. Saya {bdo} dari TPFX. Boleh minta waktu sebentar untuk memperkenalkan peluang investasi dari kami?";
 const API="https://script.google.com/macros/s/AKfycbwCiMQjyvd_GHqc-TOzofoDEcpOj_-_uxs2ciX4wZG7VuG3hoZlInRuyO3cmPxSWS6F/exec";
 let cur=0,job="Semua",mem={};
@@ -108,18 +118,39 @@ async function rpc(fn,...args){
 async function loadDatabase(){
  const status=$("statusMessage");
  status.className="status-message mut";
- status.textContent="Memuat database...";
+ status.replaceChildren(document.createTextNode("Memuat database..."));
  try{
-  const result=await rpc("publicDatabaseData");
+  const token=localStorage.getItem("swt")||"";
+  if(!token){
+   status.className="status-message error";
+   status.textContent="Silakan login ke Workspace untuk membuka database.";
+   const login=document.createElement("a");
+   login.className="btn retry";
+   login.href="index.html";
+   login.textContent="Login ke Workspace";
+   status.appendChild(login);
+   return;
+  }
+  const result=await rpc("databaseData",token);
   if(result&&result.err){
+   if(result.err==="AUTH"){
+    status.className="status-message error";
+    status.textContent="Sesi login berakhir. Login kembali untuk membuka database.";
+    const login=document.createElement("a");
+    login.className="btn retry";
+    login.href="index.html";
+    login.textContent="Login kembali";
+    status.appendChild(login);
+    return;
+   }
    throw new Error(typeof result.err==="string"?result.err:"Database tidak dapat dimuat");
   }
-  if(!result||!Array.isArray(result.rows)||!result.rows.every(d=>d&&typeof d.n==="string"&&Array.isArray(d.r)&&d.r.every(r=>Array.isArray(r)&&r.length>=3))){
+  if(!result||!Array.isArray(result.rows)||!result.rows.every(d=>d&&typeof d.n==="string"&&Array.isArray(d.r)&&d.r.every(r=>Array.isArray(r)&&r.length>=3))||new Set(result.rows.flatMap(d=>d.r.map(r=>digits(r[2]))).filter(Boolean)).size!==result.rows.reduce((count,d)=>count+d.r.length,0)){
    throw new Error("Data database dari server tidak valid");
   }
   DATA=result.rows;
   status.hidden=DATA.length>0;
-  if(!DATA.length)status.textContent="Belum ada kontak yang disetujui untuk ditampilkan.";
+  if(!DATA.length)status.textContent="Belum ada data kontak yang tersedia di database.";
   startDatabase();
  }catch(e){
   status.className="status-message error";
@@ -132,6 +163,10 @@ async function loadDatabase(){
  }
 }
 function digits(n){return String(n||"").replace(/\D/g,"")}
+function jobLabel(value){
+ const label=String(value||"");
+ return JOB_LABELS[label.trim().toLowerCase()]||label;
+}
 function fmt(n){
  const value=digits(n);
  if(value.length<6)return String(n||"");
@@ -142,37 +177,46 @@ function tabs(){
  DATA.forEach((d,i)=>{
   const b=document.createElement("button");
   b.className="tab";b.setAttribute("role","tab");b.setAttribute("aria-selected",i==cur);
-  b.textContent=d.n.split(" ").slice(0,2).join(" ");
+  b.textContent=d.n+" ("+d.r.length+")";
+  b.setAttribute("aria-label","Kontak "+d.n+", "+d.r.length+" calon nasabah");
   b.onclick=()=>{cur=i;job="Semua";render()};
   $("tabs").appendChild(b);
  });
 }
 function render(){
  if(!DATA.length){
-  const empty=document.createElement("div");empty.className="card empty";empty.textContent="Belum ada kontak yang disetujui untuk ditampilkan.";
-  $("list").replaceChildren(empty);return;
+  const empty=document.createElement("div");empty.className="card empty";empty.textContent="Belum ada data kontak yang tersedia di database.";
+  $("tabs").replaceChildren();
+  $("chips").replaceChildren();
+  $("list").replaceChildren(empty);
+  $("contactHeading").textContent="Daftar kontak";
+  $("pb").style.width="0";
+  $("stat").textContent="";
+  return;
  }
- if(cur>=DATA.length)cur=0;
+  if(cur>=DATA.length)cur=0;
+  tabs();
  const d=DATA[cur],jobs=["Semua",...new Set(d.r.map(r=>String(r[1]||"")))];
  if(!jobs.includes(job))job="Semua";
+ $("contactHeading").textContent="Kontak — "+d.n;
  $("chips").replaceChildren();
  jobs.forEach(j=>{
-  const b=document.createElement("button");b.className="chip";b.setAttribute("aria-pressed",j==job);b.textContent=j;
+  const b=document.createElement("button");b.className="chip";b.setAttribute("aria-pressed",j==job);b.textContent=jobLabel(j);
   b.onclick=()=>{job=j;render()};$("chips").appendChild(b);
  });
- const key=r=>cur+"-"+r[0],st=r=>Number(mem.s[key(r)])||0;
+ const key=r=>digits(r[2])||cur+"-"+r[0],st=r=>Number(mem.s[key(r)])||0;
  const done=d.r.filter(r=>st(r)>0).length;
  $("pb").style.width=(d.r.length?done/d.r.length*100:0)+"%";
  $("stat").textContent=done+" dari "+d.r.length+" kontak sudah diproses";
  const q=$("q").value.trim().toLowerCase();
- const rows=d.r.filter(r=>(job=="Semua"||String(r[1])==job)&&(String(r[1])+" "+String(r[2])).toLowerCase().includes(q));
+ const rows=d.r.filter(r=>(job=="Semua"||String(r[1])==job)&&(String(r[1])+" "+jobLabel(r[1])+" "+String(r[2])).toLowerCase().includes(q));
  const list=$("list");list.replaceChildren();
  if(!rows.length){const empty=document.createElement("div");empty.className="card empty";empty.textContent="Tidak ada kontak yang cocok.";list.appendChild(empty);return}
  rows.forEach(r=>{
   const phone=digits(r[2]);
   const el=document.createElement("article");el.className="item"+(st(r)>0?" done":"");
   const copy=document.createElement("div");copy.className="item-copy";
-  const number=document.createElement("div");number.className="no";number.textContent="No. "+String(r[0])+" · "+String(r[1]);
+  const number=document.createElement("div");number.className="no";number.textContent="No. "+String(r[0])+" · "+jobLabel(r[1]);
   const tel=document.createElement("div");tel.className="tel";tel.textContent=fmt(phone);
   copy.append(number,tel);
   const wa=document.createElement("a");wa.className="btn wa";wa.target="_blank";wa.rel="noopener noreferrer";wa.href="https://wa.me/"+phone+"?text="+encodeURIComponent(mem.tpl.replace("{bdo}",d.n));wa.textContent="Chat WA";

@@ -44,7 +44,7 @@ function api_() {
     updateProfile: updateProfile,
     deleteUser: deleteUser,
     databaseData: databaseData,
-    publicDatabaseData: publicDatabaseData,
+    chatNotificationSummary: chatNotificationSummary,
     checkSession: checkSession,
     socialFeed: socialFeed,
     recentPosts: recentPosts,
@@ -314,44 +314,75 @@ function deleteUser(t, username) {
 }
 ```
 
-## 5. Sajikan database publik dari Apps Script
+## 5. Database calon nasabah
 
-`database.html` dapat dibuka tanpa login dan memanggil endpoint `publicDatabaseData`. Karena endpoint ini tidak memakai sesi, jangan hubungkan endpoint tersebut ke seluruh daftar pribadi atau langsung mengembalikan `DATABASE_DATA`. Buat whitelist terpisah yang hanya berisi kontak yang pemilik datanya telah setujui untuk dipublikasikan. Jangan menaruh isi whitelist atau nomor telepon ke file dokumentasi atau Git.
-
-Data lama dapat diambil dari versi Git sebelum perubahan ini:
-
-```powershell
-git show 388de7a:database.html
-```
-
-Jangan salin seluruh array `DATA` lama sebagai data publik. Buat whitelist kosong berikut di Code.gs, lalu isi secara manual hanya dengan record yang sudah mendapat persetujuan publik. Bentuk setiap record tetap `[nomor, pekerjaan, telepon]`, dan setiap kelompok BDO berbentuk `{ n: 'Nama BDO', r: [ ...record... ] }`, sama seperti format lama:
+`database.html` memanggil endpoint `databaseData(TOKEN)` yang memerlukan sesi login. Token dibaca dari `localStorage` yang sama dengan workspace. Tab **Database** di navbar membuka halaman ini; jika sesi kedaluwarsa, halaman menyediakan tautan login. Data kontak tidak diletakkan di frontend atau Git. Pastikan sumber `DATABASE_DATA` di Apps Script berisi **seluruh** daftar calon nasabah, termasuk semua kategori, sebelum mengganti implementasi `databaseData(t)` di bawah. Fungsi menggabungkan record dari semua kelompok sumber lalu membaginya bergiliran kepada **setiap** akun di sheet `Users` yang statusnya `Y` dan role-nya `BDO`; akun baru (termasuk Marsiana, Yudha, dan BDO baru lainnya) otomatis masuk jika memenuhi kedua syarat. Semua akun login dapat melihat semua kelompok, sesuai pilihan pengguna. Setiap kelompok dikembalikan dengan nama akun BDO di sheet `Users`, sehingga bukan hanya nama dari kelompok BDO lama yang muncul. Jumlah kontak tiap BDO berbeda paling banyak satu, dan pemeriksaan menghentikan respons bila kontak kurang untuk memberi setiap BDO minimal satu atau bila nomor kosong/duplikat ditemukan. Label tab menampilkan nama BDO dan jumlah kontak untuk memudahkan verifikasi.
 
 ```javascript
-const PUBLIC_DATABASE_DATA = [];
-```
-
-Jangan tambahkan kontak ke whitelist tanpa persetujuan yang relevan. Simpan datanya hanya di project Apps Script.
-
-Pertahankan `databaseData(t)` lama untuk pemanggilan berautentikasi yang mungkin masih digunakan aplikasi. Tambahkan endpoint publik berikut ke Code.gs dan daftarkan `publicDatabaseData` di `api_()`:
-
-```javascript
-function publicDatabaseData() {
-  return { rows: PUBLIC_DATABASE_DATA };
-}
-
-
-function checkSession(t) {
+function databaseData(t) {
   const session = loadState(t);
+  if (!session || session.err) return { err: 'AUTH' };
 
-  if (!session || session.err) {
-    return { err: 'AUTH' };
+  const activeBDOs = users_().getDataRange().getValues().slice(1)
+    .filter(r =>
+      String(r[3]).toUpperCase() == 'Y' &&
+      String(r[4]).toUpperCase() == 'BDO'
+    )
+    .map(r => ({
+      username: String(r[0]),
+      name: String(r[2] || r[0]),
+      rows: []
+    }));
+
+  if (!activeBDOs.length) {
+    return { err: 'Belum ada akun BDO aktif untuk pembagian kontak' };
   }
 
-  return { ok: 1 };
+  const contacts = [];
+  DATABASE_DATA.forEach(group => {
+    if (!group || !Array.isArray(group.r)) {
+      throw new Error('Format data database lama tidak valid');
+    }
+    group.r.forEach(row => {
+      if (!Array.isArray(row) || row.length < 3) {
+        throw new Error('Format kontak database lama tidak valid');
+      }
+      contacts.push(row);
+    });
+  });
+
+  if (contacts.length < activeBDOs.length) {
+    return {
+      err: 'Jumlah kontak (' + contacts.length +
+        ') lebih sedikit daripada BDO aktif (' + activeBDOs.length +
+        '); semua BDO belum dapat menerima minimal satu kontak'
+    };
+  }
+
+  const phoneNumbers = {};
+  contacts.forEach(contact => {
+    const phone = String(contact[2] || '').replace(/\D/g, '');
+    if (!phone) throw new Error('Kontak database tidak memiliki nomor telepon');
+    if (phoneNumbers[phone]) {
+      throw new Error('Nomor kontak duplikat ditemukan; pembagian dibatalkan');
+    }
+    phoneNumbers[phone] = true;
+  });
+
+  contacts.forEach((contact, index) => {
+    activeBDOs[index % activeBDOs.length].rows.push(contact);
+  });
+
+  return {
+    rows: activeBDOs.map(bdo => ({
+      n: bdo.name,
+      r: bdo.rows
+    }))
+  };
 }
 ```
 
-`databaseData(t)` dan `checkSession(t)` tetap memvalidasi token melalui `loadState`; hanya endpoint baru `publicDatabaseData()` yang tidak memakai sesi, dan endpoint tersebut wajib mengembalikan whitelist saja. Pastikan deployment Web App mengizinkan akses publik sesuai kebutuhan aplikasi; ini berarti setiap record dalam whitelist dapat dilihat siapa pun yang memiliki URL database. Simpan Apps Script dan **deploy versi baru** pada deployment Web App yang digunakan aplikasi.
+Penyimpanan status kontak pada `database.html` memakai nomor kontak sebagai kunci lokal, agar status mengikuti kontak jika pembagian otomatis berubah setelah jumlah BDO aktif bertambah atau berkurang. Daftar nomor hanya diterima oleh browser setelah sesi berhasil divalidasi; jangan membuat endpoint publik untuk database ini.
 
 ## 6. Feed sosial dan chat di `index.html`
 
@@ -527,7 +558,8 @@ function chatContacts(t) {
       nama: String(r[2] || other),
       role: String(r[4] || 'BDO').toUpperCase(),
       lastText: '',
-      lastTs: 0
+      lastTs: 0,
+      lastFrom: ''
     };
   });
 
@@ -542,6 +574,7 @@ function chatContacts(t) {
     if (contact && ts >= contact.lastTs) {
       contact.lastText = String(r[3]);
       contact.lastTs = ts;
+      contact.lastFrom = from;
     }
   });
 
@@ -631,7 +664,11 @@ function chatGroups(t) {
     if (target.indexOf('group:') != 0) return;
     const id = target.slice(6);
     if (!lastMessages[id] || Number(r[4]) >= lastMessages[id].ts) {
-      lastMessages[id] = { text: String(r[3]), ts: Number(r[4]) || 0 };
+      lastMessages[id] = {
+        text: String(r[3]),
+        ts: Number(r[4]) || 0,
+        from: String(r[1] || '')
+      };
     }
   });
 
@@ -646,7 +683,8 @@ function chatGroups(t) {
         name: String(r[1]),
         memberCount: members.length,
         lastText: String(last.text || ''),
-        lastTs: Number(last.ts) || 0
+        lastTs: Number(last.ts) || 0,
+        lastFrom: String(last.from || '')
       };
     })
     .sort((a, b) => b.lastTs - a.lastTs || a.name.localeCompare(b.name));
@@ -803,6 +841,82 @@ Tambahkan pemanggilan `purgeSocialData_(targetUsername);` ke fungsi `deleteUser`
 
 Chat menggunakan percakapan personal yang sudah ada dan grup dengan beberapa anggota. Semua role dapat membuat grup, mengirim pesan personal, dan mengirim pesan ke grup yang mereka ikuti. Grup disimpan di sheet `ChatGroups`; pesan grup disimpan di sheet `Messages` dengan kolom `to` bernilai `group:<id grup>`. Akses riwayat dan pengiriman grup divalidasi di Apps Script berdasarkan keanggotaan. `purgeSocialData_` menghapus pesan milik akun yang dihapus, mengeluarkan akun itu dari grup, dan menghapus grup yang tersisa kurang dari dua anggota.
 
+### Notifikasi pesan baru
+
+`index.html` menggunakan Notification API bawaan browser, tanpa Firebase, Supabase, atau layanan push eksternal. Di halaman Chat, pengguna harus menekan **Aktifkan notifikasi** dan menyetujui izin browser. Workspace memeriksa ringkasan chat personal/grup setiap 6 detik selama halamannya masih terbuka, termasuk saat tab di background; browser dapat memperlambat atau menangguhkan polling tab background. Notifikasi dan badge hanya dibuat untuk pesan masuk dari anggota lain, bukan pesan sendiri. Fungsi `chatNotificationSummary` di bawah mengembalikan `lastFrom` untuk membedakan pengirim dan membaca ringkasan kedua jenis chat dalam satu request.
+
+Notifikasi browser dapat muncul saat tab workspace berada di background, tetapi tidak dapat dijamin setelah tab/browser ditutup atau sistem menghentikan halaman. Itu memerlukan Web Push dengan service worker dan server pengirim push. Gunakan hosting HTTPS. Tambahkan fungsi baru berikut dan daftarkan `chatNotificationSummary` pada `api_()`, lalu simpan dan deploy versi baru Apps Script.
+
+```javascript
+function chatNotificationSummary(t) {
+  const username = user_(t);
+  const account = username && findUser_(username);
+  if (!account || String(account[3]).toUpperCase() != 'Y') return { err: 'AUTH' };
+
+  const userKey = String(username).toLowerCase();
+  const contacts = {};
+  users_().getDataRange().getValues().slice(1).forEach(r => {
+    const peer = String(r[0] || '');
+    if (String(r[3]).toUpperCase() != 'Y' || peer.toLowerCase() == userKey) return;
+    contacts[peer.toLowerCase()] = {
+      username: peer,
+      nama: String(r[2] || peer),
+      role: String(r[4] || 'BDO').toUpperCase(),
+      lastText: '',
+      lastTs: 0,
+      lastFrom: ''
+    };
+  });
+
+  const groups = {};
+  chatGroups_().getDataRange().getValues().slice(1).forEach(r => {
+    const id = String(r[0]);
+    const members = groupMembers_(r);
+    if (members.indexOf(userKey) < 0) return;
+    groups[id] = {
+      id: id,
+      name: String(r[1]),
+      memberCount: members.length,
+      lastText: '',
+      lastTs: 0,
+      lastFrom: ''
+    };
+  });
+
+  messages_().getDataRange().getValues().slice(1).forEach(r => {
+    const from = String(r[1] || '');
+    const to = String(r[2] || '');
+    const ts = Number(r[4]) || 0;
+    if (to.indexOf('group:') == 0) {
+      const group = groups[to.slice(6)];
+      if (group && ts >= group.lastTs) {
+        group.lastText = String(r[3] || '');
+        group.lastTs = ts;
+        group.lastFrom = from;
+      }
+      return;
+    }
+
+    let peer = '';
+    if (from.toLowerCase() == userKey) peer = to.toLowerCase();
+    else if (to.toLowerCase() == userKey) peer = from.toLowerCase();
+    const contact = contacts[peer];
+    if (contact && ts >= contact.lastTs) {
+      contact.lastText = String(r[3] || '');
+      contact.lastTs = ts;
+      contact.lastFrom = from;
+    }
+  });
+
+  return {
+    contacts: Object.keys(contacts).map(key => contacts[key])
+      .sort((a, b) => b.lastTs - a.lastTs || a.nama.localeCompare(b.nama)),
+    groups: Object.keys(groups).map(key => groups[key])
+      .sort((a, b) => b.lastTs - a.lastTs || a.name.localeCompare(b.name))
+  };
+}
+```
+
 Setelah endpoint ini dan semua perubahan di atas ditempel, jalankan `setup()` sekali untuk membuat sheet `Posts`, `Messages`, dan `ChatGroups`, simpan, lalu **deploy versi baru** Web App. Fungsi `setup()` hanya menambahkan sheet yang belum ada; tidak menghapus pesan personal yang sudah tersimpan di `Messages`.
 
 ## 7. Diagnostik jika login atau chat mendapat respons kosong
@@ -811,7 +925,7 @@ Frontend mengharapkan setiap request Apps Script mengembalikan JSON dengan prope
 
 1. Fungsi `loadState(t)` harus selalu mengembalikan `{ err: 'AUTH' }` untuk token tidak valid, atau object `{ state, name, user, role }` untuk sesi aktif. Jangan menghapus `return` pada hasil sesi.
 2. Fungsi `doPost(e)` harus membungkus hasil fungsi API sebagai `{ result: f.apply(null, req.args || []) }`.
-3. Pastikan `loadState`, `socialFeed`, `recentPosts`, `createPost`, `chatContacts`, `chatHistory`, `sendChat`, `chatGroups`, `createChatGroup`, `groupHistory`, dan `sendGroupChat` terdaftar pada `api_()` dan masing-masing mengembalikan hasil.
+3. Pastikan `loadState`, `socialFeed`, `recentPosts`, `createPost`, `chatContacts`, `chatNotificationSummary`, `chatHistory`, `sendChat`, `chatGroups`, `createChatGroup`, `groupHistory`, dan `sendGroupChat` terdaftar pada `api_()` dan masing-masing mengembalikan hasil.
 4. Jalankan `setup()` agar sheet `Posts`, `Messages`, dan `ChatGroups` tersedia, lalu deploy sebagai **versi baru**. Menyimpan kode saja tidak memperbarui deployment Web App.
 5. Keluar dari aplikasi, login kembali, lalu buka Feed/Chat. Token yang lama dapat tidak berlaku setelah akun dihapus atau sesi berakhir.
 

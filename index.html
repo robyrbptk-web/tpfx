@@ -784,6 +784,7 @@ font-weight:800
 }
 
 .chat-contact{
+position:relative;
 width:100%;
 display:flex;
 align-items:center;
@@ -811,6 +812,31 @@ white-space:nowrap
 
 .chat-contact-copy span{
 font-size:12px;
+color:var(--mut)
+}
+
+.chat-unread-badge{
+flex:none;
+min-width:19px;
+padding:2px 6px;
+border-radius:99px;
+background:var(--hot);
+color:#fff;
+text-align:center;
+font-size:10px;
+font-weight:800
+}
+
+.chat-notification-control{
+display:flex;
+flex-wrap:wrap;
+align-items:center;
+justify-content:flex-end;
+gap:8px;
+margin:-4px 0 12px
+}
+
+.chat-notification-control small{
 color:var(--mut)
 }
 
@@ -1104,7 +1130,9 @@ CHAT_ACTIVE=null,
 CHAT_TIMER=null,
 CHAT_HISTORY_LOADING=false,
 CHAT_HISTORY_REQUEST=0,
-CHAT_SENDING=false;
+CHAT_SENDING=false,
+CHAT_NOTIFICATIONS_LOADING=false,
+CHAT_NOTIFICATION_ERROR_AT=0;
 
 function seed(){
 return{
@@ -1457,6 +1485,7 @@ await loadTeam();
 }
 
 render();
+pollChatNotifications();
 
 if(tab=='feed'){
 loadSocialFeed();
@@ -2305,6 +2334,8 @@ if(!Array.isArray(r.rows))throw new Error('Endpoint chat harus mengembalikan row
 
 CHAT_CONTACTS=contacts.rows;
 CHAT_GROUPS=groups.rows;
+initializeChatSeen(CHAT_CONTACTS,CHAT_GROUPS);
+updateChatUnreadIndicators();
 
 if(CHAT_ACTIVE){
 const collection=CHAT_ACTIVE.type=='group'?CHAT_GROUPS:CHAT_CONTACTS;
@@ -2314,12 +2345,254 @@ CHAT_MESSAGES=[];
 }
 }
 
-if(tab=='chat'||dmTab=='chat')render();
+updateChatUnreadIndicators();
 
 }catch(e){
 toast('Chat gagal dimuat: '+String((e&&e.message)||e));
 }
 
+}
+
+
+function chatSeenKey(){
+return 'tpfx-chat-seen-'+String(USER||'').toLowerCase();
+}
+
+
+function chatNotifiedKey(){
+return 'tpfx-chat-notified-'+String(USER||'').toLowerCase();
+}
+
+
+function readChatSeen(){
+try{
+const value=JSON.parse(localStorage.getItem(chatSeenKey())||'{}');
+return value&&typeof value=='object'?value:{};
+}catch(e){
+return {};
+}
+}
+
+
+function readChatNotified(){
+try{
+const value=JSON.parse(localStorage.getItem(chatNotifiedKey())||'{}');
+return value&&typeof value=='object'?value:{};
+}catch(e){
+return {};
+}
+}
+
+
+function writeChatSeen(seen){
+try{
+localStorage.setItem(chatSeenKey(),JSON.stringify(seen));
+}catch(e){
+console.error('Status baca chat tidak dapat disimpan:',e);
+}
+}
+
+
+function writeChatNotified(notified){
+try{
+localStorage.setItem(chatNotifiedKey(),JSON.stringify(notified));
+}catch(e){
+console.error('Status notifikasi chat tidak dapat disimpan:',e);
+}
+}
+
+
+function chatThreadKey(type,id){
+return type+':'+String(id);
+}
+
+
+function initializeChatSeen(contacts,groups){
+let storedSeen=null,storedNotified=null;
+try{
+storedSeen=localStorage.getItem(chatSeenKey());
+storedNotified=localStorage.getItem(chatNotifiedKey());
+}catch(e){
+console.error('Status chat tidak dapat dimuat:',e);
+}
+const baseline={};
+contacts.forEach(contact=>{
+baseline[chatThreadKey('personal',contact.username)]=Number(contact.lastTs)||0;
+});
+groups.forEach(group=>{
+baseline[chatThreadKey('group',group.id)]=Number(group.lastTs)||0;
+});
+if(storedSeen===null)writeChatSeen(baseline);
+if(storedNotified===null){
+writeChatNotified(storedSeen===null?baseline:readChatSeen());
+}
+}
+
+
+function markChatSeen(type,id,ts){
+const seen=readChatSeen();
+const key=chatThreadKey(type,id);
+seen[key]=Math.max(Number(seen[key])||0,Number(ts)||0);
+writeChatSeen(seen);
+updateChatUnreadIndicators();
+}
+
+
+function chatUnread(type,item){
+const id=type=='group'?item.id:item.username;
+return Number(item.lastTs)>0&&
+String(item.lastFrom||'').toLowerCase()!=String(USER).toLowerCase()&&
+Number(item.lastTs)>(Number(readChatSeen()[chatThreadKey(type,id)])||0);
+}
+
+
+function unreadChatCount(){
+return CHAT_CONTACTS.filter(item=>chatUnread('personal',item)).length+
+CHAT_GROUPS.filter(item=>chatUnread('group',item)).length;
+}
+
+
+function updateChatNavBadge(){
+const button=document.querySelector('#nav button[data-nav-key="chat"]');
+if(!button)return;
+const old=button.querySelector('.nav-badge');
+if(old)old.remove();
+const count=unreadChatCount();
+if(!count)return;
+const badge=document.createElement('b');
+badge.className='nav-badge';
+badge.textContent=count>99?'99+':String(count);
+badge.setAttribute('aria-label',count+' percakapan belum dibaca');
+button.appendChild(badge);
+}
+
+
+function updateChatUnreadIndicators(){
+updateChatNavBadge();
+[
+...Array.from(document.querySelectorAll('.chat-contact[data-username]')).map(button=>({
+button,type:'personal',item:CHAT_CONTACTS.find(contact=>String(contact.username)==button.dataset.username)
+})),
+...Array.from(document.querySelectorAll('.chat-contact[data-group]')).map(button=>({
+button,type:'group',item:CHAT_GROUPS.find(group=>String(group.id)==button.dataset.group)
+}))
+].forEach(entry=>{
+const previous=entry.button.querySelector('.chat-unread-badge');
+if(previous)previous.remove();
+if(!entry.item||!chatUnread(entry.type,entry.item))return;
+const badge=document.createElement('span');
+badge.className='chat-unread-badge';
+badge.textContent='Baru';
+badge.setAttribute('aria-label','Pesan belum dibaca');
+entry.button.appendChild(badge);
+});
+}
+
+
+function chatUnreadBadge(type,item){
+return chatUnread(type,item)?'<span class="chat-unread-badge" aria-label="Pesan belum dibaca">Baru</span>':'';
+}
+
+
+function chatNotificationStatus(){
+if(!('Notification' in window))return 'Notifikasi browser tidak didukung di browser ini.';
+if(Notification.permission=='granted')return 'Notifikasi browser aktif.';
+if(Notification.permission=='denied')return 'Izin notifikasi diblokir di pengaturan browser.';
+return 'Aktifkan agar diberi tahu saat pesan baru masuk.';
+}
+
+
+async function enableChatNotifications(){
+if(!('Notification' in window)){
+toast('Browser ini tidak mendukung notifikasi.');
+return;
+}
+try{
+const permission=await Notification.requestPermission();
+if(permission=='granted'){
+toast('Notifikasi chat berhasil diaktifkan.');
+}else if(permission=='denied'){
+toast('Izin notifikasi ditolak. Ubah izin situs di pengaturan browser.');
+}else{
+toast('Izin notifikasi belum diberikan.');
+}
+const status=$('#chatNotificationStatus');
+if(status)status.textContent=chatNotificationStatus();
+if(permission=='granted'){
+const button=$('#chatNotificationButton');
+if(button)button.remove();
+}
+updateChatNavBadge();
+}catch(e){
+console.error('Permintaan izin notifikasi gagal:',e);
+toast('Notifikasi gagal diaktifkan: '+String((e&&e.message)||e));
+}
+}
+
+
+async function pollChatNotifications(){
+if(!TOK||CHAT_NOTIFICATIONS_LOADING)return;
+CHAT_NOTIFICATIONS_LOADING=true;
+try{
+const result=await rpc('chatNotificationSummary',TOK);
+if(!result||typeof result!='object')throw new Error('Respons ringkasan notifikasi chat tidak valid.');
+if(result.err){
+if(result.err=='AUTH'){logout();return;}
+throw new Error(typeof result.err=='string'?result.err:'Ringkasan chat tidak dapat dimuat');
+}
+if(!Array.isArray(result.contacts)||!Array.isArray(result.groups))throw new Error('Ringkasan chat harus mengembalikan contacts dan groups berupa array.');
+const contacts=result.contacts,groups=result.groups;
+initializeChatSeen(contacts,groups);
+CHAT_CONTACTS=contacts;
+CHAT_GROUPS=groups;
+const seen=readChatSeen(),notified=readChatNotified();
+const currentChatIsOpen=(type,id)=>
+(document.visibilityState!='hidden'&&(tab=='chat'||dmTab=='chat'))&&CHAT_ACTIVE&&CHAT_ACTIVE.type==type&&String(CHAT_ACTIVE.id)==String(id);
+const incoming=[];
+[['personal',contacts],['group',groups]].forEach(([type,items])=>{
+items.forEach(item=>{
+const id=type=='group'?item.id:item.username;
+const key=chatThreadKey(type,id);
+const lastTs=Number(item.lastTs)||0;
+if(currentChatIsOpen(type,id)){
+seen[key]=Math.max(Number(seen[key])||0,lastTs);
+return;
+}
+if(lastTs>Math.max(Number(seen[key])||0,Number(notified[key])||0)&&String(item.lastFrom||'').toLowerCase()!=String(USER).toLowerCase()){
+incoming.push({type,item,id,key,lastTs});
+}
+});
+});
+writeChatSeen(seen);
+if('Notification' in window&&Notification.permission=='granted'){
+incoming.forEach(message=>{
+const title=message.type=='group'?message.item.name:message.item.nama;
+const notification=new Notification(title||'Pesan baru', {
+body:String(message.item.lastText||'Anda menerima pesan baru'),
+icon:'./pwa-icon-192.png',
+tag:'tpfx-chat-'+message.key,
+renotify:false
+});
+notification.onclick=()=>{
+window.focus();
+if(message.type=='group')openGroupChat(message.id);
+else openTeamChat(message.id);
+notification.close();
+};
+notified[message.key]=Math.max(Number(notified[message.key])||0,message.lastTs);
+});
+writeChatNotified(notified);
+}
+updateChatUnreadIndicators();
+}catch(e){
+const now=Date.now();
+if(now-CHAT_NOTIFICATION_ERROR_AT>60000){
+console.error('Notifikasi chat gagal diperbarui:',e);
+CHAT_NOTIFICATION_ERROR_AT=now;
+}
+}finally{
+CHAT_NOTIFICATIONS_LOADING=false;
+}
 }
 
 
@@ -2361,6 +2634,7 @@ if(!Array.isArray(r.rows))throw new Error('Endpoint riwayat chat harus mengembal
 
 if(requestId!=CHAT_HISTORY_REQUEST||!CHAT_ACTIVE||CHAT_ACTIVE.type!=(isGroup?'group':'personal')||CHAT_ACTIVE.id!=target)return;
 CHAT_MESSAGES=mergeChatRows(r.rows,isGroup?'group':'personal',target);
+markChatSeen(isGroup?'group':'personal',target,CHAT_MESSAGES.reduce((latest,message)=>Math.max(latest,Number(message.ts)||0),0));
 render();
 scrollChatToBottom();
 }catch(e){
@@ -2463,6 +2737,7 @@ ${esc(m.text)}
 <time>${socialTime(m.ts)}</time>
 </div>
 `).join('');
+const notificationStatus=chatNotificationStatus();
 const contactOptions=CHAT_CONTACTS.map(c=>`
 <option value="${esc(c.username)}">${esc(c.nama)} (${esc(c.role)})</option>
 `).join('');
@@ -2476,6 +2751,10 @@ return`
 </div>
 <button class="btn sec" onclick="loadChatContacts()">↻ Segarkan</button>
 </div>
+<div class="chat-notification-control">
+<small id="chatNotificationStatus">${esc(notificationStatus)}</small>
+${'Notification' in window&&Notification.permission!='granted'?'<button id="chatNotificationButton" class="btn sec" onclick="enableChatNotifications()">🔔 Aktifkan notifikasi</button>':''}
+</div>
 
 <div class="chat-layout ${active?'has-peer':''}">
 <section class="chat-panel">
@@ -2485,6 +2764,7 @@ ${CHAT_CONTACTS.length?CHAT_CONTACTS.map(c=>`
 <button class="chat-contact ${CHAT_ACTIVE&&CHAT_ACTIVE.type=='personal'&&CHAT_ACTIVE.id==c.username?'active':''}" data-username="${esc(c.username)}" onclick="openTeamChat(this.dataset.username)">
 <div class="social-avatar">${initials(c.nama)}</div>
 <div class="chat-contact-copy"><b>${esc(c.nama)}</b><span>${esc(c.lastText||c.role||'Mulai percakapan')}</span></div>
+${chatUnreadBadge('personal',c)}
 </button>`).join(''):'<div class="empty">Belum ada anggota aktif lain.</div>'}
 </div>
 <div class="chat-panel-head">Grup</div>
@@ -2493,6 +2773,7 @@ ${CHAT_GROUPS.length?CHAT_GROUPS.map(g=>`
 <button class="chat-contact ${CHAT_ACTIVE&&CHAT_ACTIVE.type=='group'&&CHAT_ACTIVE.id==g.id?'active':''}" data-group="${esc(g.id)}" onclick="openGroupChat(this.dataset.group)">
 <div class="social-avatar">👥</div>
 <div class="chat-contact-copy"><b>${esc(g.name)}</b><span>${esc(g.lastText||'Grup · '+(g.memberCount||0)+' anggota')}</span></div>
+${chatUnreadBadge('group',g)}
 </button>`).join(''):'<div class="empty">Anda belum tergabung dalam grup.</div>'}
 </div>
 <details class="chat-create-group">
@@ -2556,6 +2837,10 @@ if(requestId!=CHAT_HISTORY_REQUEST||!CHAT_ACTIVE||CHAT_ACTIVE.type!=(isGroup?'gr
 const box=$('#chatPreview');
 const shouldScroll=!box||box.scrollHeight-box.scrollTop-box.clientHeight<60;
 CHAT_MESSAGES=mergeChatRows(r.rows,isGroup?'group':'personal',target);
+if((tab=='chat'||dmTab=='chat')&&document.visibilityState!='hidden'){
+markChatSeen(isGroup?'group':'personal',target,CHAT_MESSAGES.reduce((latest,message)=>Math.max(latest,Number(message.ts)||0),0));
+updateChatNavBadge();
+}
 if(box){
 renderChatMessages();
 if(shouldScroll)scrollChatToBottom();
@@ -2616,11 +2901,12 @@ if(r.ok!==1)throw new Error('Apps Script belum mengonfirmasi pengiriman pesan.')
 local.pending=false;
 if(type=='group'){
 const group=CHAT_GROUPS.find(item=>String(item.id)==target);
-if(group){group.lastText=text;group.lastTs=local.ts;}
+if(group){group.lastText=text;group.lastTs=local.ts;group.lastFrom=USER;}
 }else{
 const contact=CHAT_CONTACTS.find(item=>String(item.username)==target);
-if(contact){contact.lastText=text;contact.lastTs=local.ts;}
+if(contact){contact.lastText=text;contact.lastTs=local.ts;contact.lastFrom=USER;}
 }
+markChatSeen(type,target,local.ts);
 
 const listSelector=type=='group'?'[data-group]':'[data-username]';
 Array.from(document.querySelectorAll(listSelector)).forEach(button=>{
@@ -2654,8 +2940,9 @@ if(submit&&submit.isConnected)submit.disabled=false;
 
 CHAT_TIMER=setInterval(
 ()=>{
-if(TOK&&(tab=='chat'||dmTab=='chat')){
-if(CHAT_ACTIVE)refreshChatHistory();
+if(TOK){
+pollChatNotifications();
+if(document.visibilityState!='hidden'&&(tab=='chat'||dmTab=='chat')&&CHAT_ACTIVE)refreshChatHistory();
 }
 },
 6000
@@ -6416,15 +6703,18 @@ $('#nav').innerHTML=
 ['leads','🔥','Leads'],
 ['akt','✅','Aktivitas'],
 ['chat','💬','Chat'],
+['database','🗂️','Database'],
 ['profile','👤','Profile']
 ]
 .map(
 n=>
 `<button
+data-nav-key="${n[0]}"
 class="${dmTab==n[0]?'on':''}"
 onclick="
 dmU='all';
 dmTab='${n[0]}';
+if('${n[0]}'=='database'){window.location.href='database.html';return;}
 render();
 ${n[0]=='feed'?'loadSocialFeed();':''}
 ${n[0]=='chat'?'loadChatContacts();':''}
@@ -6508,13 +6798,15 @@ $('#nav').innerHTML=
 ['pipeline','📊','Pipeline'],
 ['activity','✅','Activity'],
 ['chat','💬','Chat'],
+['database','🗂️','Database'],
 ['profile','👤','Profile']
 ]
 .map(
 n=>
 `<button
+data-nav-key="${n[0]}"
 class="${tab==n[0]?'on':''}"
-onclick="go('${n[0]}')"
+onclick="${n[0]=='database'?'window.location.href=\'database.html\'':'go(\''+n[0]+'\')'}"
 >
 
 <span>
