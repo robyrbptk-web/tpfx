@@ -1086,11 +1086,19 @@ q='',
 per='hari',
 USER='',
 FEED=[],
+FEED_LOCAL_ECHOES=[],
+FEED_LOADING=false,
+FEED_POSTING=false,
+FEED_TIMER=null,
 CHAT_CONTACTS=[],
 CHAT_MESSAGES=[],
+CHAT_LOCAL_ECHOES=[],
 CHAT_GROUPS=[],
 CHAT_ACTIVE=null,
-CHAT_TIMER=null;
+CHAT_TIMER=null,
+CHAT_HISTORY_LOADING=false,
+CHAT_HISTORY_REQUEST=0,
+CHAT_SENDING=false;
 
 function seed(){
 return{
@@ -1734,10 +1742,17 @@ TOK='';
 S=seed();
 USER='';
 FEED=[];
+FEED_LOCAL_ECHOES=[];
+FEED_LOADING=false;
+FEED_POSTING=false;
 CHAT_CONTACTS=[];
 CHAT_MESSAGES=[];
+CHAT_LOCAL_ECHOES=[];
 CHAT_GROUPS=[];
 CHAT_ACTIVE=null;
+CHAT_HISTORY_LOADING=false;
+CHAT_HISTORY_REQUEST++;
+CHAT_SENDING=false;
 $('#appHeader').hidden=true;
 
 try{
@@ -2016,6 +2031,9 @@ minute:'2-digit'
 
 async function loadSocialFeed(){
 
+if(FEED_LOADING)return;
+FEED_LOADING=true;
+
 try{
 
 const r=await rpc(
@@ -2033,7 +2051,11 @@ typeof r.err=='string'?r.err:'Tidak dapat memuat feed'
 );
 }
 
-FEED=Array.isArray(r.rows)?r.rows:[];
+if(!Array.isArray(r.rows)){
+throw new Error('Endpoint socialFeed harus mengembalikan rows berupa array.');
+}
+
+FEED=mergeFeedRows(r.rows);
 
 if(tab=='feed'||dmTab=='feed'){
 render();
@@ -2045,7 +2067,48 @@ toast(
 'Feed gagal dimuat: '+String((e&&e.message)||e)
 );
 
+}finally{
+FEED_LOADING=false;
 }
+
+}
+
+
+function mergeFeedRows(rows){
+
+const serverRows=rows.filter(item=>
+!String(item.id||'').startsWith('local-post-')
+);
+const keep=[];
+const now=Date.now();
+
+FEED_LOCAL_ECHOES.forEach(local=>{
+if(local.pending){
+keep.push(local);
+serverRows.push(local);
+return;
+}
+
+const match=serverRows.findIndex(item=>
+item.kind=='post' &&
+String(item.username||'').toLowerCase()==String(local.username||'').toLowerCase() &&
+String(item.text||'')==local.text &&
+(Number(item.ts)||0)>=local.ts-5000 &&
+(Number(item.ts)||0)<=local.ts+120000
+);
+
+if(match>=0){
+return;
+}
+
+if(local.pending||now-local.ts<120000){
+keep.push(local);
+serverRows.push(local);
+}
+});
+
+FEED_LOCAL_ECHOES=keep;
+return serverRows.sort((a,b)=>(Number(b.ts)||0)-(Number(a.ts)||0));
 
 }
 
@@ -2070,7 +2133,7 @@ return`
 </div>
 <div class="social-actions">
 <span class="mut">Postingan terlihat oleh semua anggota tim</span>
-<button class="btn" onclick="publishSocialPost()">Posting</button>
+<button class="btn" onclick="publishSocialPost()" ${FEED_POSTING?'disabled':''}>${FEED_POSTING?'Mengirim...':'Posting'}</button>
 </div>
 </div>
 
@@ -2086,6 +2149,7 @@ FEED.length
 <div>
 <b>${esc(item.nama||item.username||'Anggota TPFX')}</b>
 <div class="mut">${socialTime(item.ts)}</div>
+${item.pending?'<div class="mut">Mengirim...</div>':''}
 </div>
 </div>
 <span class="social-post-type">${item.kind=='activity'?'✦ Aktivitas':'● Postingan'}</span>
@@ -2104,6 +2168,7 @@ FEED.length
 
 async function publishSocialPost(){
 
+if(FEED_POSTING)return;
 const input=$('#feedText');
 const text=input.value.trim();
 
@@ -2111,6 +2176,22 @@ if(!text){
 toast('Tulis isi postingan terlebih dahulu');
 return;
 }
+
+const local={
+id:'local-post-'+Date.now()+'-'+Math.random().toString(36).slice(2),
+username:USER,
+nama:S.name,
+text:text,
+ts:Date.now(),
+kind:'post',
+pending:true
+};
+
+FEED_LOCAL_ECHOES.push(local);
+FEED=mergeFeedRows(FEED);
+FEED_POSTING=true;
+input.value='';
+if(tab=='feed'||dmTab=='feed')render();
 
 try{
 
@@ -2122,19 +2203,32 @@ text
 
 if(r.err){
 if(r.err=='AUTH'){
+FEED_LOCAL_ECHOES=FEED_LOCAL_ECHOES.filter(item=>item.id!=local.id);
+FEED_POSTING=false;
 logout();
 return;
 }
-toast(typeof r.err=='string'?r.err:'Postingan gagal disimpan');
-return;
+throw new Error(typeof r.err=='string'?r.err:'Postingan gagal disimpan');
 }
 
-input.value='';
-await loadSocialFeed();
+if(r.ok!==1)throw new Error('Apps Script belum mengonfirmasi penyimpanan postingan.');
+
+local.pending=false;
+FEED_POSTING=false;
+FEED=mergeFeedRows(FEED);
+if(tab=='feed'||dmTab=='feed')render();
 toast('Postingan dibagikan');
 
 }catch(e){
 
+FEED_LOCAL_ECHOES=FEED_LOCAL_ECHOES.filter(item=>item.id!=local.id);
+FEED=FEED.filter(item=>item.id!=local.id);
+FEED_POSTING=false;
+if(tab=='feed'||dmTab=='feed'){
+render();
+const restored=$('#feedText');
+if(restored)restored.value=text;
+}
 toast('Postingan gagal dikirim: '+String((e&&e.message)||e));
 
 }
@@ -2200,6 +2294,8 @@ async function openChatHistory(){
 CHAT_MESSAGES=[];
 if(ROLE=='DM'||ROLE=='BM')dmTab='chat';else tab='chat';
 render();
+const requestId=++CHAT_HISTORY_REQUEST;
+CHAT_HISTORY_LOADING=true;
 
 try{
 const isGroup=CHAT_ACTIVE.type=='group';
@@ -2217,14 +2313,68 @@ throw new Error(typeof r.err=='string'?r.err:'Tidak dapat memuat pesan');
 }
 if(!Array.isArray(r.rows))throw new Error('Endpoint riwayat chat harus mengembalikan rows berupa array.');
 
-if(!CHAT_ACTIVE||CHAT_ACTIVE.type!=(isGroup?'group':'personal')||CHAT_ACTIVE.id!=target)return;
-CHAT_MESSAGES=r.rows;
+if(requestId!=CHAT_HISTORY_REQUEST||!CHAT_ACTIVE||CHAT_ACTIVE.type!=(isGroup?'group':'personal')||CHAT_ACTIVE.id!=target)return;
+CHAT_MESSAGES=mergeChatRows(r.rows,isGroup?'group':'personal',target);
 render();
 scrollChatToBottom();
 }catch(e){
-toast('Pesan gagal dimuat: '+String((e&&e.message)||e));
+if(requestId==CHAT_HISTORY_REQUEST)toast('Pesan gagal dimuat: '+String((e&&e.message)||e));
+}finally{
+if(requestId==CHAT_HISTORY_REQUEST)CHAT_HISTORY_LOADING=false;
 }
 
+}
+
+
+function mergeChatRows(rows,type,target){
+
+const serverRows=rows.filter(item=>
+!String(item.id||'').startsWith('local-message-')
+);
+const keep=[];
+const now=Date.now();
+
+CHAT_LOCAL_ECHOES=CHAT_LOCAL_ECHOES.filter(local=>
+local.type!=type||local.target!=target||now-local.ts<120000
+);
+
+CHAT_LOCAL_ECHOES.forEach(local=>{
+if(local.type!=type||local.target!=target)return;
+
+if(local.pending){
+serverRows.push(local);
+return;
+}
+
+const match=serverRows.findIndex(item=>
+String(item.from||'').toLowerCase()==String(local.from||'').toLowerCase() &&
+String(item.text||'')==local.text &&
+(Number(item.ts)||0)>=local.ts-5000 &&
+(Number(item.ts)||0)<=local.ts+120000
+);
+
+if(match>=0){
+return;
+}
+
+serverRows.push(local);
+});
+
+return serverRows.sort((a,b)=>(Number(a.ts)||0)-(Number(b.ts)||0));
+
+}
+
+
+function renderChatMessages(){
+const box=$('#chatPreview');
+if(!box)return;
+box.innerHTML=CHAT_MESSAGES.map(m=>`
+<div class="chat-bubble ${m.from==USER?'mine':''}">
+<b>${esc(m.nama||m.from||'Anggota TPFX')}</b>
+${esc(m.text)}
+${m.pending?'<time>Mengirim...</time>':`<time>${socialTime(m.ts)}</time>`}
+</div>
+`).join('')||'<div class="empty">Mulai percakapan dengan menyapa anggota.</div>';
 }
 
 
@@ -2331,14 +2481,18 @@ ${active?`
 
 
 function scrollChatToBottom(){
-const box=$('chatPreview');
+const box=$('#chatPreview');
 if(box)box.scrollTop=box.scrollHeight;
 }
 
 
 async function refreshChatHistory(){
 
-if(!(tab=='chat'||dmTab=='chat')||!CHAT_ACTIVE)return;
+if(!(tab=='chat'||dmTab=='chat')||!CHAT_ACTIVE||CHAT_HISTORY_LOADING)return;
+if(document.visibilityState=='hidden')return;
+
+CHAT_HISTORY_LOADING=true;
+const requestId=++CHAT_HISTORY_REQUEST;
 
 try{
 const isGroup=CHAT_ACTIVE.type=='group';
@@ -2351,19 +2505,19 @@ if(r.err=='AUTH'){logout();return;}
 throw new Error(typeof r.err=='string'?r.err:'Tidak dapat memuat pesan');
 }
 if(!Array.isArray(r.rows))throw new Error('Endpoint riwayat chat harus mengembalikan rows berupa array.');
-if(!CHAT_ACTIVE||CHAT_ACTIVE.type!=(isGroup?'group':'personal')||CHAT_ACTIVE.id!=target)return;
+if(requestId!=CHAT_HISTORY_REQUEST||!CHAT_ACTIVE||CHAT_ACTIVE.type!=(isGroup?'group':'personal')||CHAT_ACTIVE.id!=target)return;
 
-const box=$('chatPreview');
+const box=$('#chatPreview');
 const shouldScroll=!box||box.scrollHeight-box.scrollTop-box.clientHeight<60;
-CHAT_MESSAGES=r.rows;
+CHAT_MESSAGES=mergeChatRows(r.rows,isGroup?'group':'personal',target);
 if(box){
-box.innerHTML=CHAT_MESSAGES.map(m=>`
-<div class="chat-bubble ${m.from==USER?'mine':''}"><b>${esc(m.nama||m.from||'Anggota TPFX')}</b>${esc(m.text)}<time>${socialTime(m.ts)}</time></div>
-`).join('')||'<div class="empty">Mulai percakapan dengan menyapa anggota.</div>';
+renderChatMessages();
 if(shouldScroll)scrollChatToBottom();
 }
 }catch(e){
-toast('Chat gagal diperbarui: '+String((e&&e.message)||e));
+if(requestId==CHAT_HISTORY_REQUEST)toast('Chat gagal diperbarui: '+String((e&&e.message)||e));
+}finally{
+if(requestId==CHAT_HISTORY_REQUEST)CHAT_HISTORY_LOADING=false;
 }
 
 }
@@ -2372,29 +2526,81 @@ toast('Chat gagal diperbarui: '+String((e&&e.message)||e));
 async function sendTeamMessage(event){
 
 event.preventDefault();
+if(CHAT_SENDING)return;
 const input=$('#chatText');
 const text=input.value.trim();
 if(!CHAT_ACTIVE||!text)return;
 
+const target=CHAT_ACTIVE.id;
+const type=CHAT_ACTIVE.type;
+const local={
+id:'local-message-'+Date.now()+'-'+Math.random().toString(36).slice(2),
+from:USER,
+nama:S.name,
+text:text,
+ts:Date.now(),
+pending:true,
+type:type,
+target:target
+};
+
+CHAT_LOCAL_ECHOES.push(local);
+CHAT_MESSAGES=mergeChatRows(CHAT_MESSAGES,type,target);
+input.value='';
+CHAT_SENDING=true;
+const submit=input.form&&input.form.querySelector('[type="submit"]');
+if(submit)submit.disabled=true;
+renderChatMessages();
+scrollChatToBottom();
+
 try{
-const isGroup=CHAT_ACTIVE.type=='group';
 const r=await rpc(
-isGroup?'sendGroupChat':'sendChat',
+type=='group'?'sendGroupChat':'sendChat',
 TOK,
-CHAT_ACTIVE.id,
+target,
 text
 );
 if(!r||typeof r!='object')throw new Error('Format respons pengiriman pesan tidak valid.');
 if(r.err){
 if(r.err=='AUTH'){logout();return;}
-toast(typeof r.err=='string'?r.err:'Pesan gagal dikirim');
-return;
+throw new Error(typeof r.err=='string'?r.err:'Pesan gagal dikirim');
 }
 if(r.ok!==1)throw new Error('Apps Script belum mengonfirmasi pengiriman pesan.');
-input.value='';
-await Promise.all([refreshChatHistory(),loadChatContacts()]);
+
+local.pending=false;
+if(type=='group'){
+const group=CHAT_GROUPS.find(item=>String(item.id)==target);
+if(group){group.lastText=text;group.lastTs=local.ts;}
+}else{
+const contact=CHAT_CONTACTS.find(item=>String(item.username)==target);
+if(contact){contact.lastText=text;contact.lastTs=local.ts;}
+}
+
+const listSelector=type=='group'?'[data-group]':'[data-username]';
+Array.from(document.querySelectorAll(listSelector)).forEach(button=>{
+const key=type=='group'?button.dataset.group:button.dataset.username;
+if(String(key)!=target)return;
+const preview=button.querySelector('.chat-contact-copy span');
+if(preview)preview.textContent=text;
+});
+
+if(CHAT_ACTIVE&&CHAT_ACTIVE.type==type&&CHAT_ACTIVE.id==target){
+CHAT_MESSAGES=mergeChatRows(CHAT_MESSAGES,type,target);
+renderChatMessages();
+}
+
+toast('Pesan terkirim');
 }catch(e){
+CHAT_LOCAL_ECHOES=CHAT_LOCAL_ECHOES.filter(item=>item.id!=local.id);
+if(CHAT_ACTIVE&&CHAT_ACTIVE.type==type&&CHAT_ACTIVE.id==target){
+CHAT_MESSAGES=CHAT_MESSAGES.filter(item=>item.id!=local.id);
+renderChatMessages();
+if(input&& !input.value)input.value=text;
+}
 toast('Pesan gagal dikirim: '+String((e&&e.message)||e));
+}finally{
+CHAT_SENDING=false;
+if(submit&&submit.isConnected)submit.disabled=false;
 }
 
 }
@@ -2406,7 +2612,21 @@ if(TOK&&(tab=='chat'||dmTab=='chat')){
 if(CHAT_ACTIVE)refreshChatHistory();
 }
 },
-7000
+4000
+);
+
+
+FEED_TIMER=setInterval(
+()=>{
+if(
+TOK &&
+document.visibilityState!='hidden' &&
+(tab=='feed'||dmTab=='feed')
+){
+loadSocialFeed();
+}
+},
+30000
 );
 
 
