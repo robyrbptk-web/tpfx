@@ -1132,7 +1132,8 @@ CHAT_HISTORY_LOADING=false,
 CHAT_HISTORY_REQUEST=0,
 CHAT_SENDING=false,
 CHAT_NOTIFICATIONS_LOADING=false,
-CHAT_NOTIFICATION_ERROR_AT=0;
+CHAT_NOTIFICATION_ERROR_AT=0,
+LOGIN_PENDING=false;
 
 function seed(){
 return{
@@ -1475,16 +1476,17 @@ ROLE=='BM'
 :'';
 
 
-if(
-ROLE=='DM' ||
-ROLE=='BM'
-){
+const manager=ROLE=='DM'||ROLE=='BM';
+if(manager)TEAM=[];
+render();
 
-await loadTeam();
-
+if(manager){
+const bootToken=TOK;
+loadTeam().then(()=>{
+if(TOK==bootToken)render();
+});
 }
 
-render();
 pollChatNotifications();
 
 if(tab=='feed'){
@@ -1641,6 +1643,7 @@ Username
 id="lu"
 autocapitalize="off"
 autocomplete="username"
+onkeydown="if(event.key=='Enter')doLogin()"
 >
 
 <label>
@@ -1682,6 +1685,8 @@ Masuk
 
 async function doLogin(){
 
+if(LOGIN_PENDING)return;
+
 const u=
 $('#lu').value.trim();
 
@@ -1701,6 +1706,12 @@ return;
 
 }
 
+LOGIN_PENDING=true;
+const button=$('#app .login-card .btn');
+if(button){
+button.disabled=true;
+button.textContent='Memproses...';
+}
 
 try{
 
@@ -1754,6 +1765,15 @@ String(
 ''
 );
 
+}finally{
+
+LOGIN_PENDING=false;
+const currentButton=$('#app .login-card .btn');
+if(currentButton){
+currentButton.disabled=false;
+currentButton.textContent='Masuk';
+}
+
 }
 
 }
@@ -1781,6 +1801,7 @@ TOK='';
 S=seed();
 USER='';
 FEED=[];
+TEAM=[];
 FEED_LOCAL_ECHOES=[];
 FEED_LOADING=false;
 FEED_RECENT_LOADING=false;
@@ -1793,6 +1814,8 @@ CHAT_ACTIVE=null;
 CHAT_HISTORY_LOADING=false;
 CHAT_HISTORY_REQUEST++;
 CHAT_SENDING=false;
+ROLE='';
+LOGIN_PENDING=false;
 $('#appHeader').hidden=true;
 
 try{
@@ -5027,29 +5050,25 @@ dmSt='all';
 
 async function loadTeam(){
 
+const token=TOK;
+
 try{
 
 const r=
 await rpc(
 'dashboardDM',
-TOK
+token
 );
 
-if(
-!r.err
-){
-
-TEAM=
-r.rows ||
-[];
-
-}
+if(TOK!=token)return;
+if(r&&r.err=='AUTH'){logout();return;}
+if(r&&r.err)throw new Error(typeof r.err=='string'?r.err:'Gagal memuat data tim');
+if(!r||!Array.isArray(r.rows))throw new Error('Data tim dari server tidak valid');
+TEAM=r.rows;
 
 }catch(e){
 
-toast(
-'Gagal memuat data tim'
-);
+if(TOK==token)toast('Gagal memuat data tim: '+String((e&&e.message)||e));
 
 }
 
