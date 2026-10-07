@@ -39,6 +39,8 @@ function api_() {
     uploadImg: uploadImg,
     listUsers: listUsers,
     createUser: createUser,
+    resetBDOPassword: resetBDOPassword,
+    updateBDOTarget: updateBDOTarget,
     updateProfile: updateProfile,
     deleteUser: deleteUser,
     databaseData: databaseData,
@@ -59,7 +61,145 @@ function api_() {
 
 Jangan menghapus endpoint lain yang sudah ada.
 
-## 3. Tambahkan fungsi backend
+## 3. Reset password dan target aktivitas BDO
+
+Tempel dua endpoint berikut ke Code.gs. Reset password memakai helper hash yang sudah digunakan login (`hash_(username, password)`), hanya mengizinkan target role BDO, dan mencabut semua sesi aktif target. Sampaikan password sementara kepada BDO secara pribadi.
+
+Target aktivitas disimpan sebagai override di Script Properties agar tidak tertimpa state lama saat aplikasi BDO melakukan sinkronisasi otomatis.
+
+```javascript
+function activityTargetKey_(username) {
+  return 'activity_target_' + String(username).toLowerCase();
+}
+
+
+function resetBDOPassword(t, username, newPassword) {
+  const caller = user_(t);
+  if (!caller) return { err: 'AUTH' };
+
+  const callerRole = role_(t);
+  if (callerRole != 'BM' && callerRole != 'DM') {
+    return { err: 'Akses ditolak' };
+  }
+
+  username = String(username || '').trim();
+  newPassword = String(newPassword || '');
+  if (!username) return { err: 'Username BDO tidak valid' };
+  if (newPassword.length < 6 || newPassword.length > 128) {
+    return { err: 'Password harus terdiri dari 6 sampai 128 karakter' };
+  }
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const target = findUser_(username);
+    if (!target || String(target[4]).toUpperCase() != 'BDO') {
+      return { err: 'Akun BDO tidak ditemukan atau tidak aktif' };
+    }
+
+    users_().getRange(target.idx, 2).setValue(hash_(target[0], newPassword));
+
+    const properties = PropertiesService.getScriptProperties();
+    const all = properties.getProperties();
+    const targetUsername = String(target[0]).toLowerCase();
+    Object.keys(all).forEach(key => {
+      if (key.indexOf('t_') != 0) return;
+      const sessionUsername = String(all[key]).split('|')[0];
+      if (sessionUsername.toLowerCase() == targetUsername) {
+        properties.deleteProperty(key);
+      }
+    });
+  } finally {
+    lock.releaseLock();
+  }
+
+  return { ok: 1 };
+}
+
+
+function updateBDOTarget(t, username, targetValue) {
+  const caller = user_(t);
+  if (!caller) return { err: 'AUTH' };
+
+  const callerRole = role_(t);
+  if (callerRole != 'BM' && callerRole != 'DM') {
+    return { err: 'Akses ditolak' };
+  }
+
+  username = String(username || '').trim();
+  const target = Number(targetValue);
+  if (!username) return { err: 'Username BDO tidak valid' };
+  if (!Number.isInteger(target) || target < 1 || target > 1000) {
+    return { err: 'Target harus bilangan bulat antara 1 sampai 1000' };
+  }
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const account = findUser_(username);
+    if (!account || String(account[4]).toUpperCase() != 'BDO') {
+      return { err: 'Akun BDO tidak ditemukan atau tidak aktif' };
+    }
+
+    PropertiesService.getScriptProperties()
+      .setProperty(activityTargetKey_(account[0]), String(target));
+  } finally {
+    lock.releaseLock();
+  }
+
+  return { ok: 1, target: target };
+}
+```
+
+**Pertahankan target saat state dimuat/disimpan:**
+
+1. Pada `loadState(t)`, tambahkan properti `target` pada object hasil sukses. Ambil nilainya dari override jika ada:
+
+   ```javascript
+   const targetOverride = PropertiesService.getScriptProperties()
+     .getProperty(activityTargetKey_(u));
+   ```
+
+   Di dalam object hasil sukses:
+
+   ```javascript
+   target: targetOverride === null ? (state && state.target || 10) : Number(targetOverride)
+   ```
+
+2. Pada `saveState(t, json)`, di dalam blok `try` setelah lock didapatkan dan sebelum membuat `raw`, pertahankan override yang sudah ditetapkan manager:
+
+   ```javascript
+   const targetOverride = PropertiesService.getScriptProperties()
+     .getProperty(activityTargetKey_(u));
+   if (targetOverride !== null) parsed.target = Number(targetOverride);
+   const raw = JSON.stringify(parsed);
+   ```
+
+   Ganti baris lama `const raw = String(json);` dengan snippet tersebut, agar penyimpanan BDO tidak menimpa target dari BM/DM.
+
+3. Pada `dashboardDM(t)`, saat mengisi `state.target` di dalam `.map(r => ...)`, gunakan override:
+
+   ```javascript
+   const targetOverride = PropertiesService.getScriptProperties()
+     .getProperty(activityTargetKey_(r[0]));
+   // Dalam object state:
+   target: targetOverride === null ? (s.target || 10) : Number(targetOverride),
+   ```
+
+   Letakkan deklarasi `targetOverride` sebelum `return` object untuk akun tersebut.
+
+4. Pada `deleteUser`, sebelum `users_().deleteRow(target.idx)`, bersihkan override agar tidak tertinggal:
+
+   ```javascript
+   PropertiesService.getScriptProperties()
+     .deleteProperty(activityTargetKey_(targetUsername));
+   ```
+
+   `targetUsername` pada fungsi hapus yang ada sudah lowercase.
+
+Simpan Apps Script, lalu deploy versi baru Web App yang sama. Uji target di BM/DM dan login BDO kembali untuk melihat target terbaru; reset password mengeluarkan sesi BDO lama.
+
+## 4. Tambahkan fungsi backend
 
 Tempel dua fungsi berikut di Code.gs, misalnya setelah fungsi `createUser`.
 
@@ -173,7 +313,7 @@ function deleteUser(t, username) {
 }
 ```
 
-## 4. Pindahkan data database ke Apps Script
+## 5. Pindahkan data database ke Apps Script
 
 `database.html` tidak lagi menyimpan daftar nama dan nomor telepon. Salin array data lama ke project Apps Script agar hanya bisa diambil lewat endpoint yang memeriksa sesi.
 
@@ -218,7 +358,7 @@ function checkSession(t) {
 
 Kedua endpoint memvalidasi token melalui `loadState`; database hanya dikirim kepada akun dengan sesi aktif. Setelah semua perubahan selesai, simpan project Apps Script dan **deploy versi baru** pada deployment Web App yang digunakan aplikasi.
 
-## 5. Feed sosial dan chat di `index.html`
+## 6. Feed sosial dan chat di `index.html`
 
 Tambahkan sheet penyimpanan berikut ke fungsi `setup()` setelah pembuatan sheet `Data`:
 
@@ -670,7 +810,7 @@ Chat menggunakan percakapan personal yang sudah ada dan grup dengan beberapa ang
 
 Setelah endpoint ini dan semua perubahan di atas ditempel, jalankan `setup()` sekali untuk membuat sheet `Posts`, `Messages`, dan `ChatGroups`, simpan, lalu **deploy versi baru** Web App. Fungsi `setup()` hanya menambahkan sheet yang belum ada; tidak menghapus pesan personal yang sudah tersimpan di `Messages`.
 
-## Diagnostik jika login atau chat mendapat respons kosong
+## 7. Diagnostik jika login atau chat mendapat respons kosong
 
 Frontend mengharapkan setiap request Apps Script mengembalikan JSON dengan properti `result`. Jika melihat pesan **“Apps Script tidak mengembalikan hasil”**, periksa hal berikut:
 
@@ -680,7 +820,7 @@ Frontend mengharapkan setiap request Apps Script mengembalikan JSON dengan prope
 4. Jalankan `setup()` agar sheet `Posts`, `Messages`, dan `ChatGroups` tersedia, lalu deploy sebagai **versi baru**. Menyimpan kode saja tidak memperbarui deployment Web App.
 5. Keluar dari aplikasi, login kembali, lalu buka Feed/Chat. Token yang lama dapat tidak berlaku setelah akun dihapus atau sesi berakhir.
 
-## Feed dan chat terasa lambat
+## 8. Feed dan chat terasa lambat
 
 Frontend menampilkan postingan/pesan secara langsung sambil menyimpan ke Apps Script. Feed mengambil postingan terbaru dari `recentPosts` setiap 10 detik saat tab Feed terbuka; endpoint ini hanya membaca maksimal 100 baris terakhir dari sheet `Posts`, tidak memindai sheet `Data`. Tambahkan `recentPosts` pada `api_()` dan tempel fungsi di atas sebelum deploy versi baru.
 

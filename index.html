@@ -1392,6 +1392,10 @@ Array.isArray(r.state.acts)
 ?r.state
 :seed();
 
+if(Number.isFinite(Number(r.target))&&Number(r.target)>=1){
+S.target=Math.floor(Number(r.target));
+}
+
 USER=
 r.user||
 '';
@@ -5463,6 +5467,8 @@ Tim Sales
 
 ${perChips()}
 
+<div class="mut" style="margin-bottom:10px">Pilih BDO untuk melihat kinerja, mengubah target aktivitas, atau reset password.</div>
+
 ${
 T.length
 ?T.map(dmBdo).join('')
@@ -5514,6 +5520,21 @@ style="margin-top:12px"
 >
 ${esc(x.m.nama)}
 </h1>
+
+<div class="card" style="margin-top:12px">
+<b>Target aktivitas per hari</b>
+<div class="row sp" style="gap:8px;margin-top:8px">
+<input id="bdoTarget" type="number" min="1" max="1000" step="1" value="${x.tg}" aria-label="Target aktivitas per hari untuk BDO">
+<button class="btn sec" onclick="saveBDOTarget('${esc(x.m.user)}')">Simpan target</button>
+</div>
+<div class="mut" style="margin-top:5px">Target ini berlaku untuk dashboard BDO dan laporan BM/DM.</div>
+</div>
+
+<div class="card" style="margin-top:8px">
+<b>Bantuan akun</b>
+<div class="mut" style="margin-top:4px">Reset password BDO jika mereka tidak dapat masuk. Sampaikan password sementara secara pribadi.</div>
+<button class="btn sec" style="margin-top:10px" onclick="resetBDOPasswordForm('${esc(x.m.user)}','${esc(x.m.nama)}')">Reset password BDO</button>
+</div>
 
 ${perChips()}
 
@@ -5771,6 +5792,77 @@ dmActRow
 // ============================================================
 // ACCOUNT MANAGEMENT
 // ============================================================
+
+async function saveBDOTarget(username){
+
+const input=$('#bdoTarget');
+const target=Number(input.value);
+
+if(!Number.isInteger(target)||target<1||target>1000){
+toast('Target harus berupa bilangan bulat antara 1 sampai 1000');
+return;
+}
+
+try{
+const r=await rpc('updateBDOTarget',TOK,username,target);
+if(!r||typeof r!='object')throw new Error('Format respons updateBDOTarget tidak valid.');
+if(r.err){
+if(r.err=='AUTH'){logout();return;}
+throw new Error(typeof r.err=='string'?r.err:'Target gagal disimpan');
+}
+if(r.ok!==1)throw new Error('Apps Script belum mengonfirmasi perubahan target.');
+
+const member=TEAM.find(item=>String(item.m.user).toLowerCase()==String(username).toLowerCase());
+if(member)member.m.state.target=target;
+render();
+toast('Target aktivitas BDO diperbarui');
+}catch(e){
+toast('Target gagal disimpan: '+String((e&&e.message)||e));
+}
+
+}
+
+
+function resetBDOPasswordForm(username,name){
+
+sheet(`
+<h1>Reset password BDO</h1>
+<div class="mut" style="margin-top:5px">Akun @${esc(username)} · ${esc(name)}</div>
+<label>Password sementara baru (minimal 6 karakter)</label>
+<input id="resetBDOPassword" type="password" autocomplete="new-password" minlength="6" maxlength="128" placeholder="Masukkan password sementara">
+<div class="mut" style="margin-top:8px">Semua sesi aktif akun ini akan dikeluarkan. Sampaikan password baru secara pribadi kepada BDO.</div>
+<button class="btn big" style="margin-top:14px" onclick="resetBDOPassword('${esc(username)}')">Simpan password baru</button>
+<button class="btn sec big" style="margin-top:8px" onclick="closeS()">Batal</button>
+`);
+
+}
+
+
+async function resetBDOPassword(username){
+
+const password=$('#resetBDOPassword').value;
+if(password.length<6||password.length>128){
+toast('Password harus terdiri dari 6 sampai 128 karakter');
+return;
+}
+
+try{
+const r=await rpc('resetBDOPassword',TOK,username,password);
+if(!r||typeof r!='object')throw new Error('Format respons resetBDOPassword tidak valid.');
+if(r.err){
+if(r.err=='AUTH'){logout();return;}
+throw new Error(typeof r.err=='string'?r.err:'Password gagal direset');
+}
+if(r.ok!==1)throw new Error('Apps Script belum mengonfirmasi reset password.');
+
+closeS();
+toast('Password direset. Sampaikan password baru secara pribadi kepada BDO.');
+}catch(e){
+toast('Password gagal direset: '+String((e&&e.message)||e));
+}
+
+}
+
 
 async function loadUsers(){
 
