@@ -1048,9 +1048,7 @@ q='',
 per='hari',
 USER='',
 FEED=[],
-CHAT_CONTACTS=[],
 CHAT_MESSAGES=[],
-CHAT_PEER='',
 CHAT_TIMER=null;
 
 function seed(){
@@ -1144,10 +1142,36 @@ throw e;
 
 }
 
+if(
+!j ||
+typeof j!='object'
+){
+
+throw new Error(
+'Server mengirim respons yang tidak valid untuk "'+
+fn+
+'".'
+);
+
+}
+
 if(j.error){
 
 throw new Error(
 j.error
+);
+
+}
+
+if(
+!Object.prototype.hasOwnProperty.call(j,'result') ||
+typeof j.result=='undefined'
+){
+
+throw new Error(
+'Apps Script tidak mengembalikan hasil untuk "'+
+fn+
+'". Pastikan endpoint terdaftar di api_(), mengembalikan nilai, lalu deploy versi terbaru.'
 );
 
 }
@@ -1245,6 +1269,14 @@ await rpc(
 TOK
 );
 
+if(!r || typeof r!='object'){
+
+throw new Error(
+'Endpoint loadState mengembalikan respons kosong. Periksa fungsi loadState di Apps Script dan deploy ulang.'
+);
+
+}
+
 
 if(
 r &&
@@ -1257,6 +1289,9 @@ try{
 
 localStorage.removeItem(
 'swt'
+);
+localStorage.removeItem(
+'swt_user'
 );
 
 }catch(e){}
@@ -1279,6 +1314,26 @@ r.err
 
 }
 
+
+if(
+!r.user ||
+!r.name ||
+!r.role ||
+!Object.prototype.hasOwnProperty.call(r,'state') ||
+(
+r.state &&
+(
+!Array.isArray(r.state.leads) ||
+!Array.isArray(r.state.acts)
+)
+)
+){
+
+throw new Error(
+'Format respons loadState tidak lengkap. Periksa endpoint loadState di Apps Script dan deploy ulang.'
+);
+
+}
 
 S=
 r.state &&
@@ -1638,9 +1693,7 @@ TOK='';
 S=seed();
 USER='';
 FEED=[];
-CHAT_CONTACTS=[];
 CHAT_MESSAGES=[];
-CHAT_PEER='';
 $('#appHeader').hidden=true;
 
 try{
@@ -1927,6 +1980,10 @@ TOK
 );
 
 if(r.err){
+if(r.err=='AUTH'){
+logout();
+return;
+}
 throw new Error(
 typeof r.err=='string'?r.err:'Tidak dapat memuat feed'
 );
@@ -2020,6 +2077,10 @@ text
 );
 
 if(r.err){
+if(r.err=='AUTH'){
+logout();
+return;
+}
 toast(typeof r.err=='string'?r.err:'Postingan gagal disimpan');
 return;
 }
@@ -2037,75 +2098,43 @@ toast('Postingan gagal dikirim: '+String((e&&e.message)||e));
 }
 
 
-async function loadChatContacts(){
+async function loadBroadcastHistory(){
 
 try{
 
 const r=await rpc(
-'chatContacts',
+'broadcastHistory',
 TOK
 );
 
+if(!r||typeof r!='object'){
+throw new Error('Format respons riwayat pesan tim tidak valid.');
+}
+
 if(r.err){
+if(r.err=='AUTH'){
+logout();
+return;
+}
 throw new Error(
 typeof r.err=='string'?r.err:'Tidak dapat memuat daftar chat'
 );
 }
 
-CHAT_CONTACTS=Array.isArray(r.rows)?r.rows:[];
-
-if(CHAT_PEER&&!CHAT_CONTACTS.some(x=>x.username==CHAT_PEER)){
-CHAT_PEER='';
-CHAT_MESSAGES=[];
+if(!Array.isArray(r.rows)){
+throw new Error('Endpoint broadcastHistory harus mengembalikan rows berupa array.');
 }
+
+CHAT_MESSAGES=r.rows;
 
 if(tab=='chat'||dmTab=='chat'){
 render();
-}
-
-}catch(e){
-
-toast('Chat gagal dimuat: '+String((e&&e.message)||e));
-
-}
-
-}
-
-
-async function openTeamChat(username){
-
-CHAT_PEER=username;
-CHAT_MESSAGES=[];
-
-if(ROLE=='DM'||ROLE=='BM'){
-dmTab='chat';
-}else{
-tab='chat';
-}
-
-render();
-
-try{
-
-const r=await rpc(
-'chatHistory',
-TOK,
-username
-);
-
-if(r.err){
-throw new Error(
-typeof r.err=='string'?r.err:'Tidak dapat memuat pesan'
-);
-}
-
-CHAT_MESSAGES=Array.isArray(r.rows)?r.rows:[];
-render();
 scrollChatToBottom();
+}
 
 }catch(e){
 
-toast('Pesan gagal dimuat: '+String((e&&e.message)||e));
+toast('Pesan tim gagal dimuat: '+String((e&&e.message)||e));
 
 }
 
@@ -2114,9 +2143,9 @@ toast('Pesan gagal dimuat: '+String((e&&e.message)||e));
 
 function chatPage(){
 
-const active=CHAT_CONTACTS.find(x=>x.username==CHAT_PEER);
 const messages=CHAT_MESSAGES.map(m=>`
 <div class="chat-bubble ${m.from==USER?'mine':''}">
+<b>${esc(m.nama||m.from||'Anggota TPFX')}</b>
 ${esc(m.text)}
 <time>${socialTime(m.ts)}</time>
 </div>
@@ -2126,49 +2155,24 @@ return`
 <div class="social-wrap">
 <div class="social-top">
 <div>
-<div class="social-brand">Pesan</div>
-<div class="social-subtitle">Percakapan pribadi antaranggota TPFX</div>
+<div class="social-brand">Pesan Tim</div>
+<div class="social-subtitle">Pengumuman untuk semua akun aktif TPFX</div>
 </div>
-<button class="btn sec" onclick="loadChatContacts()">↻ Segarkan</button>
+<button class="btn sec" onclick="loadBroadcastHistory()">↻ Segarkan</button>
 </div>
 
-<div class="chat-layout ${active?'has-peer':''}">
 <section class="chat-panel">
-<div class="chat-panel-head">Anggota tim</div>
-<div>
-${
-CHAT_CONTACTS.length
-?CHAT_CONTACTS.map(c=>`
-<button class="chat-contact ${c.username==CHAT_PEER?'active':''}" data-username="${esc(c.username)}" onclick="openTeamChat(this.dataset.username)">
-<div class="social-avatar">${initials(c.nama)}</div>
-<div class="chat-contact-copy">
-<b>${esc(c.nama)}</b>
-<span>${esc(c.lastText||c.role||'Mulai percakapan')}</span>
-</div>
-</button>
-`).join('')
-:'<div class="empty">Belum ada anggota aktif lain.</div>'
-}
-</div>
-</section>
-
-<section class="chat-panel">
-${
-active
-?`<div class="chat-panel-head row">
-<button class="btn sec chat-back" style="display:none;padding:7px 10px" onclick="CHAT_PEER='';CHAT_MESSAGES=[];render()">←</button>
-<div class="social-avatar">${initials(active.nama)}</div>
-<div>${esc(active.nama)}<div class="mut">${esc(active.role)}</div></div>
-</div>
-<div class="chat-preview" id="chatPreview">${messages||'<div class="empty">Mulai percakapan dengan menyapa rekan tim.</div>'}</div>
+<div class="chat-panel-head">Broadcast untuk semua anggota</div>
+<div class="chat-preview" id="chatPreview">${messages||'<div class="empty">Belum ada pengumuman tim.</div>'}</div>
+${ROLE=='DM'||ROLE=='BM'
+?`
 <form class="chat-compose" onsubmit="sendTeamMessage(event)">
-<textarea id="chatText" maxlength="1000" placeholder="Tulis pesan..." aria-label="Tulis pesan"></textarea>
-<button class="btn" type="submit">Kirim</button>
+<textarea id="chatText" maxlength="1000" placeholder="Tulis pengumuman untuk semua akun..." aria-label="Tulis pengumuman untuk semua akun"></textarea>
+<button class="btn" type="submit">Kirim ke semua</button>
 </form>`
-:'<div class="empty">Pilih anggota tim untuk mulai chat.</div>'
+:'<div class="chat-panel-head mut">Hanya BM dan DM yang dapat mengirim broadcast. Anda dapat membaca pengumuman tim di sini.</div>'
 }
 </section>
-</div>
 </div>
 `;
 
@@ -2183,15 +2187,18 @@ if(box)box.scrollTop=box.scrollHeight;
 
 async function refreshChatHistory(){
 
-if(!CHAT_PEER||!(tab=='chat'||dmTab=='chat'))return;
+if(!(tab=='chat'||dmTab=='chat'))return;
 
 try{
 
 const r=await rpc(
-'chatHistory',
-TOK,
-CHAT_PEER
+'broadcastHistory',
+TOK
 );
+
+if(!r||typeof r!='object'){
+throw new Error('Format respons riwayat pesan tim tidak valid.');
+}
 
 if(r.err){
 if(r.err=='AUTH'){
@@ -2201,6 +2208,10 @@ return;
 throw new Error(typeof r.err=='string'?r.err:'Tidak dapat memuat pesan');
 }
 
+if(!Array.isArray(r.rows)){
+throw new Error('Endpoint broadcastHistory harus mengembalikan rows berupa array.');
+}
+
 const box=$('chatPreview');
 const shouldScroll=!box||box.scrollHeight-box.scrollTop-box.clientHeight<60;
 CHAT_MESSAGES=Array.isArray(r.rows)?r.rows:[];
@@ -2208,10 +2219,11 @@ CHAT_MESSAGES=Array.isArray(r.rows)?r.rows:[];
 if(box){
 box.innerHTML=CHAT_MESSAGES.map(m=>`
 <div class="chat-bubble ${m.from==USER?'mine':''}">
+<b>${esc(m.nama||m.from||'Anggota TPFX')}</b>
 ${esc(m.text)}
 <time>${socialTime(m.ts)}</time>
 </div>
-`).join('')||'<div class="empty">Mulai percakapan dengan menyapa rekan tim.</div>';
+`).join('')||'<div class="empty">Belum ada pengumuman tim.</div>';
 if(shouldScroll)scrollChatToBottom();
 }
 
@@ -2228,31 +2240,39 @@ event.preventDefault();
 const input=$('#chatText');
 const text=input.value.trim();
 
-if(!CHAT_PEER||!text)return;
+if(!text)return;
 
 try{
 
 const r=await rpc(
-'sendChat',
+'sendBroadcast',
 TOK,
-CHAT_PEER,
 text
 );
 
+if(!r||typeof r!='object'){
+throw new Error('Format respons sendBroadcast tidak valid.');
+}
+
 if(r.err){
+if(r.err=='AUTH'){
+logout();
+return;
+}
 toast(typeof r.err=='string'?r.err:'Pesan gagal dikirim');
 return;
 }
 
+if(r.ok!==1){
+throw new Error('Apps Script belum mengonfirmasi pengiriman broadcast.');
+}
+
 input.value='';
-await Promise.all([
-refreshChatHistory(),
-loadChatContacts()
-]);
+await loadBroadcastHistory();
 
 }catch(e){
 
-toast('Pesan gagal dikirim: '+String((e&&e.message)||e));
+toast('Broadcast gagal dikirim: '+String((e&&e.message)||e));
 
 }
 
@@ -2263,7 +2283,6 @@ CHAT_TIMER=setInterval(
 ()=>{
 if(
 TOK &&
-CHAT_PEER &&
 (
 tab=='chat' ||
 dmTab=='chat'
@@ -5939,7 +5958,7 @@ dmU='all';
 dmTab='${n[0]}';
 render();
 ${n[0]=='feed'?'loadSocialFeed();':''}
-${n[0]=='chat'?'loadChatContacts();':''}
+${n[0]=='chat'?'loadBroadcastHistory();':''}
 scrollTo(0,0)
 "
 >
@@ -5976,7 +5995,7 @@ loadSocialFeed();
 }
 
 if(t=='chat'){
-loadChatContacts();
+loadBroadcastHistory();
 }
 
 scrollTo(

@@ -47,7 +47,9 @@ function api_() {
     createPost: createPost,
     chatContacts: chatContacts,
     chatHistory: chatHistory,
-    sendChat: sendChat
+    sendChat: sendChat,
+    broadcastHistory: broadcastHistory,
+    sendBroadcast: sendBroadcast
   };
 }
 ```
@@ -429,6 +431,65 @@ function sendChat(t, peer, text) {
 }
 
 
+function broadcastHistory(t) {
+  const username = user_(t);
+  const account = username && findUser_(username);
+  if (!account || String(account[3]).toUpperCase() != 'Y') {
+    return { err: 'AUTH' };
+  }
+
+  const names = {};
+  users_().getDataRange().getValues().slice(1).forEach(r => {
+    const account = String(r[0] || '').trim();
+    if (account) names[account.toLowerCase()] = String(r[2] || account);
+  });
+
+  const rows = messages_().getDataRange().getValues().slice(1)
+    .filter(r => String(r[2]) == '*')
+    .sort((a, b) => Number(a[4]) - Number(b[4]))
+    .slice(-200)
+    .map(r => ({
+      id: String(r[0]),
+      from: String(r[1]),
+      nama: names[String(r[1]).toLowerCase()] || String(r[1]),
+      text: String(r[3]),
+      ts: Number(r[4]) || 0
+    }));
+
+  return { rows: rows };
+}
+
+
+function sendBroadcast(t, text) {
+  const username = user_(t);
+  const account = username && findUser_(username);
+  if (!account || String(account[3]).toUpperCase() != 'Y') {
+    return { err: 'AUTH' };
+  }
+
+  const callerRole = role_(t);
+  if (callerRole != 'BM' && callerRole != 'DM') {
+    return { err: 'Hanya BM dan DM yang dapat mengirim broadcast' };
+  }
+
+  text = String(text || '').trim();
+  if (!text) return { err: 'Isi pesan tidak boleh kosong' };
+  if (text.length > 1000) return { err: 'Pesan maksimal 1000 karakter' };
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    messages_().appendRow([
+      Utilities.getUuid(), username, '*', text, Date.now()
+    ]);
+  } finally {
+    lock.releaseLock();
+  }
+
+  return { ok: 1 };
+}
+
+
 function purgeSocialData_(username) {
   const key = String(username).toLowerCase();
   const posts = posts_();
@@ -450,6 +511,20 @@ function purgeSocialData_(username) {
 
 Tambahkan pemanggilan `purgeSocialData_(targetUsername);` ke fungsi `deleteUser`, sebelum `users_().deleteRow(target.idx)`, agar posting dan chat ikut terhapus saat akun dihapus.
 
-Setelah endpoint ini dan semua perubahan di atas ditempel, jalankan `setup()` sekali untuk membuat sheet `Posts` dan `Messages`, simpan, lalu **deploy versi baru** Web App. Feed menampilkan ringkasan aktivitas tanpa nama atau rincian calon nasabah; pesan chat hanya dapat diambil oleh dua akun yang terlibat.
+Chat di halaman web menggunakan broadcast: semua akun yang sudah login dapat membaca riwayat pesan tim, sedangkan hanya BM dan DM yang dapat mengirim ke semua akun aktif. Endpoint personal `chatContacts`, `chatHistory`, dan `sendChat` tetap dipertahankan di Apps Script, tetapi tidak dipakai oleh tampilan chat broadcast. Broadcast disimpan di sheet `Messages` dengan kolom `to` bernilai `*`; fungsi `purgeSocialData_` yang sudah ada tetap menghapus broadcast yang dibuat akun yang dihapus.
+
+Setelah endpoint ini dan semua perubahan di atas ditempel, jalankan `setup()` sekali untuk membuat sheet `Posts` dan `Messages`, simpan, lalu **deploy versi baru** Web App.
+
+## Diagnostik jika login atau chat mendapat respons kosong
+
+Frontend mengharapkan setiap request Apps Script mengembalikan JSON dengan properti `result`. Jika melihat pesan **“Apps Script tidak mengembalikan hasil”**, periksa hal berikut:
+
+1. Fungsi `loadState(t)` harus selalu mengembalikan `{ err: 'AUTH' }` untuk token tidak valid, atau object `{ state, name, user, role }` untuk sesi aktif. Jangan menghapus `return` pada hasil sesi.
+2. Fungsi `doPost(e)` harus membungkus hasil fungsi API sebagai `{ result: f.apply(null, req.args || []) }`.
+3. Pastikan `loadState`, `socialFeed`, `createPost`, `broadcastHistory`, dan `sendBroadcast` terdaftar pada `api_()` dan masing-masing mengembalikan hasil. Endpoint personal lama dapat tetap terdaftar jika masih digunakan bagian lain.
+4. Jalankan `setup()` agar sheet `Posts` dan `Messages` tersedia, lalu deploy sebagai **versi baru**. Menyimpan kode saja tidak memperbarui deployment Web App.
+5. Keluar dari aplikasi, login kembali, lalu buka Feed/Chat. Token yang lama dapat tidak berlaku setelah akun dihapus atau sesi berakhir.
+
+Endpoint sesi dapat diuji tanpa kredensial dengan memanggil `loadState` menggunakan token kosong: respons yang diharapkan adalah `{ "result": { "err": "AUTH" } }`, bukan respons tanpa `result`.
 
 **Catatan riwayat Git:** data lama pernah ada di commit `388de7a`. Menghapusnya dari versi terbaru tidak menghapus data dari riwayat commit. Jika repository dapat diakses publik, data di commit lama masih dapat dilihat melalui history; penghapusan dari history memerlukan perubahan riwayat Git dan koordinasi sebelum force-push.
