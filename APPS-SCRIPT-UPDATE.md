@@ -44,6 +44,7 @@ function api_() {
     updateProfile: updateProfile,
     deleteUser: deleteUser,
     databaseData: databaseData,
+    publicDatabaseData: publicDatabaseData,
     checkSession: checkSession,
     socialFeed: socialFeed,
     recentPosts: recentPosts,
@@ -313,9 +314,9 @@ function deleteUser(t, username) {
 }
 ```
 
-## 5. Pindahkan data database ke Apps Script
+## 5. Sajikan database publik dari Apps Script
 
-`database.html` tidak lagi menyimpan daftar nama dan nomor telepon. Salin array data lama ke project Apps Script agar hanya bisa diambil lewat endpoint yang memeriksa sesi.
+`database.html` dapat dibuka tanpa login dan memanggil endpoint `publicDatabaseData`. Karena endpoint ini tidak memakai sesi, jangan hubungkan endpoint tersebut ke seluruh daftar pribadi atau langsung mengembalikan `DATABASE_DATA`. Buat whitelist terpisah yang hanya berisi kontak yang pemilik datanya telah setujui untuk dipublikasikan. Jangan menaruh isi whitelist atau nomor telepon ke file dokumentasi atau Git.
 
 Data lama dapat diambil dari versi Git sebelum perubahan ini:
 
@@ -323,25 +324,19 @@ Data lama dapat diambil dari versi Git sebelum perubahan ini:
 git show 388de7a:database.html
 ```
 
-Di output, cari deklarasi `const DATA=[...];`. Salin seluruh deklarasi array itu ke Code.gs dan ubah nama variabelnya menjadi `DATABASE_DATA`:
+Jangan salin seluruh array `DATA` lama sebagai data publik. Buat whitelist kosong berikut di Code.gs, lalu isi secara manual hanya dengan record yang sudah mendapat persetujuan publik. Bentuk setiap record tetap `[nomor, pekerjaan, telepon]`, dan setiap kelompok BDO berbentuk `{ n: 'Nama BDO', r: [ ...record... ] }`, sama seperti format lama:
 
 ```javascript
-const DATABASE_DATA = [/* tempel seluruh record array lama di sini */];
+const PUBLIC_DATABASE_DATA = [];
 ```
 
-Ganti komentar dengan seluruh record array yang disalin, tanpa mengubah isi record. Simpan array hanya di project Apps Script; jangan tempelkan isinya ke file dokumentasi atau commit Git baru.
+Jangan tambahkan kontak ke whitelist tanpa persetujuan yang relevan. Simpan datanya hanya di project Apps Script.
 
-Tambahkan fungsi berikut ke Code.gs:
+Pertahankan `databaseData(t)` lama untuk pemanggilan berautentikasi yang mungkin masih digunakan aplikasi. Tambahkan endpoint publik berikut ke Code.gs dan daftarkan `publicDatabaseData` di `api_()`:
 
 ```javascript
-function databaseData(t) {
-  const session = loadState(t);
-
-  if (!session || session.err) {
-    return { err: 'AUTH' };
-  }
-
-  return { rows: DATABASE_DATA };
+function publicDatabaseData() {
+  return { rows: PUBLIC_DATABASE_DATA };
 }
 
 
@@ -356,7 +351,7 @@ function checkSession(t) {
 }
 ```
 
-Kedua endpoint memvalidasi token melalui `loadState`; database hanya dikirim kepada akun dengan sesi aktif. Setelah semua perubahan selesai, simpan project Apps Script dan **deploy versi baru** pada deployment Web App yang digunakan aplikasi.
+`databaseData(t)` dan `checkSession(t)` tetap memvalidasi token melalui `loadState`; hanya endpoint baru `publicDatabaseData()` yang tidak memakai sesi, dan endpoint tersebut wajib mengembalikan whitelist saja. Pastikan deployment Web App mengizinkan akses publik sesuai kebutuhan aplikasi; ini berarti setiap record dalam whitelist dapat dilihat siapa pun yang memiliki URL database. Simpan Apps Script dan **deploy versi baru** pada deployment Web App yang digunakan aplikasi.
 
 ## 6. Feed sosial dan chat di `index.html`
 

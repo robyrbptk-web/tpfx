@@ -2,61 +2,95 @@
 <html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>DATABASE CALON NASABAH TPFX</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#3158d8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="pwa-icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link rel="icon" type="image/jpeg" href="tpfxlogo.jpg">
 <style>
-:root{--bg:#f3f5f7;--card:#fff;--ink:#14212e;--mut:#5d6b78;--line:#dde3e8;--acc:#0b6b5c;--accink:#fff;--chip:#e6ecef;--ok:#0b6b5c;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e161d;--card:#16212b;--ink:#e8eef2;--mut:#90a0ad;--line:#26343f;--acc:#2fbf9f;--accink:#06231d;--chip:#1f2d38;--ok:#2fbf9f}}
-:root[data-theme="dark"]{--bg:#0e161d;--card:#16212b;--ink:#e8eef2;--mut:#90a0ad;--line:#26343f;--acc:#2fbf9f;--accink:#06231d;--chip:#1f2d38;--ok:#2fbf9f}
-*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
-body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 "Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
-header{padding:18px 16px 10px;max-width:640px;margin:0 auto}
-h1{font-size:19px;margin:0;font-weight:800;letter-spacing:.2px}
-.sub{color:var(--mut);font-size:13px;margin-top:2px}
-.tabs{display:flex;gap:8px;overflow-x:auto;padding:4px 16px 10px;max-width:640px;margin:0 auto;scrollbar-width:none}
-.tabs::-webkit-scrollbar{display:none}
-.tab{flex:none;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:9px 14px;font:inherit;font-weight:600;cursor:pointer}
-.tab[aria-selected=true]{background:var(--acc);color:var(--accink);border-color:var(--acc)}
-main{max-width:640px;margin:0 auto;padding:0 16px 40px}
-.bar{position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);padding:6px 0 8px;z-index:2}
-.prog{height:6px;background:var(--chip);border-radius:9px;overflow:hidden;margin:2px 0 6px}
-.prog i{display:block;height:100%;background:var(--acc);width:0;transition:width .3s}
-.stat{font-size:13px;color:var(--mut);margin-bottom:8px}
-input[type=search]{width:100%;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:11px 12px;font:inherit}
-.chips{display:flex;gap:6px;overflow-x:auto;padding-top:8px;scrollbar-width:none}
-.chip{flex:none;border:0;background:var(--chip);color:var(--ink);border-radius:8px;padding:7px 11px;font:inherit;font-size:13px;cursor:pointer}
-.chip[aria-pressed=true]{background:var(--ink);color:var(--bg)}
-.item{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:8px;display:grid;grid-template-columns:1fr auto;gap:8px 10px;align-items:center}
-.item.done{opacity:.72}
-.no{color:var(--mut);font-size:12px}
-.tel{font-weight:700;font-size:17px;letter-spacing:.3px}
-.job{font-size:13px;color:var(--mut)}
-.wa{grid-row:1/3;grid-column:2;background:var(--acc);color:var(--accink);text-decoration:none;font-weight:700;border-radius:10px;padding:12px 16px;text-align:center}
-select{grid-column:1/3;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:8px;font:inherit;font-size:14px}
-details{margin-top:10px;font-size:13px;color:var(--mut)}
-summary{cursor:pointer}
-textarea{width:100%;margin-top:6px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:10px;font:inherit;min-height:84px}
-.empty{text-align:center;color:var(--mut);padding:30px 0}
-#gate{max-width:640px;margin:20px auto;padding:24px}
-#gate .auth-link,#gate button{display:inline-block;margin:8px 4px 0;padding:10px 16px;border:0;border-radius:10px;background:var(--acc);color:var(--accink);font:inherit;font-weight:700;text-decoration:none;cursor:pointer}
-:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+:root{color-scheme:light;--bg:#fff;--card:#fff;--ink:#192238;--mut:#758096;--line:#e8ebf2;--pri:#3158d8;--soft:#f0f4ff;--shadow:0 8px 26px rgba(30,45,80,.055);box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}
+html{scroll-padding-top:80px}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 'Plus Jakarta Sans',system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+.app-topbar{position:sticky;top:0;z-index:4;display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:900px;margin:0 auto;padding:12px 20px;border-bottom:1px solid rgba(232,235,242,.9);background:rgba(255,255,255,.94);backdrop-filter:blur(14px)}
+.app-brand{display:flex;align-items:center;gap:10px;min-width:0;text-decoration:none;color:inherit}
+.app-brand-mark{width:116px;height:40px;display:block;flex:none;border-radius:8px;object-fit:cover;background:#fff}
+.app-brand-copy b,.app-brand-copy span{display:block;white-space:nowrap}
+.app-brand-copy b{font-size:14px;line-height:1.2}
+.app-brand-copy span{margin-top:2px;color:var(--mut);font-size:10.5px}
+.top-actions{display:flex;align-items:center;gap:8px}
+.top-link,.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;padding:10px 14px;border-radius:13px;text-decoration:none;font-weight:700}
+.top-link{border:1px solid var(--line);background:#fff;color:var(--ink)}
+.btn{border:0;background:var(--pri);color:#fff;box-shadow:0 5px 14px rgba(39,67,214,.16)}
+.btn.wa{background:#168a55;color:#fff}
+main{max-width:900px;margin:0 auto;padding:22px 16px calc(40px + env(safe-area-inset-bottom,0px))}
+.page-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin-bottom:18px}
+h1{font-size:24px;font-weight:800;letter-spacing:-.03em;line-height:1.2}
+.sub{margin-top:5px;color:var(--mut);font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;box-shadow:var(--shadow)}
+.tabs{display:flex;gap:8px;overflow-x:auto;padding:3px 0 14px;scrollbar-width:none}
+.tabs::-webkit-scrollbar,.chips::-webkit-scrollbar{display:none}
+.tab{flex:none;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:9px 14px;font:inherit;font-weight:700;cursor:pointer}
+.tab[aria-selected=true]{background:var(--pri);color:#fff;border-color:var(--pri)}
+.bar{position:sticky;top:64px;z-index:2;margin:0 -2px 12px;padding:10px 2px;background:rgba(255,255,255,.96);backdrop-filter:blur(12px)}
+.prog{height:9px;background:var(--line);border-radius:9px;overflow:hidden;margin:3px 0 8px}
+.prog i{display:block;height:100%;background:var(--pri);width:0;transition:width .3s}
+.stat{font-size:12px;color:var(--mut);margin-bottom:9px}
+input[type=search],input[type=text],textarea,select{width:100%;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:13px;padding:12px 13px;font:inherit}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--pri);outline-offset:2px}
+.chips{display:flex;gap:7px;overflow-x:auto;padding-top:9px;scrollbar-width:none}
+.chip{flex:none;border:0;background:var(--soft);color:var(--ink);border-radius:10px;padding:8px 12px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.chip[aria-pressed=true]{background:var(--pri);color:#fff}
+.item{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:15px;margin-top:10px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;box-shadow:var(--shadow)}
+.item.done{background:#fbfcff}
+.item-copy{min-width:0}
+.no{color:var(--mut);font-size:12px;overflow-wrap:anywhere}
+.tel{font-weight:800;font-size:19px;letter-spacing:.2px;margin-top:3px}
+.wa{grid-row:1/3;grid-column:2;min-width:112px}
+.item select{grid-column:1/3}
+.section-title{margin:10px 0 11px;font-size:15px;font-weight:800}
+details{margin-top:14px}
+summary{cursor:pointer;font-weight:700}
+textarea{display:block;margin-top:9px;min-height:100px;resize:vertical}
+.empty{text-align:center;color:var(--mut);padding:32px 12px}
+.status-message{margin:8px 0 12px;color:var(--mut)}
+.status-message.error{color:#b42318}
+.retry{margin-top:8px}
+@media(max-width:620px){.app-topbar{padding:9px 12px;gap:8px}.app-brand{gap:7px}.app-brand-mark{width:76px;height:30px}.app-brand-copy b{font-size:11px}.app-brand-copy span{display:none}.top-actions{gap:6px}.top-link,.btn{min-height:36px;padding:8px 10px;font-size:12px;border-radius:11px}main{padding:18px 12px calc(30px + env(safe-area-inset-bottom,0px))}.page-heading{align-items:flex-start}.page-heading h1{font-size:21px}.bar{top:50px}.item{padding:13px;border-radius:16px}.tel{font-size:17px}.wa{min-width:94px;padding:10px}.tabs{margin-right:-12px;padding-right:12px}}
+:focus-visible{outline:2px solid var(--pri);outline-offset:2px}
 </style></head><body>
-<div id="gate" class="empty" role="status">Memeriksa sesi login...</div>
-<div id="protected" hidden>
-<header><h1>DATABASE CALON NASABAH TPFX</h1><div class="sub">Pilih nama BDO, lalu ketuk tombol WhatsApp untuk menghubungi.</div></header>
-<div class="tabs" id="tabs" role="tablist"></div>
+<header class="app-topbar">
+<a class="app-brand" href="index.html" aria-label="Kembali ke TPFX Sales Workspace">
+<img class="app-brand-mark" src="tpfxlogo.jpg" alt="Logo TPFX">
+<span class="app-brand-copy"><b>Sales Workspace</b><span>Team community</span></span>
+</a>
+<div class="top-actions"><a class="top-link" href="index.html">← Workspace</a></div>
+</header>
 <main>
-<div class="bar"><div class="prog"><i id="pb"></i></div><div class="stat" id="stat"></div>
+<div class="page-heading">
+<div><h1>Database Calon Nasabah</h1><div class="sub">Pilih BDO, cari calon nasabah, lalu hubungi lewat WhatsApp.</div></div>
+<span class="chip" aria-label="Database publik">Database</span>
+</div>
+<div class="tabs" id="tabs" role="tablist" aria-label="Pilih BDO"></div>
+<section class="card bar" aria-label="Cari dan filter kontak">
+<div class="prog" aria-hidden="true"><i id="pb"></i></div><div class="stat" id="stat"></div>
 <input type="search" id="q" placeholder="Cari nomor atau pekerjaan" aria-label="Cari">
-<div class="chips" id="chips"></div></div>
-<details><summary>Ubah pesan pembuka</summary><textarea id="tpl" aria-label="Pesan pembuka"></textarea></details>
+<div class="chips" id="chips"></div>
+<details><summary>Ubah pesan pembuka WhatsApp</summary><textarea id="tpl" aria-label="Pesan pembuka"></textarea></details>
+</section>
+<div id="statusMessage" class="status-message mut" role="status">Memuat database...</div>
+<h2 class="section-title">Daftar kontak</h2>
 <div id="list"></div>
 </main>
-</div>
 <script>
 let DATA=[];
 const ST=["Belum dihubungi","Sudah dichat","Menunggu balasan","Tertarik","Tidak tertarik","Closing"];
 const DEF="Halo, selamat siang. Saya {bdo} dari TPFX. Boleh minta waktu sebentar untuk memperkenalkan peluang investasi dari kami?";
 const API="https://script.google.com/macros/s/AKfycbwCiMQjyvd_GHqc-TOzofoDEcpOj_-_uxs2ciX4wZG7VuG3hoZlInRuyO3cmPxSWS6F/exec";
-let TOKEN="";
 let cur=0,job="Semua",mem={};
 const K="tpfx-v1";
 try{mem=JSON.parse(localStorage.getItem(K)||"{}")}catch(e){}
@@ -65,80 +99,89 @@ mem.tpl=mem.tpl||DEF;mem.s=mem.s||{};
 const $=id=>document.getElementById(id);
 async function rpc(fn,...args){
  const response=await fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({fn,args}),cache:"no-store"});
- const payload=await response.json();
  if(!response.ok)throw new Error("Server HTTP "+response.status);
+ const payload=await response.json();
  if(payload.error)throw new Error(payload.error);
+ if(!Object.prototype.hasOwnProperty.call(payload,"result"))throw new Error("Endpoint "+fn+" tidak mengembalikan hasil.");
  return payload.result;
 }
-function showGate(message,login=false,retry=false){
- const gate=$("gate");gate.replaceChildren();
- const text=document.createElement("p");text.textContent=message;gate.appendChild(text);
- if(login){const link=document.createElement("a");link.className="auth-link";link.href="index.html";link.textContent="Login";gate.appendChild(link)}
- if(retry){const button=document.createElement("button");button.textContent="Coba lagi";button.onclick=loadDatabase;gate.appendChild(button)}
- gate.hidden=false;$("protected").hidden=true;
-}
-function clearSession(){
- TOKEN="";DATA=[];
- try{localStorage.removeItem("swt");localStorage.removeItem("swt_user")}catch(e){}
-}
 async function loadDatabase(){
- showGate("Memeriksa sesi login...");
- try{TOKEN=localStorage.getItem("swt")||""}catch(e){showGate("Browser tidak mengizinkan akses sesi login.");return}
- if(!TOKEN){showGate("Silakan login terlebih dahulu untuk membuka database.",true);return}
+ const status=$("statusMessage");
+ status.className="status-message mut";
+ status.textContent="Memuat database...";
  try{
-  const result=await rpc("databaseData",TOKEN);
+  const result=await rpc("publicDatabaseData");
   if(result&&result.err){
-   if(result.err==="AUTH"){clearSession();showGate("Sesi login tidak valid atau sudah berakhir. Silakan login kembali.",true);return}
-   throw new Error(typeof result.err==="string"?result.err:"Akses database ditolak");
+   throw new Error(typeof result.err==="string"?result.err:"Database tidak dapat dimuat");
   }
   if(!result||!Array.isArray(result.rows)||!result.rows.every(d=>d&&typeof d.n==="string"&&Array.isArray(d.r)&&d.r.every(r=>Array.isArray(r)&&r.length>=3))){
    throw new Error("Data database dari server tidak valid");
   }
   DATA=result.rows;
-  $("protected").hidden=false;$("gate").hidden=true;
+  status.hidden=DATA.length>0;
+  if(!DATA.length)status.textContent="Belum ada kontak yang disetujui untuk ditampilkan.";
   startDatabase();
  }catch(e){
-  showGate("Database gagal dimuat: "+String(e&&e.message||e),false,true);
+  status.className="status-message error";
+  status.replaceChildren(document.createTextNode("Database gagal dimuat: "+String(e&&e.message||e)+" "));
+  const retry=document.createElement("button");
+  retry.className="btn retry";
+  retry.textContent="Coba lagi";
+  retry.onclick=loadDatabase;
+  status.appendChild(retry);
  }
 }
-async function verifySession(){
- if(!TOKEN)return;
- try{
-  const result=await rpc("checkSession",TOKEN);
-  if(!result||result.err||result.ok!==1){
-   const expired=!!(result&&result.err==="AUTH");
-   clearSession();
-   showGate(expired?"Sesi login tidak valid atau sudah berakhir. Silakan login kembali.":"Tidak dapat memverifikasi sesi login.",expired,!expired);
-  }
- }catch(e){
-  clearSession();showGate("Tidak dapat memverifikasi sesi login. Silakan coba lagi.",false,true);
- }
+function digits(n){return String(n||"").replace(/\D/g,"")}
+function fmt(n){
+ const value=digits(n);
+ if(value.length<6)return String(n||"");
+ return "+"+value.slice(0,2)+" "+value.slice(2,5)+"-"+value.slice(5,9)+"-"+value.slice(9);
 }
-window.addEventListener("storage",e=>{if(e.key==="swt"&&e.newValue!==TOKEN)location.reload()});
-window.addEventListener("pageshow",verifySession);
-document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")verifySession()});
-setInterval(verifySession,5*60*1000);
-function fmt(n){return "+"+n.slice(0,2)+" "+n.slice(2,5)+"-"+n.slice(5,9)+"-"+n.slice(9)}
-function tabs(){$("tabs").innerHTML="";DATA.forEach((d,i)=>{const b=document.createElement("button");b.className="tab";b.setAttribute("role","tab");b.setAttribute("aria-selected",i==cur);b.textContent=d.n.split(" ").slice(0,2).join(" ");b.onclick=()=>{cur=i;job="Semua";render()};$("tabs").appendChild(b)})}
+function tabs(){
+ $("tabs").replaceChildren();
+ DATA.forEach((d,i)=>{
+  const b=document.createElement("button");
+  b.className="tab";b.setAttribute("role","tab");b.setAttribute("aria-selected",i==cur);
+  b.textContent=d.n.split(" ").slice(0,2).join(" ");
+  b.onclick=()=>{cur=i;job="Semua";render()};
+  $("tabs").appendChild(b);
+ });
+}
 function render(){
- tabs();const d=DATA[cur],jobs=["Semua",...new Set(d.r.map(r=>r[1]))];
- $("chips").innerHTML="";jobs.forEach(j=>{const b=document.createElement("button");b.className="chip";b.setAttribute("aria-pressed",j==job);b.textContent=j;b.onclick=()=>{job=j;render()};$("chips").appendChild(b)});
- const key=r=>cur+"-"+r[0],st=r=>mem.s[key(r)]||0;
+ if(!DATA.length){
+  const empty=document.createElement("div");empty.className="card empty";empty.textContent="Belum ada kontak yang disetujui untuk ditampilkan.";
+  $("list").replaceChildren(empty);return;
+ }
+ if(cur>=DATA.length)cur=0;
+ const d=DATA[cur],jobs=["Semua",...new Set(d.r.map(r=>String(r[1]||"")))];
+ if(!jobs.includes(job))job="Semua";
+ $("chips").replaceChildren();
+ jobs.forEach(j=>{
+  const b=document.createElement("button");b.className="chip";b.setAttribute("aria-pressed",j==job);b.textContent=j;
+  b.onclick=()=>{job=j;render()};$("chips").appendChild(b);
+ });
+ const key=r=>cur+"-"+r[0],st=r=>Number(mem.s[key(r)])||0;
  const done=d.r.filter(r=>st(r)>0).length;
- $("pb").style.width=(done/d.r.length*100)+"%";$("stat").textContent=done+" dari "+d.r.length+" kontak sudah diproses";
- const q=$("q").value.toLowerCase();
- const rows=d.r.filter(r=>(job=="Semua"||r[1]==job)&&(r[1]+r[2]).toLowerCase().includes(q));
- const L=$("list");L.innerHTML="";
- if(!rows.length){L.innerHTML='<div class="empty">Tidak ada kontak yang cocok.</div>';return}
+ $("pb").style.width=(d.r.length?done/d.r.length*100:0)+"%";
+ $("stat").textContent=done+" dari "+d.r.length+" kontak sudah diproses";
+ const q=$("q").value.trim().toLowerCase();
+ const rows=d.r.filter(r=>(job=="Semua"||String(r[1])==job)&&(String(r[1])+" "+String(r[2])).toLowerCase().includes(q));
+ const list=$("list");list.replaceChildren();
+ if(!rows.length){const empty=document.createElement("div");empty.className="card empty";empty.textContent="Tidak ada kontak yang cocok.";list.appendChild(empty);return}
  rows.forEach(r=>{
-  const el=document.createElement("div");el.className="item"+(st(r)>0?" done":"");
-  const msg=encodeURIComponent(mem.tpl.replace("{bdo}",d.n));
-  el.innerHTML='<div><div class="no">No. '+r[0]+' · '+r[1]+'</div><div class="tel">'+fmt(r[2])+'</div></div><a class="wa" target="_blank" rel="noopener" href="https://wa.me/'+r[2]+'?text='+msg+'">Chat WA</a>';
-  const s=document.createElement("select");s.setAttribute("aria-label","Status");
+  const phone=digits(r[2]);
+  const el=document.createElement("article");el.className="item"+(st(r)>0?" done":"");
+  const copy=document.createElement("div");copy.className="item-copy";
+  const number=document.createElement("div");number.className="no";number.textContent="No. "+String(r[0])+" · "+String(r[1]);
+  const tel=document.createElement("div");tel.className="tel";tel.textContent=fmt(phone);
+  copy.append(number,tel);
+  const wa=document.createElement("a");wa.className="btn wa";wa.target="_blank";wa.rel="noopener noreferrer";wa.href="https://wa.me/"+phone+"?text="+encodeURIComponent(mem.tpl.replace("{bdo}",d.n));wa.textContent="Chat WA";
+  wa.addEventListener("click",()=>{if(!st(r)){mem.s[key(r)]=1;save();el.classList.add("done");setTimeout(render,400)}});
+  const s=document.createElement("select");s.setAttribute("aria-label","Status kontak "+String(r[0]));
   ST.forEach((t,i)=>{const o=new Option(t,i);o.selected=i==st(r);s.add(o)});
   s.onchange=()=>{mem.s[key(r)]=+s.value;save();render()};
-  el.querySelector(".wa").onclick=()=>{if(!st(r)){mem.s[key(r)]=1;save();setTimeout(render,400)}};
-  el.appendChild(s);L.appendChild(el)})
+  el.append(copy,wa,s);list.appendChild(el);
+ });
 }
 function startDatabase(){
  $("tpl").value=mem.tpl;
