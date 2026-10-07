@@ -1088,6 +1088,7 @@ USER='',
 FEED=[],
 FEED_LOCAL_ECHOES=[],
 FEED_LOADING=false,
+FEED_RECENT_LOADING=false,
 FEED_POSTING=false,
 FEED_TIMER=null,
 CHAT_CONTACTS=[],
@@ -1744,6 +1745,7 @@ USER='';
 FEED=[];
 FEED_LOCAL_ECHOES=[];
 FEED_LOADING=false;
+FEED_RECENT_LOADING=false;
 FEED_POSTING=false;
 CHAT_CONTACTS=[];
 CHAT_MESSAGES=[];
@@ -2074,6 +2076,38 @@ FEED_LOADING=false;
 }
 
 
+async function refreshRecentPosts(){
+
+if(FEED_RECENT_LOADING||document.visibilityState=='hidden')return;
+FEED_RECENT_LOADING=true;
+
+try{
+const r=await rpc('recentPosts',TOK);
+if(!r||typeof r!='object')throw new Error('Format respons recentPosts tidak valid.');
+if(r.err){
+if(r.err=='AUTH'){logout();return;}
+throw new Error(typeof r.err=='string'?r.err:'Tidak dapat memuat postingan terbaru');
+}
+if(!Array.isArray(r.rows))throw new Error('Endpoint recentPosts harus mengembalikan rows berupa array.');
+
+const activities=FEED.filter(item=>item.kind=='activity');
+FEED=mergeFeedRows(activities.concat(r.rows).sort((a,b)=>
+(Number(b.ts)||0)-(Number(a.ts)||0)
+).slice(0,100));
+
+if(tab=='feed'||dmTab=='feed'){
+const list=$('#socialFeedList');
+if(list)list.innerHTML=socialFeedItems();
+}
+}catch(e){
+console.warn('Feed cepat gagal diperbarui:',String((e&&e.message)||e));
+}finally{
+FEED_RECENT_LOADING=false;
+}
+
+}
+
+
 function mergeFeedRows(rows){
 
 const serverRows=rows.filter(item=>
@@ -2139,8 +2173,16 @@ return`
 
 <h2>Feed tim</h2>
 
-${
-FEED.length
+<div id="socialFeedList">${socialFeedItems()}</div>
+
+</div>
+`;
+
+}
+
+
+function socialFeedItems(){
+return FEED.length
 ?FEED.map(item=>`
 <article class="card social-post">
 <div class="row sp">
@@ -2157,12 +2199,7 @@ ${item.pending?'<div class="mut">Mengirim...</div>':''}
 <div class="social-copy">${esc(item.text||'')}</div>
 </article>
 `).join('')
-:'<div class="card empty">Belum ada kabar di feed. Jadilah yang pertama membagikan update.</div>'
-}
-
-</div>
-`;
-
+:'<div class="card empty">Belum ada kabar di feed. Jadilah yang pertama membagikan update.</div>';
 }
 
 
@@ -2612,7 +2649,7 @@ if(TOK&&(tab=='chat'||dmTab=='chat')){
 if(CHAT_ACTIVE)refreshChatHistory();
 }
 },
-4000
+6000
 );
 
 
@@ -2623,10 +2660,10 @@ TOK &&
 document.visibilityState!='hidden' &&
 (tab=='feed'||dmTab=='feed')
 ){
-loadSocialFeed();
+refreshRecentPosts();
 }
 },
-30000
+10000
 );
 
 

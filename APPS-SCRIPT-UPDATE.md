@@ -44,6 +44,7 @@ function api_() {
     databaseData: databaseData,
     checkSession: checkSession,
     socialFeed: socialFeed,
+    recentPosts: recentPosts,
     createPost: createPost,
     chatContacts: chatContacts,
     chatHistory: chatHistory,
@@ -346,6 +347,37 @@ function createPost(t, text) {
 }
 
 
+function recentPosts(t) {
+  const username = user_(t);
+  const account = username && findUser_(username);
+  if (!account || String(account[3]).toUpperCase() != 'Y') {
+    return { err: 'AUTH' };
+  }
+
+  const sheet = posts_();
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return { rows: [] };
+
+  const startRow = Math.max(2, lastRow - 99);
+  const values = sheet.getRange(startRow, 1, lastRow - startRow + 1, 5)
+    .getValues();
+
+  const rows = values
+    .filter(r => String(r[3] || '').trim())
+    .map(r => ({
+      id: String(r[0]),
+      username: String(r[1]),
+      nama: String(r[2]),
+      text: String(r[3]),
+      ts: Number(r[4]) || 0,
+      kind: 'post'
+    }))
+    .sort((a, b) => b.ts - a.ts);
+
+  return { rows: rows };
+}
+
+
 function chatContacts(t) {
   const username = user_(t);
   if (!username || !findUser_(username)) return { err: 'AUTH' };
@@ -644,9 +676,15 @@ Frontend mengharapkan setiap request Apps Script mengembalikan JSON dengan prope
 
 1. Fungsi `loadState(t)` harus selalu mengembalikan `{ err: 'AUTH' }` untuk token tidak valid, atau object `{ state, name, user, role }` untuk sesi aktif. Jangan menghapus `return` pada hasil sesi.
 2. Fungsi `doPost(e)` harus membungkus hasil fungsi API sebagai `{ result: f.apply(null, req.args || []) }`.
-3. Pastikan `loadState`, `socialFeed`, `createPost`, `chatContacts`, `chatHistory`, `sendChat`, `chatGroups`, `createChatGroup`, `groupHistory`, dan `sendGroupChat` terdaftar pada `api_()` dan masing-masing mengembalikan hasil.
+3. Pastikan `loadState`, `socialFeed`, `recentPosts`, `createPost`, `chatContacts`, `chatHistory`, `sendChat`, `chatGroups`, `createChatGroup`, `groupHistory`, dan `sendGroupChat` terdaftar pada `api_()` dan masing-masing mengembalikan hasil.
 4. Jalankan `setup()` agar sheet `Posts`, `Messages`, dan `ChatGroups` tersedia, lalu deploy sebagai **versi baru**. Menyimpan kode saja tidak memperbarui deployment Web App.
 5. Keluar dari aplikasi, login kembali, lalu buka Feed/Chat. Token yang lama dapat tidak berlaku setelah akun dihapus atau sesi berakhir.
+
+## Feed dan chat terasa lambat
+
+Frontend menampilkan postingan/pesan secara langsung sambil menyimpan ke Apps Script. Feed mengambil postingan terbaru dari `recentPosts` setiap 10 detik saat tab Feed terbuka; endpoint ini hanya membaca maksimal 100 baris terakhir dari sheet `Posts`, tidak memindai sheet `Data`. Tambahkan `recentPosts` pada `api_()` dan tempel fungsi di atas sebelum deploy versi baru.
+
+Riwayat chat diperbarui setiap 6 detik ketika halaman terlihat. Endpoint `chatHistory` dan `groupHistory` saat ini membaca sheet `Messages`; bila sheet tumbuh besar, request akan makin lambat. Jangan menambahkan cache berumur panjang pada riwayat karena dapat membuat pesan baru terlambat terlihat. Batasi sementara jumlah baris Messages hanya jika Anda juga menerapkan pagination agar pesan lama tidak tersembunyi.
 
 Endpoint sesi dapat diuji tanpa kredensial dengan memanggil `loadState` menggunakan token kosong: respons yang diharapkan adalah `{ "result": { "err": "AUTH" } }`, bukan respons tanpa `result`.
 
