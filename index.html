@@ -7,15 +7,17 @@
 <title>TPFX Sales Workspace</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link rel="icon" type="image/jpeg" href="tpfxlogo.jpg">
 
 <style>
 :root{
---bg:#f4f5f8;
+color-scheme:light;
+--bg:#fff;
 --card:#fff;
---ink:#141a2e;
---mut:#6b7286;
---line:#e6e8ef;
---pri:#2743d6;
+--ink:#192238;
+--mut:#758096;
+--line:#e8ebf2;
+--pri:#3158d8;
 --new:#8a93a8;
 --contacted:#2f7bea;
 --warm:#f08a1c;
@@ -23,20 +25,12 @@
 --followup:#7c4dff;
 --deal:#1f9d55;
 --lost:#4a5060;
+--social:#3158d8;
+--social-soft:#f0f4ff;
+--shadow:0 8px 26px rgba(30,45,80,.055);
 box-sizing:border-box;
 padding-top:env(safe-area-inset-top,0px);
 padding-bottom:env(safe-area-inset-bottom,0px)
-}
-
-@media(prefers-color-scheme:dark){
-:root:not([data-theme="light"]){
---bg:#0e1220;
---card:#171d31;
---ink:#eef0f7;
---mut:#98a0b6;
---line:#262d45;
---pri:#6b83ff
-}
 }
 
 *{
@@ -56,15 +50,145 @@ font:14px/1.45 'Plus Jakarta Sans',system-ui,sans-serif;
 }
 
 #app{
-max-width:720px;
+max-width:900px;
 margin:0 auto;
-padding:16px 16px 110px
+padding:20px 16px calc(110px + env(safe-area-inset-bottom,0px))
+}
+
+#app.login-screen{
+max-width:none;
+padding:0
+}
+
+.app-topbar{
+position:sticky;
+top:0;
+z-index:4;
+display:flex;
+align-items:center;
+justify-content:space-between;
+gap:12px;
+max-width:900px;
+margin:0 auto;
+padding:12px 20px;
+border-bottom:1px solid rgba(232,235,242,.9);
+background:rgba(255,255,255,.94);
+backdrop-filter:blur(14px)
+}
+
+.app-brand{
+display:flex;
+align-items:center;
+gap:10px;
+min-width:0
+}
+
+.app-brand-mark{
+width:116px;
+height:40px;
+display:block;
+flex:none;
+border-radius:8px;
+object-fit:cover;
+object-position:center;
+background:#fff
+}
+
+.app-brand-copy b,.app-brand-copy span{
+display:block;
+white-space:nowrap
+}
+
+.app-brand-copy b{
+font-size:14px;
+line-height:1.2
+}
+
+.app-brand-copy span{
+margin-top:2px;
+color:var(--mut);
+font-size:10.5px
+}
+
+.app-user{
+display:flex;
+align-items:center;
+gap:9px;
+min-width:0;
+font-weight:700;
+font-size:12px
+}
+
+.app-user-name{
+max-width:180px;
+overflow:hidden;
+text-overflow:ellipsis;
+white-space:nowrap
+}
+
+.app-user-avatar{
+width:34px;
+height:34px;
+display:grid;
+place-items:center;
+flex:none;
+border:2px solid #e8edff;
+border-radius:50%;
+background:#f0f4ff;
+color:var(--pri);
+font-size:11px;
+font-weight:800
+}
+
+.app-topbar[hidden]{
+display:none
+}
+
+.login-shell{
+min-height:100vh;
+min-height:100dvh;
+max-width:460px;
+margin:0 auto;
+padding:28px 16px;
+display:flex;
+flex-direction:column;
+justify-content:center
+}
+
+.login-brand{
+width:100%;
+height:128px;
+display:block;
+object-fit:cover;
+object-position:center;
+background:#fff;
+border:1px solid var(--line);
+border-radius:20px;
+box-shadow:var(--shadow)
+}
+
+.login-heading{
+margin-top:20px
+}
+
+.login-heading h1{
+font-size:25px
+}
+
+.login-card{
+margin-top:18px;
+padding:18px
+}
+
+.login-card input{
+min-height:48px
 }
 
 h1{
 font-size:22px;
 font-weight:800;
-letter-spacing:-.02em
+letter-spacing:-.03em;
+line-height:1.2
 }
 
 h2{
@@ -81,8 +205,10 @@ font-size:12.5px
 .card{
 background:var(--card);
 border:1px solid var(--line);
-border-radius:16px;
-padding:14px
+border-radius:20px;
+padding:14px;
+box-shadow:var(--shadow);
+transition:border-color .18s,box-shadow .18s,transform .18s
 }
 
 .row{
@@ -115,8 +241,9 @@ outline-offset:2px
 background:var(--pri);
 color:#fff;
 font-weight:700;
-border-radius:12px;
-padding:11px 16px
+border-radius:14px;
+padding:11px 16px;
+box-shadow:0 5px 14px rgba(39,67,214,.16)
 }
 
 .btn.sec{
@@ -185,7 +312,10 @@ gap:10px
 .stat{
 text-align:left;
 width:100%;
-border-left:4px solid var(--c)
+border:1px solid var(--line);
+border-top:3px solid var(--c);
+border-radius:18px;
+box-shadow:var(--shadow)
 }
 
 .stat b{
@@ -312,22 +442,29 @@ position:fixed;
 left:0;
 right:0;
 bottom:0;
-background:var(--card);
+background:color-mix(in srgb,var(--card) 94%,transparent);
 border-top:1px solid var(--line);
 padding:6px 0 calc(6px + env(safe-area-inset-bottom,0px));
+backdrop-filter:blur(16px);
 z-index:5
 }
 
 .nav div{
-max-width:720px;
+max-width:900px;
 margin:0 auto;
-display:grid;
-grid-template-columns:repeat(5,1fr)
+display:flex;
+overflow-x:auto;
+scrollbar-width:none
+}
+
+.nav div::-webkit-scrollbar{
+display:none
 }
 
 .nav button{
-padding:6px 0;
-font-size:11px;
+flex:1 0 62px;
+padding:7px 3px;
+font-size:10.5px;
 font-weight:600;
 color:var(--mut);
 display:flex;
@@ -342,6 +479,22 @@ font-size:20px
 
 .nav button.on{
 color:var(--pri)
+}
+
+.nav button.on span{
+transform:translateY(-1px)
+}
+
+.nav button .nav-badge{
+position:absolute;
+margin:-2px 0 0 22px;
+min-width:17px;
+padding:1px 5px;
+border-radius:99px;
+background:var(--hot);
+color:#fff;
+font-size:10px;
+font-weight:800
 }
 
 .fab{
@@ -461,10 +614,310 @@ margin-left:4px
 margin-bottom:8px;
 font-size:12.5px
 }
+
+.social-top{
+display:flex;
+align-items:center;
+justify-content:space-between;
+gap:12px;
+margin:0 0 16px
+}
+
+.home-welcome{
+position:relative;
+overflow:hidden;
+min-height:110px;
+padding:20px;
+border-color:#e6eafa;
+background:
+radial-gradient(circle at 92% 10%,rgba(49,88,216,.09),transparent 135px),
+#fff
+}
+
+.home-welcome h1{
+max-width:600px;
+font-size:25px
+}
+
+.home-welcome .mut{
+margin-top:7px
+}
+
+.home-progress{
+padding:18px 20px;
+border-color:#e6eafa;
+background:linear-gradient(110deg,#fff 0%,#fff 74%,#f5f7ff 100%)
+}
+
+.home-progress .big-n{
+color:var(--pri)
+}
+
+.social-composer textarea{
+border-radius:16px;
+background:#f7f8fb
+}
+
+.social-post{
+border-color:#e9ecf2;
+box-shadow:0 5px 18px rgba(30,45,80,.035)
+}
+
+.social-post:hover{
+border-color:#dfe5f5
+}
+
+.social-brand{
+font-size:25px;
+font-weight:800;
+letter-spacing:-1.2px;
+color:var(--social)
+}
+
+.social-subtitle{
+color:var(--mut);
+font-size:13px
+}
+
+.social-wrap{
+max-width:720px;
+margin:0 auto
+}
+
+.social-composer{
+display:flex;
+gap:12px;
+align-items:flex-start
+}
+
+.social-composer textarea{
+min-height:84px;
+resize:vertical;
+margin:0
+}
+
+.social-actions{
+display:flex;
+justify-content:space-between;
+align-items:center;
+gap:10px;
+margin-top:10px
+}
+
+.social-avatar{
+flex:none;
+width:42px;
+height:42px;
+display:grid;
+place-items:center;
+border-radius:50%;
+background:linear-gradient(145deg,#3158d8,#8b5cf6);
+color:#fff;
+font-weight:800;
+font-size:14px
+}
+
+.social-post{
+margin-top:12px;
+padding:16px;
+animation:feed-in .24s ease both
+}
+
+@keyframes feed-in{
+from{opacity:0;transform:translateY(7px)}
+to{opacity:1;transform:translateY(0)}
+}
+
+.social-author{
+display:flex;
+align-items:center;
+gap:10px;
+min-width:0
+}
+
+.social-author b{
+display:block;
+font-size:14px
+}
+
+.social-copy{
+white-space:pre-wrap;
+overflow-wrap:anywhere;
+margin:14px 0 12px;
+font-size:14.5px;
+line-height:1.6
+}
+
+.social-post-type{
+display:inline-flex;
+align-items:center;
+gap:5px;
+color:var(--social);
+font-weight:700;
+font-size:11px
+}
+
+.chat-layout{
+display:grid;
+grid-template-columns:minmax(230px,.8fr) minmax(0,1.2fr);
+gap:14px;
+min-height:420px
+}
+
+.chat-panel{
+background:var(--card);
+border:1px solid var(--line);
+border-radius:20px;
+box-shadow:var(--shadow);
+overflow:hidden
+}
+
+.chat-panel-head{
+padding:14px 16px;
+border-bottom:1px solid var(--line);
+font-weight:800
+}
+
+.chat-contact{
+width:100%;
+display:flex;
+align-items:center;
+gap:10px;
+padding:12px 14px;
+text-align:left;
+border-bottom:1px solid var(--line)
+}
+
+.chat-contact:hover,.chat-contact.active{
+background:var(--social-soft)
+}
+
+.chat-contact-copy{
+min-width:0;
+flex:1
+}
+
+.chat-contact-copy b,.chat-contact-copy span{
+display:block;
+overflow:hidden;
+text-overflow:ellipsis;
+white-space:nowrap
+}
+
+.chat-contact-copy span{
+font-size:12px;
+color:var(--mut)
+}
+
+.chat-preview{
+height:355px;
+overflow:auto;
+padding:14px;
+display:flex;
+flex-direction:column;
+gap:8px
+}
+
+.chat-bubble{
+max-width:84%;
+align-self:flex-start;
+padding:10px 12px;
+border-radius:16px 16px 16px 5px;
+background:var(--bg);
+overflow-wrap:anywhere;
+white-space:pre-wrap
+}
+
+.chat-bubble.mine{
+align-self:flex-end;
+background:var(--social);
+color:#fff;
+border-radius:16px 16px 5px 16px
+}
+
+.chat-bubble time{
+display:block;
+margin-top:4px;
+font-size:10px;
+opacity:.7
+}
+
+.chat-compose{
+display:flex;
+align-items:flex-end;
+gap:8px;
+padding:12px;
+border-top:1px solid var(--line)
+}
+
+.chat-compose textarea{
+min-height:44px;
+max-height:120px;
+resize:vertical;
+margin:0
+}
+
+.chat-compose .btn{
+flex:none;
+padding:11px 14px
+}
+
+@media(max-width:620px){
+#app{padding:14px 12px calc(100px + env(safe-area-inset-bottom,0px))}
+.app-topbar{
+top:env(safe-area-inset-top,0px);
+padding:9px 12px;
+gap:7px
+}
+.app-brand{gap:6px}
+.app-brand-mark{width:74px;height:30px}
+.app-brand-copy b{font-size:11px}
+.app-brand-copy span{display:none}
+.app-user{gap:6px;font-size:11px}
+.app-user-name{max-width:75px}
+.app-user .badge{padding:2px 6px;font-size:9px}
+.app-user-avatar{width:30px;height:30px}
+.nav{padding:5px 4px calc(5px + env(safe-area-inset-bottom,0px))}
+.nav div{gap:1px}
+.nav button{flex:1 1 0;min-width:0;padding:6px 1px;font-size:8.5px}
+.nav button span{font-size:17px}
+.home-welcome{padding:16px;min-height:96px}
+.home-welcome h1{font-size:21px}
+.home-progress{padding:15px}
+.social-brand{font-size:21px}
+.social-actions{align-items:stretch;flex-direction:column}
+.social-actions .btn{width:100%}
+.social-subtitle{font-size:12px}
+.social-avatar{width:36px;height:36px;font-size:12px}
+.social-post{padding:14px}
+.social-copy{font-size:14px;margin:12px 0}
+.chat-layout{grid-template-columns:1fr;min-height:0}
+.chat-preview{height:min(48vh,360px)}
+.chat-layout.has-peer .chat-panel:first-child{display:none}
+.chat-back{display:inline-flex!important}
+.login-shell{padding:20px 16px}
+.login-brand{height:112px;border-radius:17px}
+.login-heading{margin-top:16px}
+.login-heading h1{font-size:22px}
+.login-card{padding:16px;border-radius:18px}
+}
+
+@media(hover:hover){
+.card:hover{
+border-color:color-mix(in srgb,var(--pri) 22%,var(--line));
+box-shadow:0 14px 36px rgba(24,35,70,.09)
+}
+}
+
+@media(prefers-reduced-motion:reduce){
+.social-post,.card{animation:none;transition:none}
+}
 </style>
 </head>
 
 <body>
+
+<header id="appHeader" class="app-topbar" hidden></header>
 
 <div id="app"></div>
 
@@ -557,13 +1010,48 @@ c=>({
 }[c])
 );
 
+function renderAppHeader(){
+
+const header=$('#appHeader');
+
+if(!header)return;
+
+$('#app').classList.remove('login-screen');
+
+header.hidden=!TOK;
+
+if(!TOK)return;
+
+header.innerHTML=`
+<div class="app-brand">
+<img class="app-brand-mark" src="tpfxlogo.jpg" alt="Logo TPFX">
+<div class="app-brand-copy">
+<b>Sales Workspace</b>
+<span>Team community</span>
+</div>
+</div>
+<div class="app-user">
+<span class="app-user-name">${esc(S.name)}</span>
+<span class="badge s-contacted">${esc(ROLE||'BDO')}</span>
+<span class="app-user-avatar">${esc(initials(S.name))}</span>
+</div>
+`;
+
+}
+
+
 let S,
-tab='home',
+tab='feed',
 flt='all',
 srt='new',
 q='',
 per='hari',
-USER='';
+USER='',
+FEED=[],
+CHAT_CONTACTS=[],
+CHAT_MESSAGES=[],
+CHAT_PEER='',
+CHAT_TIMER=null;
 
 function seed(){
 return{
@@ -813,6 +1301,8 @@ ROLE=
 r.role ||
 'BDO';
 
+renderAppHeader();
+
 
 try{
 
@@ -854,6 +1344,10 @@ await loadTeam();
 
 render();
 
+if(tab=='feed'){
+loadSocialFeed();
+}
+
 
 }catch(e){
 
@@ -889,25 +1383,34 @@ document
 .querySelector('.nav')
 .style.display='none';
 
+$('#appHeader').hidden=true;
+
 $('#fab')
 .style.display='none';
 
+$('#app').classList.add('login-screen');
+
 $('#app').innerHTML=
 
-`<div style="padding-top:12vh">
+`<div class="login-shell">
 
+<img
+class="login-brand"
+src="tpfxlogo.jpg"
+alt="Logo TPFX — Beyond Just Trading"
+>
+
+<div class="login-heading">
 <h1>
-TPFX Sales Workspace
+Koneksi belum tersedia
 </h1>
 
 <div class="mut">
 Sesi login masih tersimpan.
 </div>
+</div>
 
-<div
-class="card"
-style="margin-top:16px"
->
+<div class="card login-card">
 
 <b>
 Gagal memuat data
@@ -956,24 +1459,35 @@ document
 .querySelector('.nav')
 .style.display='none';
 
+$('#appHeader').hidden=true;
+
 $('#fab')
 .style.display='none';
 
+$('#app').classList.add('login-screen');
+
 $('#app').innerHTML=
 
-`<div style="padding-top:12vh">
+`<div class="login-shell">
 
+<img
+class="login-brand"
+src="tpfxlogo.jpg"
+alt="Logo TPFX — Beyond Just Trading"
+>
+
+<div class="login-heading">
 <h1>
-TPFX Sales Workspace
+Selamat datang kembali
 </h1>
 
 <div class="mut">
 Masuk dengan akun sales Anda
 </div>
+</div>
 
 <div
-class="card"
-style="margin-top:16px"
+class="card login-card"
 >
 
 <label style="margin-top:0">
@@ -1123,6 +1637,11 @@ TOK='';
 
 S=seed();
 USER='';
+FEED=[];
+CHAT_CONTACTS=[];
+CHAT_MESSAGES=[];
+CHAT_PEER='';
+$('#appHeader').hidden=true;
 
 try{
 
@@ -1373,6 +1892,390 @@ Detail
 // HOME
 // ============================================================
 
+const initials=name=>
+esc(String(name||'TPFX')
+.trim()
+.split(/\s+/)
+.slice(0,2)
+.map(x=>x[0]||'')
+.join('')
+.toUpperCase());
+
+
+const socialTime=ts=>{
+const date=new Date(Number(ts)||ts);
+if(Number.isNaN(date.getTime()))return'-';
+return date.toLocaleString(
+'id-ID',
+{
+day:'numeric',
+month:'short',
+hour:'2-digit',
+minute:'2-digit'
+}
+);
+};
+
+
+async function loadSocialFeed(){
+
+try{
+
+const r=await rpc(
+'socialFeed',
+TOK
+);
+
+if(r.err){
+throw new Error(
+typeof r.err=='string'?r.err:'Tidak dapat memuat feed'
+);
+}
+
+FEED=Array.isArray(r.rows)?r.rows:[];
+
+if(tab=='feed'||dmTab=='feed'){
+render();
+}
+
+}catch(e){
+
+toast(
+'Feed gagal dimuat: '+String((e&&e.message)||e)
+);
+
+}
+
+}
+
+
+function socialFeed(){
+
+return`
+<div class="social-wrap">
+
+<div class="social-top">
+<div>
+<div class="social-brand">TPFX Connect</div>
+<div class="social-subtitle">Kabar tim dan aktivitas penjualan</div>
+</div>
+<div class="social-avatar">${initials(S.name)}</div>
+</div>
+
+<div class="card">
+<div class="social-composer">
+<div class="social-avatar">${initials(S.name)}</div>
+<textarea id="feedText" maxlength="500" placeholder="Bagikan kabar atau update singkat ke tim..." aria-label="Tulis postingan"></textarea>
+</div>
+<div class="social-actions">
+<span class="mut">Postingan terlihat oleh semua anggota tim</span>
+<button class="btn" onclick="publishSocialPost()">Posting</button>
+</div>
+</div>
+
+<h2>Feed tim</h2>
+
+${
+FEED.length
+?FEED.map(item=>`
+<article class="card social-post">
+<div class="row sp">
+<div class="social-author">
+<div class="social-avatar">${initials(item.nama)}</div>
+<div>
+<b>${esc(item.nama||item.username||'Anggota TPFX')}</b>
+<div class="mut">${socialTime(item.ts)}</div>
+</div>
+</div>
+<span class="social-post-type">${item.kind=='activity'?'✦ Aktivitas':'● Postingan'}</span>
+</div>
+<div class="social-copy">${esc(item.text||'')}</div>
+</article>
+`).join('')
+:'<div class="card empty">Belum ada kabar di feed. Jadilah yang pertama membagikan update.</div>'
+}
+
+</div>
+`;
+
+}
+
+
+async function publishSocialPost(){
+
+const input=$('#feedText');
+const text=input.value.trim();
+
+if(!text){
+toast('Tulis isi postingan terlebih dahulu');
+return;
+}
+
+try{
+
+const r=await rpc(
+'createPost',
+TOK,
+text
+);
+
+if(r.err){
+toast(typeof r.err=='string'?r.err:'Postingan gagal disimpan');
+return;
+}
+
+input.value='';
+await loadSocialFeed();
+toast('Postingan dibagikan');
+
+}catch(e){
+
+toast('Postingan gagal dikirim: '+String((e&&e.message)||e));
+
+}
+
+}
+
+
+async function loadChatContacts(){
+
+try{
+
+const r=await rpc(
+'chatContacts',
+TOK
+);
+
+if(r.err){
+throw new Error(
+typeof r.err=='string'?r.err:'Tidak dapat memuat daftar chat'
+);
+}
+
+CHAT_CONTACTS=Array.isArray(r.rows)?r.rows:[];
+
+if(CHAT_PEER&&!CHAT_CONTACTS.some(x=>x.username==CHAT_PEER)){
+CHAT_PEER='';
+CHAT_MESSAGES=[];
+}
+
+if(tab=='chat'||dmTab=='chat'){
+render();
+}
+
+}catch(e){
+
+toast('Chat gagal dimuat: '+String((e&&e.message)||e));
+
+}
+
+}
+
+
+async function openTeamChat(username){
+
+CHAT_PEER=username;
+CHAT_MESSAGES=[];
+
+if(ROLE=='DM'||ROLE=='BM'){
+dmTab='chat';
+}else{
+tab='chat';
+}
+
+render();
+
+try{
+
+const r=await rpc(
+'chatHistory',
+TOK,
+username
+);
+
+if(r.err){
+throw new Error(
+typeof r.err=='string'?r.err:'Tidak dapat memuat pesan'
+);
+}
+
+CHAT_MESSAGES=Array.isArray(r.rows)?r.rows:[];
+render();
+scrollChatToBottom();
+
+}catch(e){
+
+toast('Pesan gagal dimuat: '+String((e&&e.message)||e));
+
+}
+
+}
+
+
+function chatPage(){
+
+const active=CHAT_CONTACTS.find(x=>x.username==CHAT_PEER);
+const messages=CHAT_MESSAGES.map(m=>`
+<div class="chat-bubble ${m.from==USER?'mine':''}">
+${esc(m.text)}
+<time>${socialTime(m.ts)}</time>
+</div>
+`).join('');
+
+return`
+<div class="social-wrap">
+<div class="social-top">
+<div>
+<div class="social-brand">Pesan</div>
+<div class="social-subtitle">Percakapan pribadi antaranggota TPFX</div>
+</div>
+<button class="btn sec" onclick="loadChatContacts()">↻ Segarkan</button>
+</div>
+
+<div class="chat-layout ${active?'has-peer':''}">
+<section class="chat-panel">
+<div class="chat-panel-head">Anggota tim</div>
+<div>
+${
+CHAT_CONTACTS.length
+?CHAT_CONTACTS.map(c=>`
+<button class="chat-contact ${c.username==CHAT_PEER?'active':''}" data-username="${esc(c.username)}" onclick="openTeamChat(this.dataset.username)">
+<div class="social-avatar">${initials(c.nama)}</div>
+<div class="chat-contact-copy">
+<b>${esc(c.nama)}</b>
+<span>${esc(c.lastText||c.role||'Mulai percakapan')}</span>
+</div>
+</button>
+`).join('')
+:'<div class="empty">Belum ada anggota aktif lain.</div>'
+}
+</div>
+</section>
+
+<section class="chat-panel">
+${
+active
+?`<div class="chat-panel-head row">
+<button class="btn sec chat-back" style="display:none;padding:7px 10px" onclick="CHAT_PEER='';CHAT_MESSAGES=[];render()">←</button>
+<div class="social-avatar">${initials(active.nama)}</div>
+<div>${esc(active.nama)}<div class="mut">${esc(active.role)}</div></div>
+</div>
+<div class="chat-preview" id="chatPreview">${messages||'<div class="empty">Mulai percakapan dengan menyapa rekan tim.</div>'}</div>
+<form class="chat-compose" onsubmit="sendTeamMessage(event)">
+<textarea id="chatText" maxlength="1000" placeholder="Tulis pesan..." aria-label="Tulis pesan"></textarea>
+<button class="btn" type="submit">Kirim</button>
+</form>`
+:'<div class="empty">Pilih anggota tim untuk mulai chat.</div>'
+}
+</section>
+</div>
+</div>
+`;
+
+}
+
+
+function scrollChatToBottom(){
+const box=$('chatPreview');
+if(box)box.scrollTop=box.scrollHeight;
+}
+
+
+async function refreshChatHistory(){
+
+if(!CHAT_PEER||!(tab=='chat'||dmTab=='chat'))return;
+
+try{
+
+const r=await rpc(
+'chatHistory',
+TOK,
+CHAT_PEER
+);
+
+if(r.err){
+if(r.err=='AUTH'){
+logout();
+return;
+}
+throw new Error(typeof r.err=='string'?r.err:'Tidak dapat memuat pesan');
+}
+
+const box=$('chatPreview');
+const shouldScroll=!box||box.scrollHeight-box.scrollTop-box.clientHeight<60;
+CHAT_MESSAGES=Array.isArray(r.rows)?r.rows:[];
+
+if(box){
+box.innerHTML=CHAT_MESSAGES.map(m=>`
+<div class="chat-bubble ${m.from==USER?'mine':''}">
+${esc(m.text)}
+<time>${socialTime(m.ts)}</time>
+</div>
+`).join('')||'<div class="empty">Mulai percakapan dengan menyapa rekan tim.</div>';
+if(shouldScroll)scrollChatToBottom();
+}
+
+}catch(e){
+toast('Chat gagal diperbarui: '+String((e&&e.message)||e));
+}
+
+}
+
+
+async function sendTeamMessage(event){
+
+event.preventDefault();
+const input=$('#chatText');
+const text=input.value.trim();
+
+if(!CHAT_PEER||!text)return;
+
+try{
+
+const r=await rpc(
+'sendChat',
+TOK,
+CHAT_PEER,
+text
+);
+
+if(r.err){
+toast(typeof r.err=='string'?r.err:'Pesan gagal dikirim');
+return;
+}
+
+input.value='';
+await Promise.all([
+refreshChatHistory(),
+loadChatContacts()
+]);
+
+}catch(e){
+
+toast('Pesan gagal dikirim: '+String((e&&e.message)||e));
+
+}
+
+}
+
+
+CHAT_TIMER=setInterval(
+()=>{
+if(
+TOK &&
+CHAT_PEER &&
+(
+tab=='chat' ||
+dmTab=='chat'
+)
+){
+refreshChatHistory();
+}
+},
+7000
+);
+
+
 function home(){
 
 const n=
@@ -1418,7 +2321,7 @@ h<11
 
 return`
 
-<div class="row sp">
+<div class="card home-welcome">
 
 <div>
 
@@ -1440,14 +2343,10 @@ year:'numeric'
 </div>
 
 </div>
-
+</div>
 </div>
 
-
-<div
-class="card"
-style="margin-top:14px"
->
+<div class="card home-progress" style="margin-top:14px">
 
 <div class="mut">
 Today's progress
@@ -5007,6 +5906,10 @@ tstat
 $('#app').innerHTML=
 dmTab=='dash'
 ?dmDash(T)
+:dmTab=='feed'
+?socialFeed()
+:dmTab=='chat'
+?chatPage()
 :dmTab=='tim'
 ?dmTim(T)
 :dmTab=='leads'
@@ -5020,9 +5923,11 @@ $('#nav').innerHTML=
 
 [
 ['dash','📊','Dashboard'],
+['feed','📰','Feed'],
 ['tim','👥','Tim'],
 ['leads','🔥','Leads'],
 ['akt','✅','Aktivitas'],
+['chat','💬','Chat'],
 ['profile','👤','Profile']
 ]
 .map(
@@ -5033,6 +5938,8 @@ onclick="
 dmU='all';
 dmTab='${n[0]}';
 render();
+${n[0]=='feed'?'loadSocialFeed();':''}
+${n[0]=='chat'?'loadChatContacts();':''}
 scrollTo(0,0)
 "
 >
@@ -5064,6 +5971,14 @@ flt=f;
 
 render();
 
+if(t=='feed'){
+loadSocialFeed();
+}
+
+if(t=='chat'){
+loadChatContacts();
+}
+
 scrollTo(
 0,
 0
@@ -5087,9 +6002,11 @@ return renderDM();
 $('#app').innerHTML=
 {
 home,
+feed:socialFeed,
 leads,
 pipeline,
 activity,
+chat:chatPage,
 profile
 }[tab]();
 
@@ -5098,9 +6015,11 @@ $('#nav').innerHTML=
 
 [
 ['home','🏠','Home'],
+['feed','📰','Feed'],
 ['leads','👥','Leads'],
 ['pipeline','📊','Pipeline'],
 ['activity','✅','Activity'],
+['chat','💬','Chat'],
 ['profile','👤','Profile']
 ]
 .map(

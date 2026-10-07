@@ -40,7 +40,14 @@ function api_() {
     listUsers: listUsers,
     createUser: createUser,
     updateProfile: updateProfile,
-    deleteUser: deleteUser
+    deleteUser: deleteUser,
+    databaseData: databaseData,
+    checkSession: checkSession,
+    socialFeed: socialFeed,
+    createPost: createPost,
+    chatContacts: chatContacts,
+    chatHistory: chatHistory,
+    sendChat: sendChat
   };
 }
 ```
@@ -151,6 +158,7 @@ function deleteUser(t, username) {
       }
     }
 
+    purgeSocialData_(targetUsername);
     users_().deleteRow(target.idx);
   } finally {
     lock.releaseLock();
@@ -160,4 +168,288 @@ function deleteUser(t, username) {
 }
 ```
 
-Setelah menempel perubahan, simpan project Apps Script dan **deploy versi baru** pada deployment Web App yang digunakan aplikasi. Jika tidak, frontend tetap memanggil versi API lama yang belum mengenali endpoint baru.
+## 4. Pindahkan data database ke Apps Script
+
+`database.html` tidak lagi menyimpan daftar nama dan nomor telepon. Salin array data lama ke project Apps Script agar hanya bisa diambil lewat endpoint yang memeriksa sesi.
+
+Data lama dapat diambil dari versi Git sebelum perubahan ini:
+
+```powershell
+git show 388de7a:database.html
+```
+
+Di output, cari deklarasi `const DATA=[...];`. Salin seluruh deklarasi array itu ke Code.gs dan ubah nama variabelnya menjadi `DATABASE_DATA`:
+
+```javascript
+const DATABASE_DATA = [/* tempel seluruh record array lama di sini */];
+```
+
+Ganti komentar dengan seluruh record array yang disalin, tanpa mengubah isi record. Simpan array hanya di project Apps Script; jangan tempelkan isinya ke file dokumentasi atau commit Git baru.
+
+Tambahkan fungsi berikut ke Code.gs:
+
+```javascript
+function databaseData(t) {
+  const session = loadState(t);
+
+  if (!session || session.err) {
+    return { err: 'AUTH' };
+  }
+
+  return { rows: DATABASE_DATA };
+}
+
+
+function checkSession(t) {
+  const session = loadState(t);
+
+  if (!session || session.err) {
+    return { err: 'AUTH' };
+  }
+
+  return { ok: 1 };
+}
+```
+
+Kedua endpoint memvalidasi token melalui `loadState`; database hanya dikirim kepada akun dengan sesi aktif. Setelah semua perubahan selesai, simpan project Apps Script dan **deploy versi baru** pada deployment Web App yang digunakan aplikasi.
+
+## 5. Feed sosial dan chat di `index.html`
+
+Tambahkan sheet penyimpanan berikut ke fungsi `setup()` setelah pembuatan sheet `Data`:
+
+```javascript
+  if (!b.getSheetByName('Posts')) {
+    b.insertSheet('Posts').appendRow([
+      'id', 'username', 'nama', 'text', 'ts'
+    ]);
+  }
+
+  if (!b.getSheetByName('Messages')) {
+    b.insertSheet('Messages').appendRow([
+      'id', 'from', 'to', 'text', 'ts'
+    ]);
+  }
+```
+
+Tambahkan helper dan endpoint berikut ke Code.gs:
+
+```javascript
+function posts_() {
+  const sheet = ss_().getSheetByName('Posts');
+  if (!sheet) throw new Error('Sheet Posts belum ada. Jalankan setup dulu.');
+  return sheet;
+}
+
+
+function messages_() {
+  const sheet = ss_().getSheetByName('Messages');
+  if (!sheet) throw new Error('Sheet Messages belum ada. Jalankan setup dulu.');
+  return sheet;
+}
+
+
+function socialFeed(t) {
+  const username = user_(t);
+  if (!username || !findUser_(username)) return { err: 'AUTH' };
+
+  const feed = posts_().getDataRange().getValues().slice(1)
+    .filter(r => String(r[3] || '').trim())
+    .map(r => ({
+      id: String(r[0]),
+      username: String(r[1]),
+      nama: String(r[2]),
+      text: String(r[3]),
+      ts: Number(r[4]),
+      kind: 'post'
+    }));
+
+  const activeUsers = {};
+  users_().getDataRange().getValues().slice(1).forEach(r => {
+    if (String(r[3]).toUpperCase() == 'Y') {
+      activeUsers[String(r[0]).toLowerCase()] = String(r[2] || r[0]);
+    }
+  });
+
+  const chunks = {};
+  data_().getDataRange().getValues().slice(1).forEach(r => {
+    const key = String(r[0]).toLowerCase();
+    if (activeUsers[key]) (chunks[key] = chunks[key] || []).push(r);
+  });
+
+  const labels = {
+    call: 'Mencatat panggilan',
+    wa: 'Menghubungi calon nasabah',
+    meet: 'Melakukan pertemuan',
+    post: 'Mencatat aktivitas promosi',
+    shot: 'Mengunggah bukti aktivitas'
+  };
+  const since = Date.now() - 30 * 864e5;
+
+  Object.keys(chunks).forEach(key => {
+    const rows = chunks[key].sort((a, b) => Number(a[1]) - Number(b[1]));
+    let state;
+    try {
+      state = JSON.parse(rows.map(r => String(r[2] || '')).join(''));
+    } catch (e) {
+      Logger.log('Feed melewati state JSON tidak valid untuk ' + key);
+      return;
+    }
+
+    (state.acts || []).forEach(a => {
+      const ts = Number(a.ts);
+      if (!ts || ts < since) return;
+      feed.push({
+        id: 'activity-' + key + '-' + String(a.id || ts),
+        username: rows[0][0],
+        nama: activeUsers[key],
+        text: labels[a.type] || 'Mencatat aktivitas penjualan',
+        ts: ts,
+        kind: 'activity'
+      });
+    });
+  });
+
+  feed.sort((a, b) => b.ts - a.ts);
+  return { rows: feed.slice(0, 100) };
+}
+
+
+function createPost(t, text) {
+  const username = user_(t);
+  const account = username && findUser_(username);
+  if (!account) return { err: 'AUTH' };
+
+  text = String(text || '').trim();
+  if (!text) return { err: 'Isi postingan tidak boleh kosong' };
+  if (text.length > 500) return { err: 'Postingan maksimal 500 karakter' };
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    posts_().appendRow([
+      Utilities.getUuid(), String(account[0]), String(account[2]), text, Date.now()
+    ]);
+  } finally {
+    lock.releaseLock();
+  }
+  return { ok: 1 };
+}
+
+
+function chatContacts(t) {
+  const username = user_(t);
+  if (!username || !findUser_(username)) return { err: 'AUTH' };
+
+  const contacts = {};
+  users_().getDataRange().getValues().slice(1).forEach(r => {
+    const other = String(r[0]);
+    if (String(r[3]).toUpperCase() != 'Y' ||
+        other.toLowerCase() == username.toLowerCase()) return;
+    contacts[other.toLowerCase()] = {
+      username: other,
+      nama: String(r[2] || other),
+      role: String(r[4] || 'BDO').toUpperCase(),
+      lastText: '',
+      lastTs: 0
+    };
+  });
+
+  messages_().getDataRange().getValues().slice(1).forEach(r => {
+    const from = String(r[1]);
+    const to = String(r[2]);
+    if (from.toLowerCase() != username.toLowerCase() &&
+        to.toLowerCase() != username.toLowerCase()) return;
+    const other = (from.toLowerCase() == username.toLowerCase() ? to : from).toLowerCase();
+    const contact = contacts[other];
+    const ts = Number(r[4]) || 0;
+    if (contact && ts >= contact.lastTs) {
+      contact.lastText = String(r[3]);
+      contact.lastTs = ts;
+    }
+  });
+
+  return {
+    rows: Object.keys(contacts).map(k => contacts[k])
+      .sort((a, b) => b.lastTs - a.lastTs || a.nama.localeCompare(b.nama))
+  };
+}
+
+
+function chatHistory(t, peer) {
+  const username = user_(t);
+  if (!username || !findUser_(username)) return { err: 'AUTH' };
+
+  peer = String(peer || '').trim();
+  if (!peer || peer.toLowerCase() == username.toLowerCase() ||
+      !findUser_(peer)) return { err: 'Akun chat tidak ditemukan' };
+
+  const rows = messages_().getDataRange().getValues().slice(1)
+    .filter(r =>
+      (String(r[1]).toLowerCase() == username.toLowerCase() &&
+       String(r[2]).toLowerCase() == peer.toLowerCase()) ||
+      (String(r[1]).toLowerCase() == peer.toLowerCase() &&
+       String(r[2]).toLowerCase() == username.toLowerCase())
+    )
+    .sort((a, b) => Number(a[4]) - Number(b[4]))
+    .slice(-100)
+    .map(r => ({
+      id: String(r[0]),
+      from: String(r[1]),
+      to: String(r[2]),
+      text: String(r[3]),
+      ts: Number(r[4])
+    }));
+
+  return { rows: rows };
+}
+
+
+function sendChat(t, peer, text) {
+  const username = user_(t);
+  if (!username || !findUser_(username)) return { err: 'AUTH' };
+
+  peer = String(peer || '').trim();
+  if (!peer || peer.toLowerCase() == username.toLowerCase() ||
+      !findUser_(peer)) return { err: 'Akun chat tidak ditemukan' };
+
+  text = String(text || '').trim();
+  if (!text) return { err: 'Pesan tidak boleh kosong' };
+  if (text.length > 1000) return { err: 'Pesan maksimal 1000 karakter' };
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    messages_().appendRow([
+      Utilities.getUuid(), username, peer, text, Date.now()
+    ]);
+  } finally {
+    lock.releaseLock();
+  }
+  return { ok: 1 };
+}
+
+
+function purgeSocialData_(username) {
+  const key = String(username).toLowerCase();
+  const posts = posts_();
+  const postRows = posts.getDataRange().getValues();
+  for (let i = postRows.length - 1; i >= 1; i--) {
+    if (String(postRows[i][1]).toLowerCase() == key) posts.deleteRow(i + 1);
+  }
+
+  const messages = messages_();
+  const messageRows = messages.getDataRange().getValues();
+  for (let i = messageRows.length - 1; i >= 1; i--) {
+    if (String(messageRows[i][1]).toLowerCase() == key ||
+        String(messageRows[i][2]).toLowerCase() == key) {
+      messages.deleteRow(i + 1);
+    }
+  }
+}
+```
+
+Tambahkan pemanggilan `purgeSocialData_(targetUsername);` ke fungsi `deleteUser`, sebelum `users_().deleteRow(target.idx)`, agar posting dan chat ikut terhapus saat akun dihapus.
+
+Setelah endpoint ini dan semua perubahan di atas ditempel, jalankan `setup()` sekali untuk membuat sheet `Posts` dan `Messages`, simpan, lalu **deploy versi baru** Web App. Feed menampilkan ringkasan aktivitas tanpa nama atau rincian calon nasabah; pesan chat hanya dapat diambil oleh dua akun yang terlibat.
+
+**Catatan riwayat Git:** data lama pernah ada di commit `388de7a`. Menghapusnya dari versi terbaru tidak menghapus data dari riwayat commit. Jika repository dapat diakses publik, data di commit lama masih dapat dilihat melalui history; penghapusan dari history memerlukan perubahan riwayat Git dan koordinasi sebelum force-push.
