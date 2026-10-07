@@ -862,6 +862,44 @@ flex:none;
 padding:11px 14px
 }
 
+.chat-create-group{
+padding:12px 14px;
+border-top:1px solid var(--line)
+}
+
+.chat-create-group summary{
+cursor:pointer;
+color:var(--social);
+font-weight:800
+}
+
+.chat-create-form{
+display:grid;
+gap:9px;
+padding-top:12px
+}
+
+.chat-create-form label{
+display:grid;
+gap:5px;
+font-size:12px;
+font-weight:700
+}
+
+.chat-create-form input,.chat-create-form select{
+width:100%;
+margin:0
+}
+
+.chat-create-form select{
+min-height:110px
+}
+
+.chat-create-form small{
+color:var(--mut);
+line-height:1.4
+}
+
 @media(max-width:620px){
 #app{padding:14px 12px calc(100px + env(safe-area-inset-bottom,0px))}
 .app-topbar{
@@ -1048,7 +1086,10 @@ q='',
 per='hari',
 USER='',
 FEED=[],
+CHAT_CONTACTS=[],
 CHAT_MESSAGES=[],
+CHAT_GROUPS=[],
+CHAT_ACTIVE=null,
 CHAT_TIMER=null;
 
 function seed(){
@@ -1693,7 +1734,10 @@ TOK='';
 S=seed();
 USER='';
 FEED=[];
+CHAT_CONTACTS=[];
 CHAT_MESSAGES=[];
+CHAT_GROUPS=[];
+CHAT_ACTIVE=null;
 $('#appHeader').hidden=true;
 
 try{
@@ -2098,44 +2142,112 @@ toast('Postingan gagal dikirim: '+String((e&&e.message)||e));
 }
 
 
-async function loadBroadcastHistory(){
+async function loadChatContacts(){
 
 try{
 
-const r=await rpc(
-'broadcastHistory',
-TOK
-);
+const results=await Promise.all([
+rpc('chatContacts',TOK),
+rpc('chatGroups',TOK)
+]);
 
-if(!r||typeof r!='object'){
-throw new Error('Format respons riwayat pesan tim tidak valid.');
-}
+const contacts=results[0],
+groups=results[1];
 
+for(const r of results){
+if(!r||typeof r!='object')throw new Error('Respons daftar chat tidak valid.');
 if(r.err){
-if(r.err=='AUTH'){
-logout();
-return;
+if(r.err=='AUTH'){logout();return;}
+throw new Error(typeof r.err=='string'?r.err:'Tidak dapat memuat daftar chat');
 }
-throw new Error(
-typeof r.err=='string'?r.err:'Tidak dapat memuat daftar chat'
-);
+if(!Array.isArray(r.rows))throw new Error('Endpoint chat harus mengembalikan rows berupa array.');
 }
 
-if(!Array.isArray(r.rows)){
-throw new Error('Endpoint broadcastHistory harus mengembalikan rows berupa array.');
+CHAT_CONTACTS=contacts.rows;
+CHAT_GROUPS=groups.rows;
+
+if(CHAT_ACTIVE){
+const collection=CHAT_ACTIVE.type=='group'?CHAT_GROUPS:CHAT_CONTACTS;
+if(!collection.some(x=>String(CHAT_ACTIVE.type=='group'?x.id:x.username)==CHAT_ACTIVE.id)){
+CHAT_ACTIVE=null;
+CHAT_MESSAGES=[];
+}
 }
 
-CHAT_MESSAGES=r.rows;
-
-if(tab=='chat'||dmTab=='chat'){
-render();
-scrollChatToBottom();
-}
+if(tab=='chat'||dmTab=='chat')render();
 
 }catch(e){
+toast('Chat gagal dimuat: '+String((e&&e.message)||e));
+}
 
-toast('Pesan tim gagal dimuat: '+String((e&&e.message)||e));
+}
 
+
+async function openTeamChat(username){
+CHAT_ACTIVE={type:'personal',id:String(username)};
+await openChatHistory();
+}
+
+
+async function openGroupChat(groupId){
+CHAT_ACTIVE={type:'group',id:String(groupId)};
+await openChatHistory();
+}
+
+
+async function openChatHistory(){
+
+CHAT_MESSAGES=[];
+if(ROLE=='DM'||ROLE=='BM')dmTab='chat';else tab='chat';
+render();
+
+try{
+const isGroup=CHAT_ACTIVE.type=='group';
+const target=CHAT_ACTIVE.id;
+const r=await rpc(
+isGroup?'groupHistory':'chatHistory',
+TOK,
+target
+);
+
+if(!r||typeof r!='object')throw new Error('Format respons riwayat chat tidak valid.');
+if(r.err){
+if(r.err=='AUTH'){logout();return;}
+throw new Error(typeof r.err=='string'?r.err:'Tidak dapat memuat pesan');
+}
+if(!Array.isArray(r.rows))throw new Error('Endpoint riwayat chat harus mengembalikan rows berupa array.');
+
+if(!CHAT_ACTIVE||CHAT_ACTIVE.type!=(isGroup?'group':'personal')||CHAT_ACTIVE.id!=target)return;
+CHAT_MESSAGES=r.rows;
+render();
+scrollChatToBottom();
+}catch(e){
+toast('Pesan gagal dimuat: '+String((e&&e.message)||e));
+}
+
+}
+
+
+async function createTeamGroup(event){
+
+event.preventDefault();
+const form=event.currentTarget;
+const name=form.querySelector('[name="groupName"]').value.trim();
+const members=Array.from(form.querySelector('[name="groupMembers"]').selectedOptions).map(x=>x.value);
+
+try{
+const r=await rpc('createChatGroup',TOK,name,members);
+if(!r||typeof r!='object')throw new Error('Format respons createChatGroup tidak valid.');
+if(r.err){
+if(r.err=='AUTH'){logout();return;}
+throw new Error(typeof r.err=='string'?r.err:'Grup gagal dibuat');
+}
+if(!r.ok||!r.groupId)throw new Error('Apps Script belum mengonfirmasi pembuatan grup.');
+form.reset();
+await loadChatContacts();
+await openGroupChat(r.groupId);
+}catch(e){
+toast('Grup gagal dibuat: '+String((e&&e.message)||e));
 }
 
 }
@@ -2143,6 +2255,11 @@ toast('Pesan tim gagal dimuat: '+String((e&&e.message)||e));
 
 function chatPage(){
 
+const activeGroup=CHAT_ACTIVE&&CHAT_ACTIVE.type=='group'
+?CHAT_GROUPS.find(x=>String(x.id)==CHAT_ACTIVE.id):null;
+const activeContact=CHAT_ACTIVE&&CHAT_ACTIVE.type=='personal'
+?CHAT_CONTACTS.find(x=>String(x.username)==CHAT_ACTIVE.id):null;
+const active=activeGroup||activeContact;
 const messages=CHAT_MESSAGES.map(m=>`
 <div class="chat-bubble ${m.from==USER?'mine':''}">
 <b>${esc(m.nama||m.from||'Anggota TPFX')}</b>
@@ -2150,29 +2267,63 @@ ${esc(m.text)}
 <time>${socialTime(m.ts)}</time>
 </div>
 `).join('');
+const contactOptions=CHAT_CONTACTS.map(c=>`
+<option value="${esc(c.username)}">${esc(c.nama)} (${esc(c.role)})</option>
+`).join('');
 
 return`
 <div class="social-wrap">
 <div class="social-top">
 <div>
-<div class="social-brand">Pesan Tim</div>
-<div class="social-subtitle">Pengumuman untuk semua akun aktif TPFX</div>
+<div class="social-brand">Pesan</div>
+<div class="social-subtitle">Chat personal dan grup bersama anggota TPFX</div>
 </div>
-<button class="btn sec" onclick="loadBroadcastHistory()">↻ Segarkan</button>
+<button class="btn sec" onclick="loadChatContacts()">↻ Segarkan</button>
 </div>
 
+<div class="chat-layout ${active?'has-peer':''}">
 <section class="chat-panel">
-<div class="chat-panel-head">Broadcast untuk semua anggota</div>
-<div class="chat-preview" id="chatPreview">${messages||'<div class="empty">Belum ada pengumuman tim.</div>'}</div>
-${ROLE=='DM'||ROLE=='BM'
-?`
-<form class="chat-compose" onsubmit="sendTeamMessage(event)">
-<textarea id="chatText" maxlength="1000" placeholder="Tulis pengumuman untuk semua akun..." aria-label="Tulis pengumuman untuk semua akun"></textarea>
-<button class="btn" type="submit">Kirim ke semua</button>
-</form>`
-:'<div class="chat-panel-head mut">Hanya BM dan DM yang dapat mengirim broadcast. Anda dapat membaca pengumuman tim di sini.</div>'
-}
+<div class="chat-panel-head">Percakapan personal</div>
+<div>
+${CHAT_CONTACTS.length?CHAT_CONTACTS.map(c=>`
+<button class="chat-contact ${CHAT_ACTIVE&&CHAT_ACTIVE.type=='personal'&&CHAT_ACTIVE.id==c.username?'active':''}" data-username="${esc(c.username)}" onclick="openTeamChat(this.dataset.username)">
+<div class="social-avatar">${initials(c.nama)}</div>
+<div class="chat-contact-copy"><b>${esc(c.nama)}</b><span>${esc(c.lastText||c.role||'Mulai percakapan')}</span></div>
+</button>`).join(''):'<div class="empty">Belum ada anggota aktif lain.</div>'}
+</div>
+<div class="chat-panel-head">Grup</div>
+<div>
+${CHAT_GROUPS.length?CHAT_GROUPS.map(g=>`
+<button class="chat-contact ${CHAT_ACTIVE&&CHAT_ACTIVE.type=='group'&&CHAT_ACTIVE.id==g.id?'active':''}" data-group="${esc(g.id)}" onclick="openGroupChat(this.dataset.group)">
+<div class="social-avatar">👥</div>
+<div class="chat-contact-copy"><b>${esc(g.name)}</b><span>${esc(g.lastText||'Grup · '+(g.memberCount||0)+' anggota')}</span></div>
+</button>`).join(''):'<div class="empty">Anda belum tergabung dalam grup.</div>'}
+</div>
+<details class="chat-create-group">
+<summary>＋ Buat grup baru</summary>
+<form class="chat-create-form" onsubmit="createTeamGroup(event)">
+<label>Nama grup<input name="groupName" maxlength="60" required placeholder="Contoh: Tim Jakarta"></label>
+<label>Pilih anggota lain<select name="groupMembers" multiple size="5">${contactOptions}</select></label>
+<small>Anda otomatis menjadi anggota. Pilih minimal satu anggota lain.</small>
+<button class="btn" type="submit">Buat grup</button>
+</form>
+</details>
 </section>
+
+<section class="chat-panel">
+${active?`
+<div class="chat-panel-head row">
+<button class="btn sec chat-back" style="display:none;padding:7px 10px" onclick="CHAT_ACTIVE=null;CHAT_MESSAGES=[];render()">←</button>
+<div class="social-avatar">${activeGroup?'👥':initials(active.nama)}</div>
+<div>${esc(activeGroup?activeGroup.name:active.nama)}<div class="mut">${activeGroup?'Grup · '+(activeGroup.memberCount||0)+' anggota':esc(active.role)}</div></div>
+</div>
+<div class="chat-preview" id="chatPreview">${messages||'<div class="empty">Mulai percakapan dengan menyapa anggota.</div>'}</div>
+<form class="chat-compose" onsubmit="sendTeamMessage(event)">
+<textarea id="chatText" maxlength="1000" placeholder="Tulis pesan..." aria-label="Tulis pesan"></textarea>
+<button class="btn" type="submit">Kirim</button>
+</form>`:'<div class="empty">Pilih percakapan atau buat grup baru.</div>'}
+</section>
+</div>
 </div>
 `;
 
@@ -2187,46 +2338,30 @@ if(box)box.scrollTop=box.scrollHeight;
 
 async function refreshChatHistory(){
 
-if(!(tab=='chat'||dmTab=='chat'))return;
+if(!(tab=='chat'||dmTab=='chat')||!CHAT_ACTIVE)return;
 
 try{
+const isGroup=CHAT_ACTIVE.type=='group';
+const target=CHAT_ACTIVE.id;
+const r=await rpc(isGroup?'groupHistory':'chatHistory',TOK,target);
 
-const r=await rpc(
-'broadcastHistory',
-TOK
-);
-
-if(!r||typeof r!='object'){
-throw new Error('Format respons riwayat pesan tim tidak valid.');
-}
-
+if(!r||typeof r!='object')throw new Error('Format respons riwayat chat tidak valid.');
 if(r.err){
-if(r.err=='AUTH'){
-logout();
-return;
-}
+if(r.err=='AUTH'){logout();return;}
 throw new Error(typeof r.err=='string'?r.err:'Tidak dapat memuat pesan');
 }
-
-if(!Array.isArray(r.rows)){
-throw new Error('Endpoint broadcastHistory harus mengembalikan rows berupa array.');
-}
+if(!Array.isArray(r.rows))throw new Error('Endpoint riwayat chat harus mengembalikan rows berupa array.');
+if(!CHAT_ACTIVE||CHAT_ACTIVE.type!=(isGroup?'group':'personal')||CHAT_ACTIVE.id!=target)return;
 
 const box=$('chatPreview');
 const shouldScroll=!box||box.scrollHeight-box.scrollTop-box.clientHeight<60;
-CHAT_MESSAGES=Array.isArray(r.rows)?r.rows:[];
-
+CHAT_MESSAGES=r.rows;
 if(box){
 box.innerHTML=CHAT_MESSAGES.map(m=>`
-<div class="chat-bubble ${m.from==USER?'mine':''}">
-<b>${esc(m.nama||m.from||'Anggota TPFX')}</b>
-${esc(m.text)}
-<time>${socialTime(m.ts)}</time>
-</div>
-`).join('')||'<div class="empty">Belum ada pengumuman tim.</div>';
+<div class="chat-bubble ${m.from==USER?'mine':''}"><b>${esc(m.nama||m.from||'Anggota TPFX')}</b>${esc(m.text)}<time>${socialTime(m.ts)}</time></div>
+`).join('')||'<div class="empty">Mulai percakapan dengan menyapa anggota.</div>';
 if(shouldScroll)scrollChatToBottom();
 }
-
 }catch(e){
 toast('Chat gagal diperbarui: '+String((e&&e.message)||e));
 }
@@ -2239,41 +2374,27 @@ async function sendTeamMessage(event){
 event.preventDefault();
 const input=$('#chatText');
 const text=input.value.trim();
-
-if(!text)return;
+if(!CHAT_ACTIVE||!text)return;
 
 try{
-
+const isGroup=CHAT_ACTIVE.type=='group';
 const r=await rpc(
-'sendBroadcast',
+isGroup?'sendGroupChat':'sendChat',
 TOK,
+CHAT_ACTIVE.id,
 text
 );
-
-if(!r||typeof r!='object'){
-throw new Error('Format respons sendBroadcast tidak valid.');
-}
-
+if(!r||typeof r!='object')throw new Error('Format respons pengiriman pesan tidak valid.');
 if(r.err){
-if(r.err=='AUTH'){
-logout();
-return;
-}
+if(r.err=='AUTH'){logout();return;}
 toast(typeof r.err=='string'?r.err:'Pesan gagal dikirim');
 return;
 }
-
-if(r.ok!==1){
-throw new Error('Apps Script belum mengonfirmasi pengiriman broadcast.');
-}
-
+if(r.ok!==1)throw new Error('Apps Script belum mengonfirmasi pengiriman pesan.');
 input.value='';
-await loadBroadcastHistory();
-
+await Promise.all([refreshChatHistory(),loadChatContacts()]);
 }catch(e){
-
-toast('Broadcast gagal dikirim: '+String((e&&e.message)||e));
-
+toast('Pesan gagal dikirim: '+String((e&&e.message)||e));
 }
 
 }
@@ -2281,14 +2402,8 @@ toast('Broadcast gagal dikirim: '+String((e&&e.message)||e));
 
 CHAT_TIMER=setInterval(
 ()=>{
-if(
-TOK &&
-(
-tab=='chat' ||
-dmTab=='chat'
-)
-){
-refreshChatHistory();
+if(TOK&&(tab=='chat'||dmTab=='chat')){
+if(CHAT_ACTIVE)refreshChatHistory();
 }
 },
 7000
@@ -5958,7 +6073,7 @@ dmU='all';
 dmTab='${n[0]}';
 render();
 ${n[0]=='feed'?'loadSocialFeed();':''}
-${n[0]=='chat'?'loadBroadcastHistory();':''}
+${n[0]=='chat'?'loadChatContacts();':''}
 scrollTo(0,0)
 "
 >
@@ -5995,7 +6110,7 @@ loadSocialFeed();
 }
 
 if(t=='chat'){
-loadBroadcastHistory();
+loadChatContacts();
 }
 
 scrollTo(

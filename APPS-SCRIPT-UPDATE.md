@@ -48,8 +48,10 @@ function api_() {
     chatContacts: chatContacts,
     chatHistory: chatHistory,
     sendChat: sendChat,
-    broadcastHistory: broadcastHistory,
-    sendBroadcast: sendBroadcast
+    chatGroups: chatGroups,
+    createChatGroup: createChatGroup,
+    groupHistory: groupHistory,
+    sendGroupChat: sendGroupChat
   };
 }
 ```
@@ -229,6 +231,12 @@ Tambahkan sheet penyimpanan berikut ke fungsi `setup()` setelah pembuatan sheet 
   if (!b.getSheetByName('Messages')) {
     b.insertSheet('Messages').appendRow([
       'id', 'from', 'to', 'text', 'ts'
+    ]);
+  }
+
+  if (!b.getSheetByName('ChatGroups')) {
+    b.insertSheet('ChatGroups').appendRow([
+      'id', 'name', 'owner', 'members_json', 'ts'
     ]);
   }
 ```
@@ -431,21 +439,116 @@ function sendChat(t, peer, text) {
 }
 
 
-function broadcastHistory(t) {
+function chatGroups_() {
+  const sheet = ss_().getSheetByName('ChatGroups');
+  if (!sheet) throw new Error('Sheet ChatGroups belum ada. Jalankan setup dulu.');
+  return sheet;
+}
+
+
+function groupMembers_(row) {
+  const members = JSON.parse(String(row[3] || '[]'));
+  if (!Array.isArray(members)) throw new Error('Daftar anggota grup tidak valid.');
+  return members.map(name => String(name).toLowerCase());
+}
+
+
+function chatGroups(t) {
   const username = user_(t);
   const account = username && findUser_(username);
-  if (!account || String(account[3]).toUpperCase() != 'Y') {
-    return { err: 'AUTH' };
+  if (!account || String(account[3]).toUpperCase() != 'Y') return { err: 'AUTH' };
+
+  const lastMessages = {};
+  messages_().getDataRange().getValues().slice(1).forEach(r => {
+    const target = String(r[2] || '');
+    if (target.indexOf('group:') != 0) return;
+    const id = target.slice(6);
+    if (!lastMessages[id] || Number(r[4]) >= lastMessages[id].ts) {
+      lastMessages[id] = { text: String(r[3]), ts: Number(r[4]) || 0 };
+    }
+  });
+
+  const rows = chatGroups_().getDataRange().getValues().slice(1)
+    .filter(r => groupMembers_(r).indexOf(String(username).toLowerCase()) >= 0)
+    .map(r => {
+      const id = String(r[0]);
+      const members = groupMembers_(r);
+      const last = lastMessages[id] || {};
+      return {
+        id: id,
+        name: String(r[1]),
+        memberCount: members.length,
+        lastText: String(last.text || ''),
+        lastTs: Number(last.ts) || 0
+      };
+    })
+    .sort((a, b) => b.lastTs - a.lastTs || a.name.localeCompare(b.name));
+
+  return { rows: rows };
+}
+
+
+function createChatGroup(t, name, selectedMembers) {
+  const username = user_(t);
+  const account = username && findUser_(username);
+  if (!account || String(account[3]).toUpperCase() != 'Y') return { err: 'AUTH' };
+
+  name = String(name || '').trim();
+  if (!name) return { err: 'Nama grup tidak boleh kosong' };
+  if (name.length > 60) return { err: 'Nama grup maksimal 60 karakter' };
+  if (!Array.isArray(selectedMembers)) return { err: 'Daftar anggota grup tidak valid' };
+
+  const active = {};
+  users_().getDataRange().getValues().slice(1).forEach(r => {
+    if (String(r[3]).toUpperCase() == 'Y') {
+      active[String(r[0]).toLowerCase()] = String(r[0]);
+    }
+  });
+
+  const members = [String(username)];
+  selectedMembers.forEach(value => {
+    const key = String(value || '').trim().toLowerCase();
+    if (!key || key == String(username).toLowerCase()) return;
+    if (!active[key]) throw new Error('Anggota grup tidak aktif atau tidak ditemukan: ' + key);
+    if (members.map(x => x.toLowerCase()).indexOf(key) < 0) members.push(active[key]);
+  });
+
+  if (members.length < 2) return { err: 'Pilih minimal satu anggota lain untuk grup' };
+  if (members.length > 50) return { err: 'Grup maksimal 50 anggota' };
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const id = Utilities.getUuid();
+    chatGroups_().appendRow([id, name, username, JSON.stringify(members), Date.now()]);
+    return { ok: 1, groupId: id };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+
+function groupHistory(t, groupId) {
+  const username = user_(t);
+  const account = username && findUser_(username);
+  if (!account || String(account[3]).toUpperCase() != 'Y') return { err: 'AUTH' };
+
+  groupId = String(groupId || '').trim();
+  const groups = chatGroups_().getDataRange().getValues().slice(1);
+  const group = groups.find(r => String(r[0]) == groupId);
+  if (!group) return { err: 'Grup tidak ditemukan' };
+  if (groupMembers_(group).indexOf(String(username).toLowerCase()) < 0) {
+    return { err: 'Anda bukan anggota grup ini' };
   }
 
   const names = {};
   users_().getDataRange().getValues().slice(1).forEach(r => {
-    const account = String(r[0] || '').trim();
-    if (account) names[account.toLowerCase()] = String(r[2] || account);
+    const key = String(r[0] || '').toLowerCase();
+    if (key) names[key] = String(r[2] || r[0]);
   });
 
   const rows = messages_().getDataRange().getValues().slice(1)
-    .filter(r => String(r[2]) == '*')
+    .filter(r => String(r[2]) == 'group:' + groupId)
     .sort((a, b) => Number(a[4]) - Number(b[4]))
     .slice(-200)
     .map(r => ({
@@ -460,32 +563,32 @@ function broadcastHistory(t) {
 }
 
 
-function sendBroadcast(t, text) {
+function sendGroupChat(t, groupId, text) {
   const username = user_(t);
   const account = username && findUser_(username);
-  if (!account || String(account[3]).toUpperCase() != 'Y') {
-    return { err: 'AUTH' };
-  }
+  if (!account || String(account[3]).toUpperCase() != 'Y') return { err: 'AUTH' };
 
-  const callerRole = role_(t);
-  if (callerRole != 'BM' && callerRole != 'DM') {
-    return { err: 'Hanya BM dan DM yang dapat mengirim broadcast' };
+  groupId = String(groupId || '').trim();
+  const group = chatGroups_().getDataRange().getValues().slice(1)
+    .find(r => String(r[0]) == groupId);
+  if (!group) return { err: 'Grup tidak ditemukan' };
+  if (groupMembers_(group).indexOf(String(username).toLowerCase()) < 0) {
+    return { err: 'Anda bukan anggota grup ini' };
   }
 
   text = String(text || '').trim();
-  if (!text) return { err: 'Isi pesan tidak boleh kosong' };
+  if (!text) return { err: 'Pesan tidak boleh kosong' };
   if (text.length > 1000) return { err: 'Pesan maksimal 1000 karakter' };
 
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
     messages_().appendRow([
-      Utilities.getUuid(), username, '*', text, Date.now()
+      Utilities.getUuid(), username, 'group:' + groupId, text, Date.now()
     ]);
   } finally {
     lock.releaseLock();
   }
-
   return { ok: 1 };
 }
 
@@ -506,14 +609,34 @@ function purgeSocialData_(username) {
       messages.deleteRow(i + 1);
     }
   }
+
+  const groups = chatGroups_();
+  const groupRows = groups.getDataRange().getValues();
+  for (let i = groupRows.length - 1; i >= 1; i--) {
+    const members = groupMembers_(groupRows[i])
+      .filter(member => member != key);
+    if (members.length < 2) {
+      const groupId = 'group:' + String(groupRows[i][0]);
+      const currentMessages = messages.getDataRange().getValues();
+      for (let j = currentMessages.length - 1; j >= 1; j--) {
+        if (String(currentMessages[j][2]) == groupId) messages.deleteRow(j + 1);
+      }
+      groups.deleteRow(i + 1);
+    } else {
+      groups.getRange(i + 1, 4).setValue(JSON.stringify(members));
+      if (String(groupRows[i][2]).toLowerCase() == key) {
+        groups.getRange(i + 1, 3).setValue(members[0]);
+      }
+    }
+  }
 }
 ```
 
 Tambahkan pemanggilan `purgeSocialData_(targetUsername);` ke fungsi `deleteUser`, sebelum `users_().deleteRow(target.idx)`, agar posting dan chat ikut terhapus saat akun dihapus.
 
-Chat di halaman web menggunakan broadcast: semua akun yang sudah login dapat membaca riwayat pesan tim, sedangkan hanya BM dan DM yang dapat mengirim ke semua akun aktif. Endpoint personal `chatContacts`, `chatHistory`, dan `sendChat` tetap dipertahankan di Apps Script, tetapi tidak dipakai oleh tampilan chat broadcast. Broadcast disimpan di sheet `Messages` dengan kolom `to` bernilai `*`; fungsi `purgeSocialData_` yang sudah ada tetap menghapus broadcast yang dibuat akun yang dihapus.
+Chat menggunakan percakapan personal yang sudah ada dan grup dengan beberapa anggota. Semua role dapat membuat grup, mengirim pesan personal, dan mengirim pesan ke grup yang mereka ikuti. Grup disimpan di sheet `ChatGroups`; pesan grup disimpan di sheet `Messages` dengan kolom `to` bernilai `group:<id grup>`. Akses riwayat dan pengiriman grup divalidasi di Apps Script berdasarkan keanggotaan. `purgeSocialData_` menghapus pesan milik akun yang dihapus, mengeluarkan akun itu dari grup, dan menghapus grup yang tersisa kurang dari dua anggota.
 
-Setelah endpoint ini dan semua perubahan di atas ditempel, jalankan `setup()` sekali untuk membuat sheet `Posts` dan `Messages`, simpan, lalu **deploy versi baru** Web App.
+Setelah endpoint ini dan semua perubahan di atas ditempel, jalankan `setup()` sekali untuk membuat sheet `Posts`, `Messages`, dan `ChatGroups`, simpan, lalu **deploy versi baru** Web App. Fungsi `setup()` hanya menambahkan sheet yang belum ada; tidak menghapus pesan personal yang sudah tersimpan di `Messages`.
 
 ## Diagnostik jika login atau chat mendapat respons kosong
 
@@ -521,8 +644,8 @@ Frontend mengharapkan setiap request Apps Script mengembalikan JSON dengan prope
 
 1. Fungsi `loadState(t)` harus selalu mengembalikan `{ err: 'AUTH' }` untuk token tidak valid, atau object `{ state, name, user, role }` untuk sesi aktif. Jangan menghapus `return` pada hasil sesi.
 2. Fungsi `doPost(e)` harus membungkus hasil fungsi API sebagai `{ result: f.apply(null, req.args || []) }`.
-3. Pastikan `loadState`, `socialFeed`, `createPost`, `broadcastHistory`, dan `sendBroadcast` terdaftar pada `api_()` dan masing-masing mengembalikan hasil. Endpoint personal lama dapat tetap terdaftar jika masih digunakan bagian lain.
-4. Jalankan `setup()` agar sheet `Posts` dan `Messages` tersedia, lalu deploy sebagai **versi baru**. Menyimpan kode saja tidak memperbarui deployment Web App.
+3. Pastikan `loadState`, `socialFeed`, `createPost`, `chatContacts`, `chatHistory`, `sendChat`, `chatGroups`, `createChatGroup`, `groupHistory`, dan `sendGroupChat` terdaftar pada `api_()` dan masing-masing mengembalikan hasil.
+4. Jalankan `setup()` agar sheet `Posts`, `Messages`, dan `ChatGroups` tersedia, lalu deploy sebagai **versi baru**. Menyimpan kode saja tidak memperbarui deployment Web App.
 5. Keluar dari aplikasi, login kembali, lalu buka Feed/Chat. Token yang lama dapat tidak berlaku setelah akun dihapus atau sesi berakhir.
 
 Endpoint sesi dapat diuji tanpa kredensial dengan memanggil `loadState` menggunakan token kosong: respons yang diharapkan adalah `{ "result": { "err": "AUTH" } }`, bukan respons tanpa `result`.
