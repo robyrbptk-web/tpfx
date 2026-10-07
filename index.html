@@ -562,7 +562,8 @@ tab='home',
 flt='all',
 srt='new',
 q='',
-per='hari';
+per='hari',
+USER='';
 
 function seed(){
 return{
@@ -798,6 +799,9 @@ Array.isArray(r.state.acts)
 ?r.state
 :seed();
 
+USER=
+r.user||
+'';
 
 S.name=
 r.name ||
@@ -1118,6 +1122,7 @@ TOK
 TOK='';
 
 S=seed();
+USER='';
 
 try{
 
@@ -4487,17 +4492,26 @@ await rpc(
 TOK
 );
 
-return r.err
-?[]
-:(r.rows||[]);
+if(r.err){
+
+throw new Error(
+typeof r.err=='string'
+?r.err
+:'Tidak memiliki akses untuk mengelola akun'
+);
+
+}
+
+return r.rows||[];
 
 }catch(e){
 
 toast(
-'Gagal memuat akun'
+'Gagal memuat akun: '+
+String((e&&e.message)||e)
 );
 
-return[];
+return null;
 
 }
 
@@ -4522,6 +4536,10 @@ return;
 
 const rows=
 await loadUsers();
+
+if(!rows){
+return;
+}
 
 
 sheet(`
@@ -4580,6 +4598,8 @@ ${esc(r.role)}
 
 </div>
 
+<div class="row" style="gap:8px">
+
 <span
 class="badge ${
 r.role=='BM'
@@ -4591,6 +4611,22 @@ r.role=='BM'
 >
 ${esc(r.role)}
 </span>
+
+${
+String(r.username).toLowerCase()==
+String(USER).toLowerCase()
+?'<span class="mut">Akun Anda</span>'
+:`<button
+class="btn sec"
+style="padding:7px 10px;color:var(--hot)"
+data-username="${esc(r.username)}"
+onclick="deleteAccount(this.dataset.username)"
+>
+Hapus
+</button>`
+}
+
+</div>
 
 </div>`
 )
@@ -4755,11 +4791,81 @@ toast(
 'Akun berhasil dibuat'
 );
 
+accountManager();
+
 
 }catch(e){
 
 toast(
-'Gagal membuat akun'
+'Gagal membuat akun: '+
+String((e&&e.message)||e)
+);
+
+}
+
+}
+
+
+async function deleteAccount(username){
+
+if(
+!username ||
+String(username).toLowerCase()==
+String(USER).toLowerCase()
+){
+
+toast(
+'Akun yang sedang digunakan tidak dapat dihapus'
+);
+
+return;
+
+}
+
+
+if(
+!confirm(
+'Hapus akun @'+username+' beserta seluruh data akun tersebut?'
+)
+){
+
+return;
+
+}
+
+
+try{
+
+const r=
+await rpc(
+'deleteUser',
+TOK,
+username
+);
+
+if(r.err){
+
+toast(
+typeof r.err=='string'
+?r.err
+:'Gagal menghapus akun'
+);
+
+return;
+
+}
+
+toast(
+'Akun @'+username+' berhasil dihapus'
+);
+
+await accountManager();
+
+}catch(e){
+
+toast(
+'Gagal menghapus akun: '+
+String((e&&e.message)||e)
 );
 
 }
@@ -4782,9 +4888,16 @@ class="card"
 style="margin-top:12px"
 >
 
-<b>
-${esc(S.name)}
-</b>
+<label style="margin-top:0">
+Nama
+</label>
+
+<input
+id="dmProfileName"
+value="${esc(S.name)}"
+maxlength="100"
+autocomplete="name"
+>
 
 <div class="mut">
 ${
@@ -4794,10 +4907,18 @@ ROLE=='BM'
 }
 </div>
 
-
 <button
 class="btn big"
 style="margin-top:12px"
+onclick="saveManagerProfile()"
+>
+Simpan Nama
+</button>
+
+
+<button
+class="btn big"
+style="margin-top:10px"
 onclick="accountManager()"
 >
 👥 Kelola Akun
@@ -4815,6 +4936,65 @@ Keluar
 </div>
 
 ${pwCard()}`;
+
+
+async function saveManagerProfile(){
+
+const name=
+$('#dmProfileName').value.trim();
+
+if(!name){
+
+toast(
+'Nama tidak boleh kosong'
+);
+
+return;
+
+}
+
+
+try{
+
+const r=
+await rpc(
+'updateProfile',
+TOK,
+name
+);
+
+if(r.err){
+
+toast(
+typeof r.err=='string'
+?r.err
+:'Gagal menyimpan nama'
+);
+
+return;
+
+}
+
+S.name=
+r.nama||
+name;
+
+render();
+
+toast(
+'Nama profil berhasil diperbarui'
+);
+
+}catch(e){
+
+toast(
+'Gagal menyimpan nama: '+
+String((e&&e.message)||e)
+);
+
+}
+
+}
 
 function renderDM(){
 
