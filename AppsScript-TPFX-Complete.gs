@@ -48,6 +48,88 @@ function messages_() {
   return sheetEnsure_('Messages', ['id', 'from', 'to', 'text', 'ts']);
 }
 
+// Keep row numbers stable for active chat cursors while removing message contents.
+function redactMessageRow_(sheet, rowNumber) {
+  sheet.getRange(rowNumber, 2, 1, 4).clearContent();
+}
+
+function chatSummary_() {
+  return sheetEnsure_('ChatSummary', [
+    'key', 'type', 'target', 'text', 'ts', 'from', 'row'
+  ]);
+}
+
+function chatThreadKey_(type, from, target) {
+  if (type == 'personal') {
+    return 'personal:' + [String(from).toLowerCase(), String(target).toLowerCase()]
+      .sort().join('|');
+  }
+  return type + ':' + String(target);
+}
+
+function rebuildChatSummary_() {
+  const messages = messages_();
+  const lastRow = messages.getLastRow();
+  const summary = chatSummary_();
+  const latest = {};
+  if (lastRow > 1) {
+    messages.getRange(2, 1, lastRow - 1, 5).getValues().forEach((row, index) => {
+      const from = String(row[1] || '');
+      const to = String(row[2] || '');
+      if (!String(row[0] || '').trim() || (!from && !to)) return;
+      let type, target;
+      if (to == 'global') {
+        type = 'global';
+        target = 'global';
+      } else if (to.indexOf('group:') == 0) {
+        type = 'group';
+        target = to.slice(6);
+      } else {
+        type = 'personal';
+        target = to;
+      }
+      const key = chatThreadKey_(type, from, target);
+      const sheetRow = index + 2;
+      if (!latest[key] || sheetRow > latest[key][6]) {
+        latest[key] = [
+          key, type, target, String(row[3] || ''), Number(row[4]) || 0,
+          from, sheetRow
+        ];
+      }
+    });
+  }
+  const oldLastRow = summary.getLastRow();
+  if (oldLastRow > 1) summary.getRange(2, 1, oldLastRow - 1, 7).clearContent();
+  const rows = Object.keys(latest).map(key => latest[key]);
+  if (rows.length) summary.getRange(2, 1, rows.length, 7).setValues(rows);
+}
+
+function updateChatSummary_(type, target, from, text, ts, row) {
+  const summary = chatSummary_();
+  const key = chatThreadKey_(type, from, target);
+  const lastRow = summary.getLastRow();
+  const keys = lastRow > 1
+    ? summary.getRange(2, 1, lastRow - 1, 1).getValues()
+    : [];
+  const index = keys.findIndex(value => String(value[0]) == key);
+  const values = [key, type, target, text, ts, from, row];
+  if (index < 0) summary.appendRow(values);
+  else summary.getRange(index + 2, 1, 1, 7).setValues([values]);
+}
+
+function deleteChatSummary_(type, from, target) {
+  const summary = chatSummary_();
+  const key = chatThreadKey_(type, from, target);
+  const rows = summary.getDataRange().getValues();
+  for (let i = rows.length - 1; i >= 1; i--) {
+    if (String(rows[i][0]) == key) summary.deleteRow(i + 1);
+  }
+}
+
+function chatSummaryRows_() {
+  return chatSummary_().getDataRange().getValues().slice(1);
+}
+
 function postLikes_() {
   return sheetEnsure_('PostLikes', ['postId', 'username', 'ts']);
 }
@@ -101,6 +183,7 @@ const DATABASE_DATA = [
 function setup() {
 
   const b = ss_();
+  const properties = PropertiesService.getScriptProperties();
 
   if (!b.getSheetByName('Users')) {
     b.insertSheet('Users')
@@ -145,6 +228,12 @@ function setup() {
     b.insertSheet('ChatGroups').appendRow([
       'id', 'name', 'owner', 'members_json', 'ts'
     ]);
+  }
+
+  chatSummary_();
+  if (properties.getProperty('CHAT_SUMMARY_VERSION') != '1') {
+    rebuildChatSummary_();
+    properties.setProperty('CHAT_SUMMARY_VERSION', '1');
   }
 
   const usersSheet = b.getSheetByName('Users');
@@ -260,6 +349,7 @@ function api_() {
     addPostComment: addPostComment,
     chatContacts: chatContacts,
     chatHistory: chatHistory,
+    chatSync: chatSync,
     sendChat: sendChat,
     chatGroups: chatGroups,
     createChatGroup: createChatGroup,
@@ -964,6 +1054,12 @@ function updateProfile(t, nama) {
   return { ok: 1, nama: nama };
 }
 
+function validImageUrl_(url) {
+  const value = String(url || '');
+  return /^https:\/\/drive\.google\.com\/(?:thumbnail\?id=[A-Za-z0-9_-]+&sz=w\d{1,4}|uc\?export=view&id=[A-Za-z0-9_-]+)$/i
+    .test(value);
+}
+
 function updateProfilePhoto(t, photoUrl) {
   const username = user_(t);
   const account = username && findUser_(username);
@@ -972,11 +1068,6 @@ function updateProfilePhoto(t, photoUrl) {
   photoUrl = String(photoUrl || '').trim();
   if (!validImageUrl_(photoUrl)) {
     return { err: 'URL foto profil tidak valid' };
-  }
-
-  function validImageUrl_(url) {
-    return /^https:\/\/drive\.google\.com\/thumbnail\?id=[A-Za-z0-9_-]+&sz=w\d{1,4}$/i
-      .test(String(url || ''));
   }
 
   users_().getRange(account.idx, 6).setValue(photoUrl);
@@ -1133,7 +1224,7 @@ function uploadImg(t, dataUrl) {
     DriveApp.Permission.VIEW
   );
 
-  return 'https://drive.google.com/thumbnail?id=' + f.getId() + '&sz=w600';
+  return 'https://drive.google.com/uc?export=view&id=' + f.getId();
 }
 
 
@@ -1631,6 +1722,97 @@ function addPostComment(t, postId, text) {
 // CHAT
 // ============================================================
 
+function conversationMatches_(row, type, target, username) {
+  const from = String(row[1] || '').toLowerCase();
+  const to = String(row[2] || '').toLowerCase();
+  if (type == 'global') return to == 'global';
+  if (type == 'group') return to == ('group:' + target).toLowerCase();
+  return (from == username.toLowerCase() && to == target.toLowerCase()) ||
+    (from == target.toLowerCase() && to == username.toLowerCase());
+}
+
+function chatMessageObject_(row, rowNumber, profiles, type) {
+  const from = String(row[1] || '');
+  const profile = profiles[from.toLowerCase()] || {};
+  const message = {
+    id: String(row[0]),
+    from: from,
+    nama: profile.nama || from,
+    role: profile.role || '',
+    photoUrl: profile.photoUrl || '',
+    text: String(row[3] || ''),
+    ts: Number(row[4]) || 0,
+    row: rowNumber
+  };
+  if (type == 'personal') message.to = String(row[2] || '');
+  return message;
+}
+
+function conversationPage_(type, target, username, beforeRow, profiles, pageSize) {
+  const messages = messages_();
+  const cursor = messages.getLastRow();
+  const before = Number(beforeRow) > 1
+    ? Math.min(cursor + 1, Math.floor(Number(beforeRow)))
+    : cursor + 1;
+  let end = before - 1;
+  const found = [];
+  const blockSize = 5000;
+  while (end >= 2 && found.length <= pageSize) {
+    const start = Math.max(2, end - blockSize + 1);
+    const values = messages.getRange(start, 1, end - start + 1, 5).getValues();
+    for (let i = values.length - 1; i >= 0; i--) {
+      if (conversationMatches_(values[i], type, target, username)) {
+        found.push(chatMessageObject_(values[i], start + i, profiles, type));
+        if (found.length > pageSize) break;
+      }
+    }
+    end = start - 1;
+  }
+  const hasMore = found.length > pageSize;
+  const rows = found.slice(0, pageSize).reverse();
+  return { rows: rows, cursor: cursor, hasMore: hasMore };
+}
+
+function chatSync(t, type, target, afterRow) {
+  const username = user_(t);
+  const account = username && findUser_(username);
+  if (!account) return { err: 'AUTH' };
+
+  type = String(type || '');
+  target = String(target || '').trim();
+  if (type == 'personal') {
+    if (!target || target.toLowerCase() == username.toLowerCase() || !findUser_(target)) {
+      return { err: 'Akun chat tidak ditemukan' };
+    }
+  } else if (type == 'group') {
+    const group = chatGroups_().getDataRange().getValues().slice(1)
+      .find(row => String(row[0]) == target);
+    if (!group) return { err: 'Grup tidak ditemukan' };
+    if (groupMembers_(group).indexOf(String(username).toLowerCase()) < 0) {
+      return { err: 'Anda bukan anggota grup ini' };
+    }
+  } else if (type != 'global') {
+    return { err: 'Jenis chat tidak valid' };
+  }
+
+  const messages = messages_();
+  const lastRow = messages.getLastRow();
+  const cursor = Math.max(1, Math.floor(Number(afterRow) || 1));
+  if (cursor >= lastRow) return { rows: [], cursor: lastRow };
+
+  const start = Math.max(2, cursor + 1);
+  const end = Math.min(lastRow, start + 999);
+  const values = messages.getRange(start, 1, end - start + 1, 5).getValues();
+  const profiles = socialUsers_();
+  const rows = [];
+  values.forEach((row, index) => {
+    if (conversationMatches_(row, type, target, username)) {
+      rows.push(chatMessageObject_(row, start + index, profiles, type));
+    }
+  });
+  return { rows: rows, cursor: end, hasMore: end < lastRow };
+}
+
 function chatContacts(t) {
 
   const username = user_(t);
@@ -1660,26 +1842,18 @@ function chatContacts(t) {
 
   });
 
-  messages_().getDataRange().getValues().slice(1).forEach(r => {
-
-    const from = String(r[1]);
-    const to = String(r[2]);
-
-    if (
-      from.toLowerCase() != username.toLowerCase() &&
-      to.toLowerCase() != username.toLowerCase()
-    ) return;
-
-    const other = (from.toLowerCase() == username.toLowerCase() ? to : from).toLowerCase();
+  chatSummaryRows_().forEach(r => {
+    if (String(r[1]) != 'personal') return;
+    const key = String(r[0]);
+    const match = key.slice('personal:'.length).split('|');
+    if (match.length != 2) return;
+    const other = match[0] == username.toLowerCase() ? match[1] :
+      match[1] == username.toLowerCase() ? match[0] : '';
     const contact = contacts[other];
-    const ts = Number(r[4]) || 0;
-
-    if (contact && ts >= contact.lastTs) {
-      contact.lastText = String(r[3]);
-      contact.lastTs = ts;
-      contact.lastFrom = from;
-    }
-
+    if (!contact) return;
+    contact.lastText = String(r[3] || '');
+    contact.lastTs = Number(r[4]) || 0;
+    contact.lastFrom = String(r[5] || '');
   });
 
   return {
@@ -1690,7 +1864,7 @@ function chatContacts(t) {
 }
 
 
-function chatHistory(t, peer) {
+function chatHistory(t, peer, beforeRow) {
 
   const username = user_(t);
 
@@ -1705,30 +1879,9 @@ function chatHistory(t, peer) {
     !findUser_(peer)
   ) return { err: 'Akun chat tidak ditemukan' };
 
-  const rows = messages_().getDataRange().getValues().slice(1)
-    .filter(r =>
-      (String(r[1]).toLowerCase() == username.toLowerCase() &&
-       String(r[2]).toLowerCase() == peer.toLowerCase()) ||
-      (String(r[1]).toLowerCase() == peer.toLowerCase() &&
-       String(r[2]).toLowerCase() == username.toLowerCase())
-    )
-    .sort((a, b) => Number(a[4]) - Number(b[4]))
-    .slice(-100)
-    .map(r => {
-      const profile = profiles[String(r[1]).toLowerCase()] || {};
-      return {
-        id: String(r[0]),
-        from: String(r[1]),
-        to: String(r[2]),
-        nama: profile.nama || String(r[1]),
-        role: profile.role || '',
-        photoUrl: profile.photoUrl || '',
-        text: String(r[3]),
-        ts: Number(r[4])
-      };
-    });
-
-  return { rows: rows };
+  return conversationPage_(
+    'personal', peer, username, beforeRow, profiles, 50
+  );
 }
 
 
@@ -1757,13 +1910,16 @@ function sendChat(t, peer, text) {
 
   try {
 
-    messages_().appendRow([
+    const messages = messages_();
+    const ts = Date.now();
+    messages.appendRow([
       Utilities.getUuid(),
       username,
       peer,
       text,
-      Date.now()
+      ts
     ]);
+    updateChatSummary_('personal', peer, username, text, ts, messages.getLastRow());
 
   } finally {
 
@@ -1794,18 +1950,13 @@ function chatGroups(t) {
   if (!account || String(account[3]).toUpperCase() != 'Y') return { err: 'AUTH' };
 
   const lastMessages = {};
-
-  messages_().getDataRange().getValues().slice(1).forEach(r => {
-    const target = String(r[2] || '');
-    if (target.indexOf('group:') != 0) return;
-    const id = target.slice(6);
-    if (!lastMessages[id] || Number(r[4]) >= lastMessages[id].ts) {
-      lastMessages[id] = {
-        text: String(r[3]),
-        ts: Number(r[4]) || 0,
-        from: String(r[1] || '')
-      };
-    }
+  chatSummaryRows_().forEach(r => {
+    if (String(r[1]) != 'group') return;
+    lastMessages[String(r[2])] = {
+      text: String(r[3] || ''),
+      ts: Number(r[4]) || 0,
+      from: String(r[5] || '')
+    };
   });
 
   const rows = chatGroups_().getDataRange().getValues().slice(1)
@@ -1882,7 +2033,7 @@ function createChatGroup(t, name, selectedMembers) {
 }
 
 
-function groupHistory(t, groupId) {
+function groupHistory(t, groupId, beforeRow) {
 
   const username = user_(t);
   const account = username && findUser_(username);
@@ -1900,26 +2051,9 @@ function groupHistory(t, groupId) {
     return { err: 'Anda bukan anggota grup ini' };
   }
 
-  const profiles = socialUsers_();
-
-  const rows = messages_().getDataRange().getValues().slice(1)
-    .filter(r => String(r[2]) == 'group:' + groupId)
-    .sort((a, b) => Number(a[4]) - Number(b[4]))
-    .slice(-200)
-    .map(r => {
-      const profile = profiles[String(r[1]).toLowerCase()] || {};
-      return {
-        id: String(r[0]),
-        from: String(r[1]),
-        nama: profile.nama || String(r[1]),
-        role: profile.role || '',
-        photoUrl: profile.photoUrl || '',
-        text: String(r[3]),
-        ts: Number(r[4]) || 0
-      };
-    });
-
-  return { rows: rows };
+  return conversationPage_(
+    'group', groupId, username, beforeRow, socialUsers_(), 50
+  );
 }
 
 
@@ -1951,9 +2085,12 @@ function sendGroupChat(t, groupId, text) {
 
   try {
 
-    messages_().appendRow([
-      Utilities.getUuid(), username, 'group:' + groupId, text, Date.now()
+    const messages = messages_();
+    const ts = Date.now();
+    messages.appendRow([
+      Utilities.getUuid(), username, 'group:' + groupId, text, ts
     ]);
+    updateChatSummary_('group', groupId, username, text, ts, messages.getLastRow());
 
   } finally {
 
@@ -1988,9 +2125,10 @@ function deleteChatGroup(t, groupId) {
     const messageRows = messages.getDataRange().getValues();
     for (let i = messageRows.length - 1; i >= 1; i--) {
       if (String(messageRows[i][2]) == 'group:' + groupId) {
-        messages.deleteRow(i + 1);
+        redactMessageRow_(messages, i + 1);
       }
     }
+    deleteChatSummary_('group', groupId, groupId);
     groups.deleteRow(index + 1);
   } finally {
     lock.releaseLock();
@@ -1998,29 +2136,14 @@ function deleteChatGroup(t, groupId) {
   return { ok: 1 };
 }
 
-function globalChatHistory(t) {
+function globalChatHistory(t, unusedTarget, beforeRow) {
   const username = user_(t);
   const account = username && findUser_(username);
   if (!account) return { err: 'AUTH' };
 
-  const profiles = socialUsers_();
-  const rows = messages_().getDataRange().getValues().slice(1)
-    .filter(r => String(r[2]) == 'global')
-    .sort((a, b) => Number(a[4]) - Number(b[4]))
-    .slice(-200)
-    .map(r => {
-      const profile = profiles[String(r[1]).toLowerCase()] || {};
-      return {
-        id: String(r[0]),
-        from: String(r[1]),
-        nama: profile.nama || String(r[1]),
-        role: profile.role || '',
-        photoUrl: profile.photoUrl || '',
-        text: String(r[3]),
-        ts: Number(r[4]) || 0
-      };
-    });
-  return { rows: rows };
+  return conversationPage_(
+    'global', 'global', username, beforeRow, socialUsers_(), 50
+  );
 }
 
 function sendGlobalChat(t, unusedTarget, text) {
@@ -2035,9 +2158,12 @@ function sendGlobalChat(t, unusedTarget, text) {
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
-    messages_().appendRow([
-      Utilities.getUuid(), username, 'global', text, Date.now()
+    const messages = messages_();
+    const ts = Date.now();
+    messages.appendRow([
+      Utilities.getUuid(), username, 'global', text, ts
     ]);
+    updateChatSummary_('global', 'global', username, text, ts, messages.getLastRow());
   } finally {
     lock.releaseLock();
   }
@@ -2106,47 +2232,32 @@ function chatNotificationSummary(t) {
     lastFrom: ''
   };
 
-  messages_().getDataRange().getValues().slice(1).forEach(r => {
-
-    const from = String(r[1] || '');
-    const to = String(r[2] || '');
-    const ts = Number(r[4]) || 0;
-
-    if (to == 'global') {
-      if (ts >= global.lastTs) {
-        global.lastText = String(r[3] || '');
-        global.lastTs = ts;
-        global.lastFrom = from;
-      }
-      return;
-    }
-
-    if (to.indexOf('group:') == 0) {
-
-      const group = groups[to.slice(6)];
-
-      if (group && ts >= group.lastTs) {
+  chatSummaryRows_().forEach(r => {
+    const type = String(r[1] || '');
+    const target = String(r[2] || '');
+    const from = String(r[5] || '');
+    if (type == 'global') {
+      global.lastText = String(r[3] || '');
+      global.lastTs = Number(r[4]) || 0;
+      global.lastFrom = from;
+    } else if (type == 'group') {
+      const group = groups[target];
+      if (group) {
         group.lastText = String(r[3] || '');
-        group.lastTs = ts;
+        group.lastTs = Number(r[4]) || 0;
         group.lastFrom = from;
       }
-
-      return;
+    } else if (type == 'personal') {
+      const match = String(r[0]).slice('personal:'.length).split('|');
+      const peer = match[0] == userKey ? match[1] :
+        match[1] == userKey ? match[0] : '';
+      const contact = contacts[peer];
+      if (contact) {
+        contact.lastText = String(r[3] || '');
+        contact.lastTs = Number(r[4]) || 0;
+        contact.lastFrom = from;
+      }
     }
-
-    let peer = '';
-
-    if (from.toLowerCase() == userKey) peer = to.toLowerCase();
-    else if (to.toLowerCase() == userKey) peer = from.toLowerCase();
-
-    const contact = contacts[peer];
-
-    if (contact && ts >= contact.lastTs) {
-      contact.lastText = String(r[3] || '');
-      contact.lastTs = ts;
-      contact.lastFrom = from;
-    }
-
   });
 
   return {
@@ -2205,7 +2316,7 @@ function purgeSocialData_(username) {
     if (
       String(messageRows[i][1]).toLowerCase() == key ||
       String(messageRows[i][2]).toLowerCase() == key
-    ) messages.deleteRow(i + 1);
+    ) redactMessageRow_(messages, i + 1);
   }
 
   const groups = chatGroups_();
@@ -2221,7 +2332,9 @@ function purgeSocialData_(username) {
       const currentMessages = messages.getDataRange().getValues();
 
       for (let j = currentMessages.length - 1; j >= 1; j--) {
-        if (String(currentMessages[j][2]) == groupId) messages.deleteRow(j + 1);
+        if (String(currentMessages[j][2]) == groupId) {
+          redactMessageRow_(messages, j + 1);
+        }
       }
 
       groups.deleteRow(i + 1);
@@ -2237,4 +2350,6 @@ function purgeSocialData_(username) {
     }
 
   }
+
+  rebuildChatSummary_();
 }

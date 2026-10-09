@@ -1324,8 +1324,14 @@ CHAT_GROUPS=[],
 CHAT_GLOBAL=null,
 CHAT_ACTIVE=null,
 CHAT_TIMER=null,
+CHAT_SYNC_TIMER=null,
 CHAT_HISTORY_LOADING=false,
+CHAT_SYNC_LOADING=false,
 CHAT_HISTORY_REQUEST=0,
+CHAT_SYNC_CURSOR=0,
+CHAT_OLDEST_ROW=0,
+CHAT_HAS_MORE=false,
+CHAT_SYNC_ERROR_AT=0,
 CHAT_SENDING=false,
 CHAT_NOTIFICATIONS_LOADING=false,
 CHAT_NOTIFICATION_ERROR_AT=0,
@@ -2018,6 +2024,10 @@ CHAT_LOCAL_ECHOES=[];
 CHAT_GROUPS=[];
 CHAT_GLOBAL=null;
 CHAT_ACTIVE=null;
+CHAT_SYNC_CURSOR=0;
+CHAT_OLDEST_ROW=0;
+CHAT_HAS_MORE=false;
+CHAT_SYNC_LOADING=false;
 CHAT_HISTORY_LOADING=false;
 CHAT_HISTORY_REQUEST++;
 CHAT_SENDING=false;
@@ -2996,6 +3006,9 @@ await openChatHistory();
 async function openChatHistory(){
 
 CHAT_MESSAGES=[];
+CHAT_SYNC_CURSOR=0;
+CHAT_OLDEST_ROW=0;
+CHAT_HAS_MORE=false;
 if(ROLE=='DM'||ROLE=='BM')dmTab='chat';else tab='chat';
 render();
 const requestId=++CHAT_HISTORY_REQUEST;
@@ -3007,7 +3020,8 @@ const target=CHAT_ACTIVE.id;
 const r=await rpc(
 type=='group'?'groupHistory':type=='global'?'globalChatHistory':'chatHistory',
 TOK,
-target
+target,
+0
 );
 
 if(!r||typeof r!='object')throw new Error('Format respons riwayat chat tidak valid.');
@@ -3018,6 +3032,9 @@ throw new Error(typeof r.err=='string'?r.err:'Tidak dapat memuat pesan');
 if(!Array.isArray(r.rows))throw new Error('Endpoint riwayat chat harus mengembalikan rows berupa array.');
 
 if(requestId!=CHAT_HISTORY_REQUEST||!CHAT_ACTIVE||CHAT_ACTIVE.type!=type||CHAT_ACTIVE.id!=target)return;
+CHAT_SYNC_CURSOR=Number(r.cursor)||0;
+CHAT_HAS_MORE=!!r.hasMore;
+CHAT_OLDEST_ROW=r.rows.length?Number(r.rows[0].row)||0:0;
 CHAT_MESSAGES=mergeChatRows(r.rows,type,target);
 markChatSeen(type,target,CHAT_MESSAGES.reduce((latest,message)=>Math.max(latest,Number(message.ts)||0),0));
 render();
@@ -3028,6 +3045,35 @@ if(requestId==CHAT_HISTORY_REQUEST)toast('Pesan gagal dimuat: '+String((e&&e.mes
 if(requestId==CHAT_HISTORY_REQUEST)CHAT_HISTORY_LOADING=false;
 }
 
+}
+
+async function loadOlderChat(){
+if(CHAT_HISTORY_LOADING||!CHAT_HAS_MORE||!CHAT_ACTIVE)return;
+CHAT_HISTORY_LOADING=true;
+const type=CHAT_ACTIVE.type,target=CHAT_ACTIVE.id;
+const requestId=CHAT_HISTORY_REQUEST;
+const beforeRow=CHAT_OLDEST_ROW;
+const box=$('#chatPreview');
+const oldHeight=box?box.scrollHeight:0;
+const oldTop=box?box.scrollTop:0;
+try{
+const endpoint=type=='group'?'groupHistory':type=='global'?'globalChatHistory':'chatHistory';
+const result=await rpc(endpoint,TOK,target,beforeRow);
+if(!result||typeof result!='object')throw new Error('Respons riwayat lama tidak valid.');
+if(result.err){
+if(result.err=='AUTH'){logout();return;}
+throw new Error(typeof result.err=='string'?result.err:'Riwayat lama gagal dimuat');
+}
+if(!Array.isArray(result.rows))throw new Error('Respons riwayat lama tidak valid.');
+if(requestId!=CHAT_HISTORY_REQUEST||!CHAT_ACTIVE||CHAT_ACTIVE.type!=type||CHAT_ACTIVE.id!=target)return;
+CHAT_HAS_MORE=!!result.hasMore;
+if(result.rows.length)CHAT_OLDEST_ROW=Number(result.rows[0].row)||CHAT_OLDEST_ROW;
+CHAT_MESSAGES=mergeChatRows(CHAT_MESSAGES.concat(result.rows),type,target);
+renderChatMessages();
+const updated=$('#chatPreview');
+if(updated)updated.scrollTop=updated.scrollHeight-oldHeight+oldTop;
+}catch(e){toast('Pesan lama gagal dimuat: '+String((e&&e.message)||e));}
+finally{if(requestId==CHAT_HISTORY_REQUEST)CHAT_HISTORY_LOADING=false;}
 }
 
 
@@ -3065,7 +3111,10 @@ return;
 serverRows.push(local);
 });
 
-return serverRows.sort((a,b)=>(Number(a.ts)||0)-(Number(b.ts)||0));
+return serverRows.sort((a,b)=>
+(Number(a.ts)||0)-(Number(b.ts)||0) ||
+(Number(a.row)||0)-(Number(b.row)||0)
+);
 
 }
 
@@ -3073,7 +3122,7 @@ return serverRows.sort((a,b)=>(Number(a.ts)||0)-(Number(b.ts)||0));
 function renderChatMessages(){
 const box=$('#chatPreview');
 if(!box)return;
-box.innerHTML=CHAT_MESSAGES.map(m=>`
+box.innerHTML=(CHAT_HAS_MORE?'<button class="btn sec chat-load-older" type="button" onclick="loadOlderChat()">Muat pesan sebelumnya</button>':'')+CHAT_MESSAGES.map(m=>`
 <div class="chat-bubble ${m.from==USER?'mine':''}">
 <div class="chat-bubble-author">${socialAvatar(m.nama,m.photoUrl,'social-avatar small')}<b>${esc(m.nama||m.from||'Anggota TPFX')}</b>${m.role?`<span class="role-mark role-${['BM','DM'].includes(String(m.role).toUpperCase())?String(m.role).toLowerCase():'other'}">${esc(m.role)}</span>`:''}</div>
 ${esc(m.text)}
@@ -3131,7 +3180,7 @@ const activeContact=CHAT_ACTIVE&&CHAT_ACTIVE.type=='personal'
 ?CHAT_CONTACTS.find(x=>String(x.username)==CHAT_ACTIVE.id):null;
 const activeGlobal=CHAT_ACTIVE&&CHAT_ACTIVE.type=='global'?CHAT_GLOBAL:null;
 const active=activeGroup||activeContact||activeGlobal;
-const messages=CHAT_MESSAGES.map(m=>`
+const messages=(CHAT_HAS_MORE?'<button class="btn sec chat-load-older" type="button" onclick="loadOlderChat()">Muat pesan sebelumnya</button>':'')+CHAT_MESSAGES.map(m=>`
 <div class="chat-bubble ${m.from==USER?'mine':''}">
 <div class="chat-bubble-author">${socialAvatar(m.nama,m.photoUrl,'social-avatar small')}<b>${esc(m.nama||m.from||'Anggota TPFX')}</b>${m.role?`<span class="role-mark role-${['BM','DM'].includes(String(m.role).toUpperCase())?String(m.role).toLowerCase():'other'}">${esc(m.role)}</span>`:''}</div>
 ${esc(m.text)}
@@ -3221,16 +3270,16 @@ if(box)box.scrollTop=box.scrollHeight;
 
 async function refreshChatHistory(){
 
-if(!(tab=='chat'||dmTab=='chat')||!CHAT_ACTIVE||CHAT_HISTORY_LOADING)return;
+if(!(tab=='chat'||dmTab=='chat')||!CHAT_ACTIVE||CHAT_HISTORY_LOADING||CHAT_SYNC_LOADING)return;
 if(document.visibilityState=='hidden')return;
 
-CHAT_HISTORY_LOADING=true;
-const requestId=++CHAT_HISTORY_REQUEST;
-
-try{
+CHAT_SYNC_LOADING=true;
 const type=CHAT_ACTIVE.type;
 const target=CHAT_ACTIVE.id;
-const r=await rpc(type=='group'?'groupHistory':type=='global'?'globalChatHistory':'chatHistory',TOK,target);
+const cursor=CHAT_SYNC_CURSOR;
+
+try{
+const r=await rpc('chatSync',TOK,type,target,cursor);
 
 if(!r||typeof r!='object')throw new Error('Format respons riwayat chat tidak valid.');
 if(r.err){
@@ -3238,23 +3287,28 @@ if(r.err=='AUTH'){logout();return;}
 throw new Error(typeof r.err=='string'?r.err:'Tidak dapat memuat pesan');
 }
 if(!Array.isArray(r.rows))throw new Error('Endpoint riwayat chat harus mengembalikan rows berupa array.');
-if(requestId!=CHAT_HISTORY_REQUEST||!CHAT_ACTIVE||CHAT_ACTIVE.type!=type||CHAT_ACTIVE.id!=target)return;
+if(!Number.isFinite(Number(r.cursor))||Number(r.cursor)<cursor)throw new Error('Cursor sinkronisasi chat tidak valid.');
+if(!CHAT_ACTIVE||CHAT_ACTIVE.type!=type||CHAT_ACTIVE.id!=target||CHAT_SYNC_CURSOR!=cursor)return;
 
 const box=$('#chatPreview');
 const shouldScroll=!box||box.scrollHeight-box.scrollTop-box.clientHeight<60;
-CHAT_MESSAGES=mergeChatRows(r.rows,type,target);
+CHAT_SYNC_CURSOR=Number(r.cursor);
+if(r.rows.length)CHAT_MESSAGES=mergeChatRows(CHAT_MESSAGES.concat(r.rows),type,target);
 if((tab=='chat'||dmTab=='chat')&&document.visibilityState!='hidden'){
 markChatSeen(type,target,CHAT_MESSAGES.reduce((latest,message)=>Math.max(latest,Number(message.ts)||0),0));
 updateChatNavBadge();
 }
-if(box){
+if(box&&r.rows.length){
 renderChatMessages();
 if(shouldScroll)scrollChatToBottom();
 }
 }catch(e){
-if(requestId==CHAT_HISTORY_REQUEST)toast('Chat gagal diperbarui: '+String((e&&e.message)||e));
+if(Date.now()-CHAT_SYNC_ERROR_AT>30000){
+CHAT_SYNC_ERROR_AT=Date.now();
+toast('Chat gagal diperbarui: '+String((e&&e.message)||e));
+}
 }finally{
-if(requestId==CHAT_HISTORY_REQUEST)CHAT_HISTORY_LOADING=false;
+CHAT_SYNC_LOADING=false;
 }
 
 }
@@ -3347,15 +3401,22 @@ if(submit&&submit.isConnected)submit.disabled=false;
 
 
 CHAT_TIMER=setInterval(
-()=>{
+async()=>{
 if(TOK){
-pollChatNotifications();
-if(document.visibilityState!='hidden'&&(tab=='chat'||dmTab=='chat')&&CHAT_ACTIVE)refreshChatHistory();
+await pollChatNotifications();
 }
 },
-6000
+5000
 );
 
+CHAT_SYNC_TIMER=setInterval(
+()=>{
+if(TOK&&document.visibilityState!='hidden'&&(tab=='chat'||dmTab=='chat')&&CHAT_ACTIVE){
+refreshChatHistory();
+}
+},
+1500
+);
 
 FEED_TIMER=setInterval(
 ()=>{

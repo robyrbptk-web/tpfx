@@ -64,6 +64,7 @@ function api_() {
     addPostComment: addPostComment,
     chatContacts: chatContacts,
     chatHistory: chatHistory,
+    chatSync: chatSync,
     sendChat: sendChat,
     chatGroups: chatGroups,
     createChatGroup: createChatGroup,
@@ -1468,7 +1469,7 @@ function chatNotificationSummary(t) {
 
 ### Notifikasi pesan baru
 
-`index.html` menggunakan Notification API bawaan browser, tanpa Firebase, Supabase, atau layanan push eksternal. Di halaman Chat, pengguna harus menekan **Aktifkan notifikasi** dan menyetujui izin browser. Workspace memeriksa ringkasan chat personal/grup/global setiap 6 detik selama halamannya masih terbuka, termasuk saat tab di background; browser dapat memperlambat atau menangguhkan polling tab background. Notifikasi dan badge hanya dibuat untuk pesan masuk dari anggota lain, bukan pesan sendiri. Gunakan implementasi `chatNotificationSummary(t)` pada bagian **Hapus grup chat dan chat global** di atas; fungsi tersebut juga mengembalikan ringkasan global.
+`index.html` menggunakan Notification API bawaan browser, tanpa Firebase, Supabase, atau layanan push eksternal. Di halaman Chat, pengguna harus menekan **Aktifkan notifikasi** dan menyetujui izin browser. Workspace memeriksa ringkasan chat personal/grup/global setiap 5 detik selama halamannya masih terbuka, termasuk saat tab di background; browser dapat memperlambat atau menangguhkan polling tab background. Notifikasi dan badge hanya dibuat untuk pesan masuk dari anggota lain, bukan pesan sendiri. Gunakan implementasi `chatNotificationSummary(t)` pada bagian **Hapus grup chat dan chat global** di atas; fungsi tersebut juga mengembalikan ringkasan global.
 
 Notifikasi browser dapat muncul saat tab workspace berada di background, tetapi tidak dapat dijamin setelah tab/browser ditutup atau sistem menghentikan halaman. Itu memerlukan Web Push dengan service worker dan server pengirim push. Gunakan hosting HTTPS.
 
@@ -1478,15 +1479,17 @@ Frontend mengharapkan setiap request Apps Script mengembalikan JSON dengan prope
 
 1. Fungsi `loadState(t)` harus selalu mengembalikan `{ err: 'AUTH' }` untuk token tidak valid, atau object `{ state, name, user, role }` untuk sesi aktif. Jangan menghapus `return` pada hasil sesi.
 2. Fungsi `doPost(e)` harus membungkus hasil fungsi API sebagai `{ result: f.apply(null, req.args || []) }`.
-3. Pastikan fungsi lama dan baru terdaftar pada `api_()`: `loadState`, `socialFeed`, `recentPosts`, `createPost`, `deletePost`, `togglePostLike`, `togglePostPin`, `postComments`, `addPostComment`, `updateProfilePhoto`, `chatContacts`, `chatNotificationSummary`, `chatHistory`, `sendChat`, `chatGroups`, `createChatGroup`, `deleteChatGroup`, `groupHistory`, `sendGroupChat`, `globalChatHistory`, dan `sendGlobalChat`.
-4. Jalankan `setup()` agar sheet `Posts`, `PostLikes`, `PostPins`, `PostComments`, `Messages`, dan `ChatGroups` tersedia serta kolom foto tersedia di `Posts` dan `Users`, lalu deploy sebagai **versi baru**. Menyimpan kode saja tidak memperbarui deployment Web App.
+3. Pastikan fungsi lama dan baru terdaftar pada `api_()`: `loadState`, `socialFeed`, `recentPosts`, `createPost`, `deletePost`, `togglePostLike`, `togglePostPin`, `postComments`, `addPostComment`, `updateProfilePhoto`, `chatContacts`, `chatNotificationSummary`, `chatHistory`, `chatSync`, `sendChat`, `chatGroups`, `createChatGroup`, `deleteChatGroup`, `groupHistory`, `sendGroupChat`, `globalChatHistory`, dan `sendGlobalChat`.
+4. Jalankan `setup()` agar sheet `Posts`, `PostLikes`, `PostPins`, `PostComments`, `Messages`, `ChatGroups`, dan `ChatSummary` tersedia, kolom foto tersedia di `Posts` dan `Users`, serta ringkasan chat lama diindeks sekali. Menyimpan kode saja tidak memperbarui deployment Web App.
 5. Keluar dari aplikasi, login kembali, lalu buka Feed/Chat. Token yang lama dapat tidak berlaku setelah akun dihapus atau sesi berakhir.
 
 ## 8. Feed dan chat terasa lambat
 
 Frontend menampilkan postingan/pesan secara langsung sambil menyimpan ke Apps Script. Feed mengambil postingan terbaru dari `recentPosts` setiap 10 detik saat tab Feed terbuka; endpoint ini hanya membaca maksimal 100 baris terakhir dari sheet `Posts`, tidak memindai sheet `Data`. Tambahkan `recentPosts` pada `api_()` dan tempel fungsi di atas sebelum deploy versi baru.
 
-Riwayat chat diperbarui setiap 6 detik ketika halaman terlihat. Endpoint `chatHistory` dan `groupHistory` saat ini membaca sheet `Messages`; bila sheet tumbuh besar, request akan makin lambat. Jangan menambahkan cache berumur panjang pada riwayat karena dapat membuat pesan baru terlambat terlihat. Batasi sementara jumlah baris Messages hanya jika Anda juga menerapkan pagination agar pesan lama tidak tersembunyi.
+Saat halaman Chat terlihat, `chatSync` memeriksa pesan baru setiap 1,5 detik dan hanya membaca baris `Messages` yang bertambah setelah cursor terakhir; request tidak ditumpuk jika request sebelumnya belum selesai. Ringkasan percakapan dibaca dari sheet `ChatSummary`, bukan dengan memindai semua pesan setiap polling. `chatHistory`, `groupHistory`, dan `globalChatHistory` memuat 50 pesan terbaru, lalu tombol **Muat pesan sebelumnya** melakukan pagination berdasarkan nomor baris sheet. Tidak ada pemangkasan otomatis riwayat; saat grup/akun dihapus, isi pesan terkait dibersihkan tanpa menggeser baris agar cursor aktif tetap akurat. Jalankan `setup()` sekali setelah menyalin backend baru agar index `ChatSummary` dibuat dari pesan lama.
+
+Polling Apps Script bukan push real-time: interval aktual juga dipengaruhi waktu eksekusi Google, jaringan, dan throttling browser. Tab yang ditutup tidak menerima pesan atau notifikasi. Untuk foto, endpoint `uploadImg` menyimpan gambar di Drive dengan akses tautan, mengembalikan URL `uc?export=view`, dan `updateProfilePhoto` menyimpannya di kolom F `Users`; deploy backend baru lalu jalankan ulang simpan foto bila tautan lama gagal.
 
 Endpoint sesi dapat diuji tanpa kredensial dengan memanggil `loadState` menggunakan token kosong: respons yang diharapkan adalah `{ "result": { "err": "AUTH" } }`, bukan respons tanpa `result`.
 
