@@ -1310,6 +1310,8 @@ per='hari',
 USER='',
 FEED=[],
 FEED_LOCAL_ECHOES=[],
+FEED_COMMENT_LOADING={},
+FEED_COMMENT_SUBMITTING={},
 FEED_LOADING=false,
 FEED_RECENT_LOADING=false,
 FEED_POSTING=false,
@@ -2015,6 +2017,8 @@ PROFILE_PHOTO='';
 PROFILE_PHOTO_DRAFT='';
 TEAM=[];
 FEED_LOCAL_ECHOES=[];
+FEED_COMMENT_LOADING={};
+FEED_COMMENT_SUBMITTING={};
 FEED_LOADING=false;
 FEED_RECENT_LOADING=false;
 FEED_POSTING=false;
@@ -2657,12 +2661,30 @@ if(!post)return;
 post.commentsOpen=!post.commentsOpen;
 render();
 if(!post.commentsOpen)return;
+const key=String(postId);
+if(FEED_COMMENT_LOADING[key])return;
+FEED_COMMENT_LOADING[key]=true;
 try{
 const result=await rpc('postComments',TOK,postId);
-if(!result||!Array.isArray(result.rows))throw new Error(result&&result.err||'Respons komentar tidak valid.');
-post.comments=result.rows;
+if(!result||typeof result!='object')throw new Error('Respons komentar tidak valid.');
+if(result.err){
+if(result.err=='AUTH'){logout();return;}
+throw new Error(result.err);
+}
+if(!Array.isArray(result.rows))throw new Error('Respons komentar tidak valid.');
+const latestPost=FEED.find(item=>String(item.id)==key);
+if(latestPost&&latestPost.commentsOpen){
+latestPost.comments=result.rows;
 if(tab=='feed'||dmTab=='feed')render();
-}catch(e){post.commentsOpen=false;render();toast('Komentar gagal dimuat: '+String((e&&e.message)||e));}
+}
+}catch(e){
+const latestPost=FEED.find(item=>String(item.id)==key);
+if(latestPost)latestPost.commentsOpen=false;
+render();
+toast('Komentar gagal dimuat: '+String((e&&e.message)||e));
+}finally{
+delete FEED_COMMENT_LOADING[key];
+}
 }
 
 async function submitPostComment(event,postId){
@@ -2671,22 +2693,41 @@ const form=event.currentTarget;
 const input=form.elements.commentText;
 const text=input.value.trim();
 if(!text)return;
+const key=String(postId);
+if(FEED_COMMENT_SUBMITTING[key])return;
+FEED_COMMENT_SUBMITTING[key]=true;
+const submit=form.querySelector('[type="submit"]');
+if(submit)submit.disabled=true;
 try{
 const result=await rpc('addPostComment',TOK,postId,text);
-if(!result||result.ok!==1)throw new Error(result&&result.err||'Komentar gagal disimpan.');
-await loadSocialFeed();
-const post=FEED.find(item=>String(item.id)==String(postId));
+if(!result||typeof result!='object')throw new Error('Respons penyimpanan komentar tidak valid.');
+if(result.err){
+if(result.err=='AUTH'){logout();return;}
+throw new Error(result.err);
+}
+if(result.ok!==1)throw new Error('Komentar gagal disimpan.');
+const post=FEED.find(item=>String(item.id)==key);
 if(post){
 post.commentsOpen=true;
 await loadPostComments(postId);
+post.commentsCount=Math.max(
+(Number(post.commentsCount)||0)+1,
+(post.comments||[]).length
+);
 if(tab=='feed'||dmTab=='feed')render();
 }
 toast('Komentar ditambahkan.');
-}catch(e){toast('Komentar gagal dikirim: '+String((e&&e.message)||e));}
+}catch(e){
+toast('Komentar gagal dikirim: '+String((e&&e.message)||e));
+}finally{
+delete FEED_COMMENT_SUBMITTING[key];
+if(submit&&submit.isConnected)submit.disabled=false;
+}
 }
 
 async function loadPostComments(postId){
 const result=await rpc('postComments',TOK,postId);
+if(result&&result.err=='AUTH'){logout();return;}
 if(!result||!Array.isArray(result.rows))throw new Error(result&&result.err||'Respons komentar tidak valid.');
 const post=FEED.find(item=>String(item.id)==String(postId));
 if(post)post.comments=result.rows;
@@ -7191,6 +7232,16 @@ const dmProf=()=>
 `<h1>
 Profile
 </h1>
+
+<div class="card profile-photo-card" style="margin-top:12px">
+${socialAvatar(S.name,PROFILE_PHOTO_DRAFT||PROFILE_PHOTO,'social-avatar profile-avatar')}
+<div class="profile-photo-controls">
+<b>Foto profil</b>
+<div class="mut">Foto akan terlihat oleh anggota tim pada feed dan chat.</div>
+<input id="profilePhotoFile" type="file" accept="image/*" onchange="prepareProfilePhoto(this)">
+<button class="btn sec" type="button" onclick="saveProfilePhoto()" ${PROFILE_PHOTO_DRAFT?'':'disabled'}>Simpan foto</button>
+</div>
+</div>
 
 <div
 class="card"
