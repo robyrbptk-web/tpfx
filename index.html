@@ -244,6 +244,13 @@ font-size:11px;
 font-weight:800
 }
 
+.app-user-avatar img{
+width:100%;
+height:100%;
+object-fit:cover;
+border-radius:50%
+}
+
 .app-topbar[hidden]{
 display:none
 }
@@ -821,6 +828,69 @@ font-weight:800;
 font-size:14px
 }
 
+.photo-avatar{
+object-fit:cover;
+overflow:hidden
+}
+
+.social-avatar.small{
+width:26px;
+height:26px;
+font-size:10px
+}
+
+.social-avatar.profile-avatar{
+width:64px;
+height:64px;
+font-size:20px
+}
+
+.role-mark{
+display:inline-flex;
+vertical-align:middle;
+margin-left:5px;
+padding:2px 6px;
+border-radius:99px;
+font-size:10px;
+line-height:1.4;
+font-weight:800;
+background:#eef2ff;
+color:#4254a6
+}
+
+.role-bm{background:#fff2d6;color:#895b00}
+.role-dm{background:#e8e5ff;color:#5544b3}
+
+.feed-image-tools,.feed-post-actions,.feed-comment-form,.profile-photo-card{
+display:flex;
+align-items:center;
+gap:9px
+}
+
+.feed-image-tools{margin:10px 0 0 54px}
+.feed-image-pick{position:relative;overflow:hidden}
+.feed-image-pick input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.feed-image-preview{display:flex;align-items:flex-start;gap:10px;margin:12px 0 0 54px}
+.feed-image-preview img{max-width:min(100%,280px);max-height:200px;object-fit:cover;border-radius:12px}
+.feed-post-image{display:block;max-width:100%;max-height:480px;object-fit:contain;border-radius:14px;margin:0 0 12px}
+.feed-post-tools{display:flex;align-items:center;gap:8px}
+.feed-post-actions{flex-wrap:wrap;padding-top:10px;border-top:1px solid var(--line)}
+.feed-post-actions .btn{min-height:34px;padding:7px 10px;font-size:12px}
+.feed-comments{border-top:1px solid var(--line);margin-top:10px;padding-top:10px}
+.feed-comment{display:flex;align-items:flex-start;gap:8px;padding:7px 0}
+.feed-comment time{display:block;color:var(--mut);font-size:11px}
+.feed-comment-form{margin-top:8px}
+.feed-comment-form input{flex:1;min-width:0}
+.feed-comment-form .btn{flex:none}
+.feed-icon-btn{border:0;background:transparent;color:var(--mut);font:inherit;font-size:12px;cursor:pointer}
+.profile-photo-card{align-items:center}
+.profile-photo-controls{display:grid;gap:6px}
+.profile-photo-controls input{max-width:100%}
+.chat-bubble-author{display:flex;align-items:center;gap:6px;margin-bottom:5px}
+.chat-group-entry{display:flex;align-items:center;gap:6px}
+.chat-group-entry>.chat-contact{flex:1;min-width:0}
+.chat-group-delete{min-height:32px;padding:6px 9px;color:#b42318}
+
 .social-post{
 margin-top:12px;
 padding:16px;
@@ -1220,7 +1290,7 @@ header.innerHTML=`
 <div class="app-user">
 <span class="app-user-name">${esc(S.name)}</span>
 <span class="badge s-contacted">${esc(ROLE||'BDO')}</span>
-<span class="app-user-avatar">${esc(initials(S.name))}</span>
+<span class="app-user-avatar">${PROFILE_PHOTO&&/^https:\/\//i.test(PROFILE_PHOTO)?`<img src="${esc(PROFILE_PHOTO)}" alt="Foto profil">`:esc(initials(S.name))}</span>
 </div>
 `;
 
@@ -1232,6 +1302,10 @@ tab='feed',
 flt='all',
 srt='new',
 q='',
+leadView='mine',
+TEAM_LEADS=[],
+TEAM_LEADS_LOADING=false,
+TEAM_LEADS_ERROR='',
 per='hari',
 USER='',
 FEED=[],
@@ -1240,10 +1314,14 @@ FEED_LOADING=false,
 FEED_RECENT_LOADING=false,
 FEED_POSTING=false,
 FEED_TIMER=null,
+FEED_IMAGE='',
+PROFILE_PHOTO='',
+PROFILE_PHOTO_DRAFT='',
 CHAT_CONTACTS=[],
 CHAT_MESSAGES=[],
 CHAT_LOCAL_ECHOES=[],
 CHAT_GROUPS=[],
+CHAT_GLOBAL=null,
 CHAT_ACTIVE=null,
 CHAT_TIMER=null,
 CHAT_HISTORY_LOADING=false,
@@ -1561,6 +1639,7 @@ S.name ||
 ROLE=
 r.role ||
 'BDO';
+PROFILE_PHOTO=String(r.photoUrl||'');
 
 renderAppHeader();
 
@@ -1925,6 +2004,9 @@ TOK='';
 S=seed();
 USER='';
 FEED=[];
+FEED_IMAGE='';
+PROFILE_PHOTO='';
+PROFILE_PHOTO_DRAFT='';
 TEAM=[];
 FEED_LOCAL_ECHOES=[];
 FEED_LOADING=false;
@@ -1934,6 +2016,7 @@ CHAT_CONTACTS=[];
 CHAT_MESSAGES=[];
 CHAT_LOCAL_ECHOES=[];
 CHAT_GROUPS=[];
+CHAT_GLOBAL=null;
 CHAT_ACTIVE=null;
 CHAT_HISTORY_LOADING=false;
 CHAT_HISTORY_REQUEST++;
@@ -2215,6 +2298,13 @@ minute:'2-digit'
 );
 };
 
+const socialAvatar=(name,photo,className='social-avatar')=>{
+const source=String(photo||'');
+return source&&/^https?:\/\//i.test(source)
+?`<img class="${className} photo-avatar" src="${esc(source)}" alt="Foto profil ${esc(name||'anggota')}" loading="lazy">`
+:`<div class="${className}">${initials(name)}</div>`;
+};
+
 
 async function loadSocialFeed(){
 
@@ -2312,6 +2402,7 @@ const match=serverRows.findIndex(item=>
 item.kind=='post' &&
 String(item.username||'').toLowerCase()==String(local.username||'').toLowerCase() &&
 String(item.text||'')==local.text &&
+String(item.imageUrl||'')==String(local.imageUrl||'') &&
 (Number(item.ts)||0)>=local.ts-5000 &&
 (Number(item.ts)||0)<=local.ts+120000
 );
@@ -2327,7 +2418,10 @@ serverRows.push(local);
 });
 
 FEED_LOCAL_ECHOES=keep;
-return serverRows.sort((a,b)=>(Number(b.ts)||0)-(Number(a.ts)||0));
+return serverRows.sort((a,b)=>
+Number(Boolean(b.pinned))-Number(Boolean(a.pinned))||
+(Number(b.ts)||0)-(Number(a.ts)||0)
+);
 
 }
 
@@ -2342,14 +2436,19 @@ return`
 <div class="social-brand">TPFX Connect</div>
 <div class="social-subtitle">Kabar tim dan aktivitas penjualan</div>
 </div>
-<div class="social-avatar">${initials(S.name)}</div>
+${socialAvatar(S.name,PROFILE_PHOTO)}
 </div>
 
 <div class="card">
 <div class="social-composer">
-<div class="social-avatar">${initials(S.name)}</div>
+${socialAvatar(S.name,PROFILE_PHOTO)}
 <textarea id="feedText" maxlength="500" placeholder="Bagikan kabar atau update singkat ke tim..." aria-label="Tulis postingan"></textarea>
 </div>
+<div class="feed-image-tools">
+<label class="btn sec feed-image-pick">📷 Foto<input id="feedImageFile" type="file" accept="image/*" onchange="prepareFeedImage(this)"></label>
+<span id="feedImageStatus" class="mut">${FEED_IMAGE?'Foto siap diunggah':''}</span>
+</div>
+${FEED_IMAGE?`<div class="feed-image-preview"><img src="${FEED_IMAGE}" alt="Pratinjau foto postingan"><button class="btn sec" type="button" onclick="FEED_IMAGE='';render()">Hapus foto</button></div>`:''}
 <div class="social-actions">
 <span class="mut">Postingan terlihat oleh semua anggota tim</span>
 <button class="btn" onclick="publishSocialPost()" ${FEED_POSTING?'disabled':''}>${FEED_POSTING?'Mengirim...':'Posting'}</button>
@@ -2372,19 +2471,62 @@ return FEED.length
 <article class="card social-post">
 <div class="row sp">
 <div class="social-author">
-<div class="social-avatar">${initials(item.nama)}</div>
+${socialAvatar(item.nama,item.profilePhoto)}
 <div>
 <b>${esc(item.nama||item.username||'Anggota TPFX')}</b>
+${item.role?`<span class="role-mark role-${String(item.role).toLowerCase()=='bm'?'bm':String(item.role).toLowerCase()=='dm'?'dm':'other'}">${esc(item.role)}</span>`:''}
 <div class="mut">${socialTime(item.ts)}</div>
 ${item.pending?'<div class="mut">Mengirim...</div>':''}
 </div>
 </div>
+<div class="feed-post-tools">
 <span class="social-post-type">${item.kind=='activity'?'✦ Aktivitas':'● Postingan'}</span>
+${item.pinned?'<span class="role-mark role-dm">📌 Disematkan</span>':''}
+${item.kind=='post'&&item.username==USER?`<button class="feed-icon-btn" aria-label="Hapus postingan" title="Hapus postingan" onclick="deleteSocialPost(decodeURIComponent('${encodeURIComponent(String(item.id))}'))">Hapus</button>`:''}
+</div>
 </div>
 <div class="social-copy">${esc(item.text||'')}</div>
+${item.imageUrl?`<img class="feed-post-image" src="${esc(item.imageUrl)}" alt="Foto postingan" loading="lazy">`:''}
+${item.kind=='post'?`
+<div class="feed-post-actions">
+<button class="btn sec" onclick="togglePostLike(decodeURIComponent('${encodeURIComponent(String(item.id))}'))">${item.liked?'♥':'♡'} Suka${Number(item.likes)?' · '+Number(item.likes):''}</button>
+<button class="btn sec" onclick="togglePostComments(decodeURIComponent('${encodeURIComponent(String(item.id))}'))">Komentar · ${Number(item.commentsCount)||0}</button>
+${['BM','DM'].includes(String(ROLE).toUpperCase())?`<button class="btn sec" onclick="togglePostPin(decodeURIComponent('${encodeURIComponent(String(item.id))}'))">${item.pinned?'📌 Lepas sematan':'📌 Sematkan'}</button>`:''}
+</div>
+${item.commentsOpen?`<div class="feed-comments">
+<div>${(item.comments||[]).map(c=>`<div class="feed-comment">${socialAvatar(c.nama,c.photoUrl,'social-avatar small')}<div><b>${esc(c.nama||c.username)}</b><div>${esc(c.text)}</div><time>${socialTime(c.ts)}</time></div></div>`).join('')||'<div class="mut">Belum ada komentar.</div>'}</div>
+<form class="feed-comment-form" onsubmit="submitPostComment(event,decodeURIComponent('${encodeURIComponent(String(item.id))}'))"><input name="commentText" maxlength="500" placeholder="Tulis komentar..." required><button class="btn" type="submit">Kirim</button></form>
+</div>`:''}
+`:''}
 </article>
 `).join('')
 :'<div class="card empty">Belum ada kabar di feed. Jadilah yang pertama membagikan update.</div>';
+}
+
+function prepareFeedImage(input){
+const file=input.files&&input.files[0];
+if(!file)return;
+if(!file.type.startsWith('image/')){toast('Pilih file gambar.');input.value='';return;}
+if(file.size>8*1024*1024){toast('Ukuran foto maksimal 8 MB.');input.value='';return;}
+const reader=new FileReader();
+reader.onerror=()=>toast('Foto gagal dibaca.');
+reader.onload=()=>{
+const image=new Image();
+image.onerror=()=>toast('Format foto tidak dapat dibuka.');
+image.onload=()=>{
+const scale=Math.min(1,1200/image.width,1200/image.height);
+const canvas=document.createElement('canvas');
+canvas.width=Math.max(1,Math.round(image.width*scale));
+canvas.height=Math.max(1,Math.round(image.height*scale));
+const context=canvas.getContext('2d');
+if(!context){toast('Browser tidak dapat memproses foto.');return;}
+context.drawImage(image,0,0,canvas.width,canvas.height);
+FEED_IMAGE=canvas.toDataURL('image/jpeg',.78);
+render();
+};
+image.src=String(reader.result||'');
+};
+reader.readAsDataURL(file);
 }
 
 
@@ -2394,8 +2536,8 @@ if(FEED_POSTING)return;
 const input=$('#feedText');
 const text=input.value.trim();
 
-if(!text){
-toast('Tulis isi postingan terlebih dahulu');
+if(!text&&!FEED_IMAGE){
+toast('Tulis isi postingan atau pilih foto terlebih dahulu');
 return;
 }
 
@@ -2406,21 +2548,34 @@ nama:S.name,
 text:text,
 ts:Date.now(),
 kind:'post',
+photoUrl:'',
+profilePhoto:PROFILE_PHOTO,
+imageUrl:'',
 pending:true
 };
 
 FEED_LOCAL_ECHOES.push(local);
 FEED=mergeFeedRows(FEED);
 FEED_POSTING=true;
+const photo=FEED_IMAGE;
+FEED_IMAGE='';
 input.value='';
 if(tab=='feed'||dmTab=='feed')render();
 
 try{
 
+let photoUrl='';
+if(photo){
+photoUrl=await rpc('uploadImg',TOK,photo);
+if(typeof photoUrl!='string'||!/^https?:\/\//i.test(photoUrl))throw new Error('Server tidak mengembalikan tautan foto yang valid.');
+local.imageUrl=photoUrl;
+}
+
 const r=await rpc(
 'createPost',
 TOK,
-text
+text,
+photoUrl
 );
 
 if(r.err){
@@ -2445,6 +2600,7 @@ toast('Postingan dibagikan');
 
 FEED_LOCAL_ECHOES=FEED_LOCAL_ECHOES.filter(item=>item.id!=local.id);
 FEED=FEED.filter(item=>item.id!=local.id);
+FEED_IMAGE=photo;
 FEED_POSTING=false;
 if(tab=='feed'||dmTab=='feed'){
 render();
@@ -2455,6 +2611,75 @@ toast('Postingan gagal dikirim: '+String((e&&e.message)||e));
 
 }
 
+}
+
+async function togglePostLike(postId){
+try{
+const result=await rpc('togglePostLike',TOK,postId);
+if(!result||result.ok!==1)throw new Error(result&&result.err||'Suka gagal disimpan.');
+await loadSocialFeed();
+}catch(e){toast('Suka gagal disimpan: '+String((e&&e.message)||e));}
+}
+
+async function togglePostPin(postId){
+try{
+const result=await rpc('togglePostPin',TOK,postId);
+if(!result||result.ok!==1)throw new Error(result&&result.err||'Sematan gagal diperbarui.');
+toast(result.pinned?'Postingan disematkan.':'Sematan dilepas.');
+await loadSocialFeed();
+}catch(e){toast('Sematan gagal diperbarui: '+String((e&&e.message)||e));}
+}
+
+async function deleteSocialPost(postId){
+if(!confirm('Hapus postingan ini?'))return;
+try{
+const result=await rpc('deletePost',TOK,postId);
+if(!result||result.ok!==1)throw new Error(result&&result.err||'Postingan gagal dihapus.');
+FEED=FEED.filter(item=>String(item.id)!=String(postId));
+render();
+toast('Postingan dihapus.');
+}catch(e){toast('Postingan gagal dihapus: '+String((e&&e.message)||e));}
+}
+
+async function togglePostComments(postId){
+const post=FEED.find(item=>String(item.id)==String(postId));
+if(!post)return;
+post.commentsOpen=!post.commentsOpen;
+render();
+if(!post.commentsOpen)return;
+try{
+const result=await rpc('postComments',TOK,postId);
+if(!result||!Array.isArray(result.rows))throw new Error(result&&result.err||'Respons komentar tidak valid.');
+post.comments=result.rows;
+if(tab=='feed'||dmTab=='feed')render();
+}catch(e){post.commentsOpen=false;render();toast('Komentar gagal dimuat: '+String((e&&e.message)||e));}
+}
+
+async function submitPostComment(event,postId){
+event.preventDefault();
+const form=event.currentTarget;
+const input=form.elements.commentText;
+const text=input.value.trim();
+if(!text)return;
+try{
+const result=await rpc('addPostComment',TOK,postId,text);
+if(!result||result.ok!==1)throw new Error(result&&result.err||'Komentar gagal disimpan.');
+await loadSocialFeed();
+const post=FEED.find(item=>String(item.id)==String(postId));
+if(post){
+post.commentsOpen=true;
+await loadPostComments(postId);
+if(tab=='feed'||dmTab=='feed')render();
+}
+toast('Komentar ditambahkan.');
+}catch(e){toast('Komentar gagal dikirim: '+String((e&&e.message)||e));}
+}
+
+async function loadPostComments(postId){
+const result=await rpc('postComments',TOK,postId);
+if(!result||!Array.isArray(result.rows))throw new Error(result&&result.err||'Respons komentar tidak valid.');
+const post=FEED.find(item=>String(item.id)==String(postId));
+if(post)post.comments=result.rows;
 }
 
 
@@ -2485,8 +2710,8 @@ initializeChatSeen(CHAT_CONTACTS,CHAT_GROUPS);
 updateChatUnreadIndicators();
 
 if(CHAT_ACTIVE){
-const collection=CHAT_ACTIVE.type=='group'?CHAT_GROUPS:CHAT_CONTACTS;
-if(!collection.some(x=>String(CHAT_ACTIVE.type=='group'?x.id:x.username)==CHAT_ACTIVE.id)){
+const collection=CHAT_ACTIVE.type=='group'?CHAT_GROUPS:CHAT_ACTIVE.type=='personal'?CHAT_CONTACTS:[CHAT_GLOBAL].filter(Boolean);
+if(!collection.some(x=>String(CHAT_ACTIVE.type=='personal'?x.username:x.id)==CHAT_ACTIVE.id)){
 CHAT_ACTIVE=null;
 CHAT_MESSAGES=[];
 }
@@ -2569,6 +2794,7 @@ baseline[chatThreadKey('personal',contact.username)]=Number(contact.lastTs)||0;
 groups.forEach(group=>{
 baseline[chatThreadKey('group',group.id)]=Number(group.lastTs)||0;
 });
+baseline[chatThreadKey('global','global')]=0;
 if(storedSeen===null)writeChatSeen(baseline);
 if(storedNotified===null){
 writeChatNotified(storedSeen===null?baseline:readChatSeen());
@@ -2586,7 +2812,7 @@ updateChatUnreadIndicators();
 
 
 function chatUnread(type,item){
-const id=type=='group'?item.id:item.username;
+const id=type=='personal'?item.username:(item.id||'global');
 return Number(item.lastTs)>0&&
 String(item.lastFrom||'').toLowerCase()!=String(USER).toLowerCase()&&
 Number(item.lastTs)>(Number(readChatSeen()[chatThreadKey(type,id)])||0);
@@ -2595,7 +2821,8 @@ Number(item.lastTs)>(Number(readChatSeen()[chatThreadKey(type,id)])||0);
 
 function unreadChatCount(){
 return CHAT_CONTACTS.filter(item=>chatUnread('personal',item)).length+
-CHAT_GROUPS.filter(item=>chatUnread('group',item)).length;
+CHAT_GROUPS.filter(item=>chatUnread('group',item)).length+
+(CHAT_GLOBAL&&chatUnread('global',CHAT_GLOBAL)?1:0);
 }
 
 
@@ -2622,6 +2849,9 @@ button,type:'personal',item:CHAT_CONTACTS.find(contact=>String(contact.username)
 })),
 ...Array.from(document.querySelectorAll('.chat-contact[data-group]')).map(button=>({
 button,type:'group',item:CHAT_GROUPS.find(group=>String(group.id)==button.dataset.group)
+})),
+...Array.from(document.querySelectorAll('.chat-contact[data-global]')).map(button=>({
+button,type:'global',item:CHAT_GLOBAL
 }))
 ].forEach(entry=>{
 const previous=entry.button.querySelector('.chat-unread-badge');
@@ -2688,17 +2918,18 @@ if(result.err=='AUTH'){logout();return;}
 throw new Error(typeof result.err=='string'?result.err:'Ringkasan chat tidak dapat dimuat');
 }
 if(!Array.isArray(result.contacts)||!Array.isArray(result.groups))throw new Error('Ringkasan chat harus mengembalikan contacts dan groups berupa array.');
-const contacts=result.contacts,groups=result.groups;
+const contacts=result.contacts,groups=result.groups,global=result.global||{id:'global',lastTs:0,lastFrom:'',lastText:''};
 initializeChatSeen(contacts,groups);
 CHAT_CONTACTS=contacts;
 CHAT_GROUPS=groups;
+CHAT_GLOBAL=global;
 const seen=readChatSeen(),notified=readChatNotified();
 const currentChatIsOpen=(type,id)=>
 (document.visibilityState!='hidden'&&(tab=='chat'||dmTab=='chat'))&&CHAT_ACTIVE&&CHAT_ACTIVE.type==type&&String(CHAT_ACTIVE.id)==String(id);
 const incoming=[];
-[['personal',contacts],['group',groups]].forEach(([type,items])=>{
+[['personal',contacts],['group',groups],['global',[global]]].forEach(([type,items])=>{
 items.forEach(item=>{
-const id=type=='group'?item.id:item.username;
+const id=type=='personal'?item.username:(item.id||'global');
 const key=chatThreadKey(type,id);
 const lastTs=Number(item.lastTs)||0;
 if(currentChatIsOpen(type,id)){
@@ -2723,6 +2954,7 @@ renotify:false
 notification.onclick=()=>{
 window.focus();
 if(message.type=='group')openGroupChat(message.id);
+else if(message.type=='global')openGlobalChat();
 else openTeamChat(message.id);
 notification.close();
 };
@@ -2754,6 +2986,12 @@ CHAT_ACTIVE={type:'group',id:String(groupId)};
 await openChatHistory();
 }
 
+async function openGlobalChat(){
+CHAT_GLOBAL=CHAT_GLOBAL||{id:'global',lastText:'',lastTs:0,lastFrom:''};
+CHAT_ACTIVE={type:'global',id:'global'};
+await openChatHistory();
+}
+
 
 async function openChatHistory(){
 
@@ -2764,10 +3002,10 @@ const requestId=++CHAT_HISTORY_REQUEST;
 CHAT_HISTORY_LOADING=true;
 
 try{
-const isGroup=CHAT_ACTIVE.type=='group';
+const type=CHAT_ACTIVE.type;
 const target=CHAT_ACTIVE.id;
 const r=await rpc(
-isGroup?'groupHistory':'chatHistory',
+type=='group'?'groupHistory':type=='global'?'globalChatHistory':'chatHistory',
 TOK,
 target
 );
@@ -2779,9 +3017,9 @@ throw new Error(typeof r.err=='string'?r.err:'Tidak dapat memuat pesan');
 }
 if(!Array.isArray(r.rows))throw new Error('Endpoint riwayat chat harus mengembalikan rows berupa array.');
 
-if(requestId!=CHAT_HISTORY_REQUEST||!CHAT_ACTIVE||CHAT_ACTIVE.type!=(isGroup?'group':'personal')||CHAT_ACTIVE.id!=target)return;
-CHAT_MESSAGES=mergeChatRows(r.rows,isGroup?'group':'personal',target);
-markChatSeen(isGroup?'group':'personal',target,CHAT_MESSAGES.reduce((latest,message)=>Math.max(latest,Number(message.ts)||0),0));
+if(requestId!=CHAT_HISTORY_REQUEST||!CHAT_ACTIVE||CHAT_ACTIVE.type!=type||CHAT_ACTIVE.id!=target)return;
+CHAT_MESSAGES=mergeChatRows(r.rows,type,target);
+markChatSeen(type,target,CHAT_MESSAGES.reduce((latest,message)=>Math.max(latest,Number(message.ts)||0),0));
 render();
 scrollChatToBottom();
 }catch(e){
@@ -2837,7 +3075,7 @@ const box=$('#chatPreview');
 if(!box)return;
 box.innerHTML=CHAT_MESSAGES.map(m=>`
 <div class="chat-bubble ${m.from==USER?'mine':''}">
-<b>${esc(m.nama||m.from||'Anggota TPFX')}</b>
+<div class="chat-bubble-author">${socialAvatar(m.nama,m.photoUrl,'social-avatar small')}<b>${esc(m.nama||m.from||'Anggota TPFX')}</b>${m.role?`<span class="role-mark role-${['BM','DM'].includes(String(m.role).toUpperCase())?String(m.role).toLowerCase():'other'}">${esc(m.role)}</span>`:''}</div>
 ${esc(m.text)}
 ${m.pending?'<time>Mengirim...</time>':`<time>${socialTime(m.ts)}</time>`}
 </div>
@@ -2869,6 +3107,21 @@ toast('Grup gagal dibuat: '+String((e&&e.message)||e));
 
 }
 
+async function deleteTeamGroup(groupId){
+if(!confirm('Hapus grup ini beserta seluruh riwayat pesannya?'))return;
+try{
+const result=await rpc('deleteChatGroup',TOK,groupId);
+if(!result||result.ok!==1)throw new Error(result&&result.err||'Grup gagal dihapus.');
+if(CHAT_ACTIVE&&CHAT_ACTIVE.type=='group'&&CHAT_ACTIVE.id==String(groupId)){
+CHAT_ACTIVE=null;
+CHAT_MESSAGES=[];
+}
+await loadChatContacts();
+render();
+toast('Grup dan riwayat pesannya dihapus.');
+}catch(e){toast('Grup gagal dihapus: '+String((e&&e.message)||e));}
+}
+
 
 function chatPage(){
 
@@ -2876,10 +3129,11 @@ const activeGroup=CHAT_ACTIVE&&CHAT_ACTIVE.type=='group'
 ?CHAT_GROUPS.find(x=>String(x.id)==CHAT_ACTIVE.id):null;
 const activeContact=CHAT_ACTIVE&&CHAT_ACTIVE.type=='personal'
 ?CHAT_CONTACTS.find(x=>String(x.username)==CHAT_ACTIVE.id):null;
-const active=activeGroup||activeContact;
+const activeGlobal=CHAT_ACTIVE&&CHAT_ACTIVE.type=='global'?CHAT_GLOBAL:null;
+const active=activeGroup||activeContact||activeGlobal;
 const messages=CHAT_MESSAGES.map(m=>`
 <div class="chat-bubble ${m.from==USER?'mine':''}">
-<b>${esc(m.nama||m.from||'Anggota TPFX')}</b>
+<div class="chat-bubble-author">${socialAvatar(m.nama,m.photoUrl,'social-avatar small')}<b>${esc(m.nama||m.from||'Anggota TPFX')}</b>${m.role?`<span class="role-mark role-${['BM','DM'].includes(String(m.role).toUpperCase())?String(m.role).toLowerCase():'other'}">${esc(m.role)}</span>`:''}</div>
 ${esc(m.text)}
 <time>${socialTime(m.ts)}</time>
 </div>
@@ -2894,7 +3148,7 @@ return`
 <div class="social-top">
 <div>
 <div class="social-brand">Pesan</div>
-<div class="social-subtitle">Chat personal dan grup bersama anggota TPFX</div>
+<div class="social-subtitle">Chat global, personal, dan grup bersama anggota TPFX</div>
 </div>
 <button class="btn sec" onclick="loadChatContacts()">↻ Segarkan</button>
 </div>
@@ -2905,11 +3159,16 @@ ${'Notification' in window&&Notification.permission!='granted'?'<button id="chat
 
 <div class="chat-layout ${active?'has-peer':''}">
 <section class="chat-panel">
-<div class="chat-panel-head">Percakapan personal</div>
+<div class="chat-panel-head">Chat Global &amp; Personal</div>
 <div>
+<button class="chat-contact ${CHAT_ACTIVE&&CHAT_ACTIVE.type=='global'?'active':''}" data-global="global" onclick="openGlobalChat()">
+<div class="social-avatar">🌐</div>
+<div class="chat-contact-copy"><b>Chat Global</b><span>${esc(CHAT_GLOBAL&&CHAT_GLOBAL.lastText||'Semua anggota aktif dapat bergabung')}</span></div>
+${CHAT_GLOBAL?chatUnreadBadge('global',CHAT_GLOBAL):''}
+</button>
 ${CHAT_CONTACTS.length?CHAT_CONTACTS.map(c=>`
 <button class="chat-contact ${CHAT_ACTIVE&&CHAT_ACTIVE.type=='personal'&&CHAT_ACTIVE.id==c.username?'active':''}" data-username="${esc(c.username)}" onclick="openTeamChat(this.dataset.username)">
-<div class="social-avatar">${initials(c.nama)}</div>
+${socialAvatar(c.nama,c.photoUrl)}
 <div class="chat-contact-copy"><b>${esc(c.nama)}</b><span>${esc(c.lastText||c.role||'Mulai percakapan')}</span></div>
 ${chatUnreadBadge('personal',c)}
 </button>`).join(''):'<div class="empty">Belum ada anggota aktif lain.</div>'}
@@ -2917,11 +3176,11 @@ ${chatUnreadBadge('personal',c)}
 <div class="chat-panel-head">Grup</div>
 <div>
 ${CHAT_GROUPS.length?CHAT_GROUPS.map(g=>`
-<button class="chat-contact ${CHAT_ACTIVE&&CHAT_ACTIVE.type=='group'&&CHAT_ACTIVE.id==g.id?'active':''}" data-group="${esc(g.id)}" onclick="openGroupChat(this.dataset.group)">
+<div class="chat-group-entry"><button class="chat-contact ${CHAT_ACTIVE&&CHAT_ACTIVE.type=='group'&&CHAT_ACTIVE.id==g.id?'active':''}" data-group="${esc(g.id)}" onclick="openGroupChat(this.dataset.group)">
 <div class="social-avatar">👥</div>
 <div class="chat-contact-copy"><b>${esc(g.name)}</b><span>${esc(g.lastText||'Grup · '+(g.memberCount||0)+' anggota')}</span></div>
 ${chatUnreadBadge('group',g)}
-</button>`).join(''):'<div class="empty">Anda belum tergabung dalam grup.</div>'}
+</button>${(String(g.owner||'').toLowerCase()==String(USER).toLowerCase()||['BM','DM'].includes(String(ROLE).toUpperCase()))?`<button class="btn sec chat-group-delete" onclick="deleteTeamGroup(decodeURIComponent('${encodeURIComponent(String(g.id))}'))" aria-label="Hapus grup ${esc(g.name)}">Hapus</button>`:''}</div>`).join(''):'<div class="empty">Anda belum tergabung dalam grup.</div>'}
 </div>
 <details class="chat-create-group">
 <summary>＋ Buat grup baru</summary>
@@ -2938,14 +3197,14 @@ ${chatUnreadBadge('group',g)}
 ${active?`
 <div class="chat-panel-head row">
 <button class="btn sec chat-back" style="display:none;padding:7px 10px" onclick="CHAT_ACTIVE=null;CHAT_MESSAGES=[];render()">←</button>
-<div class="social-avatar">${activeGroup?'👥':initials(active.nama)}</div>
-<div>${esc(activeGroup?activeGroup.name:active.nama)}<div class="mut">${activeGroup?'Grup · '+(activeGroup.memberCount||0)+' anggota':esc(active.role)}</div></div>
+${activeGlobal?'<div class="social-avatar">🌐</div>':activeGroup?'<div class="social-avatar">👥</div>':socialAvatar(active.nama,active.photoUrl)}
+<div>${esc(activeGlobal?'Chat Global':activeGroup?activeGroup.name:active.nama)}<div class="mut">${activeGlobal?'Semua anggota aktif':activeGroup?'Grup · '+(activeGroup.memberCount||0)+' anggota':esc(active.role)}</div></div>
 </div>
 <div class="chat-preview" id="chatPreview">${messages||'<div class="empty">Mulai percakapan dengan menyapa anggota.</div>'}</div>
 <form class="chat-compose" onsubmit="sendTeamMessage(event)">
 <textarea id="chatText" maxlength="1000" placeholder="Tulis pesan..." aria-label="Tulis pesan"></textarea>
 <button class="btn" type="submit">Kirim</button>
-</form>`:'<div class="empty">Pilih percakapan atau buat grup baru.</div>'}
+</form>`:'<div class="empty">Pilih Chat Global, percakapan, atau buat grup baru.</div>'}
 </section>
 </div>
 </div>
@@ -2969,9 +3228,9 @@ CHAT_HISTORY_LOADING=true;
 const requestId=++CHAT_HISTORY_REQUEST;
 
 try{
-const isGroup=CHAT_ACTIVE.type=='group';
+const type=CHAT_ACTIVE.type;
 const target=CHAT_ACTIVE.id;
-const r=await rpc(isGroup?'groupHistory':'chatHistory',TOK,target);
+const r=await rpc(type=='group'?'groupHistory':type=='global'?'globalChatHistory':'chatHistory',TOK,target);
 
 if(!r||typeof r!='object')throw new Error('Format respons riwayat chat tidak valid.');
 if(r.err){
@@ -2979,13 +3238,13 @@ if(r.err=='AUTH'){logout();return;}
 throw new Error(typeof r.err=='string'?r.err:'Tidak dapat memuat pesan');
 }
 if(!Array.isArray(r.rows))throw new Error('Endpoint riwayat chat harus mengembalikan rows berupa array.');
-if(requestId!=CHAT_HISTORY_REQUEST||!CHAT_ACTIVE||CHAT_ACTIVE.type!=(isGroup?'group':'personal')||CHAT_ACTIVE.id!=target)return;
+if(requestId!=CHAT_HISTORY_REQUEST||!CHAT_ACTIVE||CHAT_ACTIVE.type!=type||CHAT_ACTIVE.id!=target)return;
 
 const box=$('#chatPreview');
 const shouldScroll=!box||box.scrollHeight-box.scrollTop-box.clientHeight<60;
-CHAT_MESSAGES=mergeChatRows(r.rows,isGroup?'group':'personal',target);
+CHAT_MESSAGES=mergeChatRows(r.rows,type,target);
 if((tab=='chat'||dmTab=='chat')&&document.visibilityState!='hidden'){
-markChatSeen(isGroup?'group':'personal',target,CHAT_MESSAGES.reduce((latest,message)=>Math.max(latest,Number(message.ts)||0),0));
+markChatSeen(type,target,CHAT_MESSAGES.reduce((latest,message)=>Math.max(latest,Number(message.ts)||0),0));
 updateChatNavBadge();
 }
 if(box){
@@ -3033,7 +3292,7 @@ scrollChatToBottom();
 
 try{
 const r=await rpc(
-type=='group'?'sendGroupChat':'sendChat',
+type=='group'?'sendGroupChat':type=='global'?'sendGlobalChat':'sendChat',
 TOK,
 target,
 text
@@ -3049,15 +3308,17 @@ local.pending=false;
 if(type=='group'){
 const group=CHAT_GROUPS.find(item=>String(item.id)==target);
 if(group){group.lastText=text;group.lastTs=local.ts;group.lastFrom=USER;}
-}else{
+}else if(type=='personal'){
 const contact=CHAT_CONTACTS.find(item=>String(item.username)==target);
 if(contact){contact.lastText=text;contact.lastTs=local.ts;contact.lastFrom=USER;}
+}else if(CHAT_GLOBAL){
+CHAT_GLOBAL.lastText=text;CHAT_GLOBAL.lastTs=local.ts;CHAT_GLOBAL.lastFrom=USER;
 }
 markChatSeen(type,target,local.ts);
 
-const listSelector=type=='group'?'[data-group]':'[data-username]';
+const listSelector=type=='group'?'[data-group]':type=='global'?'[data-global]':'[data-username]';
 Array.from(document.querySelectorAll(listSelector)).forEach(button=>{
-const key=type=='group'?button.dataset.group:button.dataset.username;
+const key=type=='group'?button.dataset.group:type=='global'?'global':button.dataset.username;
 if(String(key)!=target)return;
 const preview=button.querySelector('.chat-contact-copy span');
 if(preview)preview.textContent=text;
@@ -3328,7 +3589,120 @@ fu.length
 // LEADS
 // ============================================================
 
+async function loadTeamLeads(){
+
+TEAM_LEADS_LOADING=true;
+TEAM_LEADS_ERROR='';
+render();
+
+try{
+
+const r=await rpc(
+'teamLeads',
+TOK
+);
+
+if(r&&r.err=='AUTH'){
+logout();
+return;
+}
+
+if(r&&r.err)throw new Error(typeof r.err=='string'?r.err:'Gagal memuat lead tim');
+if(!r||!Array.isArray(r.rows))throw new Error('Data lead tim dari server tidak valid');
+
+TEAM_LEADS=r.rows;
+
+}catch(e){
+
+TEAM_LEADS_ERROR=String((e&&e.message)||e);
+
+}finally{
+
+TEAM_LEADS_LOADING=false;
+if(TOK)render();
+
+}
+
+}
+
+
+function teamLeadCard(l){
+
+const status=ST[l.status]||'Lead';
+const phone=String(l.phone||'').trim();
+
+return`
+<div class="card lead">
+<div>
+<div class="row sp">
+<span class="n">${l.status=='hot'?'🔥 ':''}${esc(l.name||'Lead tanpa nama')}</span>
+<span class="badge s-${esc(l.status||'new')}">${esc(status)}</span>
+</div>
+<div class="meta">
+<span>📱</span><span>${esc(phone||'-')}</span>
+<span>Minat</span><span>${esc(l.product)||'-'}</span>
+<span>Diinput oleh</span><span>${esc(l.owner||'BDO/Sales')}</span>
+<span>Follow up</span><span>${l.next==iso(0)?'<b>Hari ini</b>':esc(fmt(l.next))}</span>
+</div>
+${l.notes?`<div class="note">“${esc(l.notes)}”</div>`:''}
+</div>
+<div class="row" style="margin-top:10px">
+${phone?`<a class="btn wa" href="${esc(wa(phone))}" target="_blank" rel="noopener noreferrer">WhatsApp</a>`:'<span class="mut">Nomor WhatsApp tidak tersedia</span>'}
+</div>
+</div>`;
+
+}
+
+
 function leads(){
+
+const canViewTeam=['BDO','SALES'].includes(String(ROLE).toUpperCase());
+
+if(leadView=='team'&&canViewTeam){
+
+let L=TEAM_LEADS
+.filter(l=>
+flt=='all' ||
+(flt=='due'
+?l.next&&l.next<=iso(0)&&!['deal','lost'].includes(l.status)
+:l.status==flt)
+)
+.filter(l=>
+!q ||
+String(l.name||'').concat(' ',String(l.phone||''),' ',String(l.product||''),' ',String(l.owner||''))
+.toLowerCase()
+.includes(q.toLowerCase())
+)
+.sort((a,b)=>String(b.c||'').localeCompare(String(a.c||'')));
+
+const fs=[
+['all','Semua'],
+['new','New'],
+['contacted','Contacted'],
+['warm','Warm'],
+['hot','HOT'],
+['followup','Follow Up'],
+['deal','Deposit'],
+['lost','Lost'],
+['due','Hari Ini']
+];
+
+return`
+<h1>Leads</h1>
+<div class="chips" style="margin-top:12px">
+<button class="chip" onclick="leadView='mine';render()">Lead Saya</button>
+<button class="chip on" aria-current="page">Lead Tim</button>
+</div>
+<input id="q" placeholder="Cari nama, nomor HP, produk, atau BDO..." value="${esc(q)}" oninput="q=this.value;keep()" style="margin-top:12px">
+<div class="chips">
+${fs.map(f=>`<button class="chip ${flt==f[0]?'on':''}" onclick="flt='${f[0]}';render()">${f[1]}</button>`).join('')}
+</div>
+${TEAM_LEADS_LOADING?'<div class="card empty">Memuat lead tim...</div>':''}
+${TEAM_LEADS_ERROR?`<div class="card empty">${esc(TEAM_LEADS_ERROR)}<div><button class="btn" style="margin-top:10px" onclick="loadTeamLeads()">Coba lagi</button></div></div>`:''}
+${!TEAM_LEADS_LOADING&&!TEAM_LEADS_ERROR?`<div style="margin-top:12px">${L.length?L.map(teamLeadCard).join(''):'<div class="card empty">Belum ada lead dari BDO/Sales lain.</div>'}</div>`:''}
+`;
+
+}
 
 let L=
 S.leads
@@ -3423,6 +3797,11 @@ return`
 <h1>
 Leads
 </h1>
+
+${canViewTeam?`<div class="chips" style="margin-top:12px">
+<button class="chip on" aria-current="page">Lead Saya</button>
+<button class="chip" onclick="leadView='team';loadTeamLeads()">Lead Tim</button>
+</div>`:''}
 
 <input
 id="q"
@@ -3876,6 +4255,16 @@ return`
 <h1>
 Profile
 </h1>
+
+<div class="card profile-photo-card" style="margin-top:12px">
+${socialAvatar(S.name,PROFILE_PHOTO_DRAFT||PROFILE_PHOTO,'social-avatar profile-avatar')}
+<div class="profile-photo-controls">
+<b>Foto profil</b>
+<div class="mut">Foto akan terlihat oleh anggota tim pada feed dan chat.</div>
+<input id="profilePhotoFile" type="file" accept="image/*" onchange="prepareProfilePhoto(this)">
+<button class="btn sec" type="button" onclick="saveProfilePhoto()" ${PROFILE_PHOTO_DRAFT?'':'disabled'}>Simpan foto</button>
+</div>
+</div>
 
 <div
 class="card"
@@ -6039,6 +6428,48 @@ by:x.m.nama
 
 `;
 
+}
+
+function prepareProfilePhoto(input){
+const file=input.files&&input.files[0];
+if(!file)return;
+if(!file.type.startsWith('image/')){toast('Pilih file gambar.');input.value='';return;}
+if(file.size>8*1024*1024){toast('Ukuran foto maksimal 8 MB.');input.value='';return;}
+const reader=new FileReader();
+reader.onerror=()=>toast('Foto profil gagal dibaca.');
+reader.onload=()=>{
+const image=new Image();
+image.onerror=()=>toast('Format foto profil tidak dapat dibuka.');
+image.onload=()=>{
+const side=512,scale=Math.min(1,side/image.width,side/image.height);
+const canvas=document.createElement('canvas');
+canvas.width=Math.max(1,Math.round(image.width*scale));
+canvas.height=Math.max(1,Math.round(image.height*scale));
+const context=canvas.getContext('2d');
+if(!context){toast('Browser tidak dapat memproses foto profil.');return;}
+context.drawImage(image,0,0,canvas.width,canvas.height);
+PROFILE_PHOTO_DRAFT=canvas.toDataURL('image/jpeg',.8);
+render();
+};
+image.src=String(reader.result||'');
+};
+reader.readAsDataURL(file);
+}
+
+async function saveProfilePhoto(){
+if(!PROFILE_PHOTO_DRAFT)return;
+try{
+toast('Mengunggah foto profil...');
+const url=await rpc('uploadImg',TOK,PROFILE_PHOTO_DRAFT);
+if(typeof url!='string'||!/^https?:\/\//i.test(url))throw new Error('Server tidak mengembalikan tautan foto yang valid.');
+const result=await rpc('updateProfilePhoto',TOK,url);
+if(!result||result.ok!==1)throw new Error(result&&result.err||'Foto profil gagal disimpan.');
+PROFILE_PHOTO=url;
+PROFILE_PHOTO_DRAFT='';
+renderAppHeader();
+render();
+toast('Foto profil diperbarui.');
+}catch(e){toast('Foto profil gagal disimpan: '+String((e&&e.message)||e));}
 }
 
 

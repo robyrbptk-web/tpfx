@@ -1,6 +1,12 @@
 # Pembaruan Google Apps Script
 
-File `Pasted text #1.txt` tidak saya ubah karena merupakan lampiran read-only. Terapkan perubahan berikut pada project Apps Script yang sudah ada.
+Versi backend lengkap yang menggabungkan fitur di bawah tersedia di [AppsScript-TPFX-Complete.gs](./AppsScript-TPFX-Complete.gs). File sumber yang dibagikan di chat tidak diubah; file baru tersebut dibuat sebagai salinan lengkap dengan perubahan.
+
+**Penting sebelum mengganti Code.gs:** lampiran sumber yang diterima berisi placeholder kosong `DATABASE_DATA`. Jika Code.gs yang sedang terpasang memuat daftar kontak asli, salin isi array `DATABASE_DATA` yang asli ke file lengkap ini terlebih dahulu agar daftar itu tidak hilang setelah deploy. Jangan menyalin ulang `setup()` sebelum memeriksa akun yang sudah ada; fungsi `setup()` membuat sheet tambahan dan menjaga nama/password akun lama.
+
+Untuk database baru yang belum mempunyai akun manager, isi Script Properties `INITIAL_BM_PASSWORD` dan `INITIAL_DM_PASSWORD` dengan password sementara minimal 12 karakter sebelum menjalankan `setup()`, kemudian hapus kedua property setelah akun dibuat dan atur password melalui proses yang aman. Jangan simpan password di repository.
+
+File ini tetap memuat penjelasan perubahan dan endpoint per bagian sebagai referensi. Untuk instalasi penuh, gunakan file `.gs` lengkap; tidak perlu menempelkan endpoint satu per satu dari bagian bawah.
 
 ## 1. Ganti fungsi `ensureManager_`
 
@@ -42,20 +48,30 @@ function api_() {
     resetBDOPassword: resetBDOPassword,
     updateBDOTarget: updateBDOTarget,
     updateProfile: updateProfile,
+    updateProfilePhoto: updateProfilePhoto,
     deleteUser: deleteUser,
     databaseData: databaseData,
+    teamLeads: teamLeads,
     chatNotificationSummary: chatNotificationSummary,
     checkSession: checkSession,
     socialFeed: socialFeed,
     recentPosts: recentPosts,
     createPost: createPost,
+    deletePost: deletePost,
+    togglePostLike: togglePostLike,
+    togglePostPin: togglePostPin,
+    postComments: postComments,
+    addPostComment: addPostComment,
     chatContacts: chatContacts,
     chatHistory: chatHistory,
     sendChat: sendChat,
     chatGroups: chatGroups,
     createChatGroup: createChatGroup,
+    deleteChatGroup: deleteChatGroup,
     groupHistory: groupHistory,
-    sendGroupChat: sendGroupChat
+    sendGroupChat: sendGroupChat,
+    globalChatHistory: globalChatHistory,
+    sendGlobalChat: sendGlobalChat
   };
 }
 ```
@@ -384,6 +400,70 @@ function databaseData(t) {
 
 Penyimpanan status kontak pada `database.html` memakai nomor kontak sebagai kunci lokal, agar status mengikuti kontak jika pembagian otomatis berubah setelah jumlah BDO aktif bertambah atau berkurang. Daftar nomor hanya diterima oleh browser setelah sesi berhasil divalidasi; jangan membuat endpoint publik untuk database ini.
 
+### Bagikan lead yang diinput BDO/Sales
+
+Lead pada menu **Leads** disimpan per akun di sheet `Data`, dengan baris berformat `[username, timestamp, potongan_json_state]`. Tambahkan endpoint berikut agar semua akun aktif ber-role `BDO` atau `SALES` dapat melihat dan menghubungi lead seluruh anggota tim. Endpoint hanya membaca data dan tetap memerlukan sesi login.
+
+```javascript
+function teamLeads(t) {
+  const username = user_(t);
+  const caller = username && findUser_(username);
+  if (!caller || String(caller[3]).toUpperCase() != 'Y') {
+    return { err: 'AUTH' };
+  }
+  if (!['BDO', 'SALES'].includes(String(caller[4]).toUpperCase())) {
+    return { err: 'Akses ditolak' };
+  }
+
+  const owners = {};
+  users_().getDataRange().getValues().slice(1).forEach(r => {
+    const role = String(r[4] || '').toUpperCase();
+    if (String(r[3]).toUpperCase() == 'Y' && (role == 'BDO' || role == 'SALES')) {
+      owners[String(r[0]).toLowerCase()] = String(r[2] || r[0]);
+    }
+  });
+
+  const chunks = {};
+  data_().getDataRange().getValues().slice(1).forEach(r => {
+    const key = String(r[0] || '').toLowerCase();
+    if (owners[key]) (chunks[key] = chunks[key] || []).push(r);
+  });
+
+  const rows = [];
+  Object.keys(chunks).forEach(key => {
+    const savedRows = chunks[key].sort((a, b) => Number(a[1]) - Number(b[1]));
+    const state = JSON.parse(savedRows.map(r => String(r[2] || '')).join(''));
+    if (!state || !Array.isArray(state.leads)) {
+      throw new Error('Format state lead tidak valid untuk akun ' + key);
+    }
+
+    state.leads.forEach(lead => {
+      if (!lead || typeof lead != 'object') {
+        throw new Error('Format lead tidak valid untuk akun ' + key);
+      }
+      rows.push({
+        id: lead.id,
+        name: String(lead.name || ''),
+        phone: String(lead.phone || ''),
+        product: String(lead.product || ''),
+        status: String(lead.status || 'new'),
+        interest: String(lead.interest || ''),
+        last: String(lead.last || ''),
+        next: String(lead.next || ''),
+        notes: String(lead.notes || ''),
+        c: String(lead.c || ''),
+        owner: owners[key]
+      });
+    });
+  });
+
+  rows.sort((a, b) => String(b.c).localeCompare(String(a.c)));
+  return { rows: rows };
+}
+```
+
+Setelah menambahkan fungsi ke `api_()` dan Code.gs, deploy versi Web App terbaru. Di workspace, buka **Leads → Lead Tim** untuk mencari seluruh lead BDO/Sales dan memakai tombol **WhatsApp**. Tombol tersebut membuka percakapan dengan nomor lead; akun lain tidak dapat mengubah atau menghapus data lead pemiliknya.
+
 ## 6. Feed sosial dan chat di `index.html`
 
 Tambahkan sheet penyimpanan berikut ke fungsi `setup()` setelah pembuatan sheet `Data`:
@@ -391,7 +471,21 @@ Tambahkan sheet penyimpanan berikut ke fungsi `setup()` setelah pembuatan sheet 
 ```javascript
   if (!b.getSheetByName('Posts')) {
     b.insertSheet('Posts').appendRow([
-      'id', 'username', 'nama', 'text', 'ts'
+      'id', 'username', 'nama', 'text', 'ts', 'photoUrl'
+    ]);
+  }
+  const postsSheet = b.getSheetByName('Posts');
+  if (postsSheet.getLastColumn() < 6) postsSheet.getRange(1, 6).setValue('photoUrl');
+
+  if (!b.getSheetByName('PostLikes')) {
+    b.insertSheet('PostLikes').appendRow(['postId', 'username', 'ts']);
+  }
+  if (!b.getSheetByName('PostPins')) {
+    b.insertSheet('PostPins').appendRow(['postId', 'username', 'ts']);
+  }
+  if (!b.getSheetByName('PostComments')) {
+    b.insertSheet('PostComments').appendRow([
+      'id', 'postId', 'username', 'text', 'ts'
     ]);
   }
 
@@ -406,7 +500,11 @@ Tambahkan sheet penyimpanan berikut ke fungsi `setup()` setelah pembuatan sheet 
       'id', 'name', 'owner', 'members_json', 'ts'
     ]);
   }
+  const usersSheet = b.getSheetByName('Users');
+  if (usersSheet.getLastColumn() < 6) usersSheet.getRange(1, 6).setValue('photoUrl');
 ```
+
+`Users` tetap memakai kolom A=username, C=nama, D=status, E=role; kolom F yang ditambahkan hanya menyimpan URL foto profil. `Posts` tetap mempertahankan kolom lama dan menambahkan URL foto di kolom F. `setup()` menambahkan sheet/kolom saja dan tidak menghapus data lama.
 
 Tambahkan helper dan endpoint berikut ke Code.gs:
 
@@ -841,11 +939,459 @@ Tambahkan pemanggilan `purgeSocialData_(targetUsername);` ke fungsi `deleteUser`
 
 Chat menggunakan percakapan personal yang sudah ada dan grup dengan beberapa anggota. Semua role dapat membuat grup, mengirim pesan personal, dan mengirim pesan ke grup yang mereka ikuti. Grup disimpan di sheet `ChatGroups`; pesan grup disimpan di sheet `Messages` dengan kolom `to` bernilai `group:<id grup>`. Akses riwayat dan pengiriman grup divalidasi di Apps Script berdasarkan keanggotaan. `purgeSocialData_` menghapus pesan milik akun yang dihapus, mengeluarkan akun itu dari grup, dan menghapus grup yang tersisa kurang dari dua anggota.
 
-### Notifikasi pesan baru
+### Fitur foto, interaksi feed, chat global, dan hapus grup
 
-`index.html` menggunakan Notification API bawaan browser, tanpa Firebase, Supabase, atau layanan push eksternal. Di halaman Chat, pengguna harus menekan **Aktifkan notifikasi** dan menyetujui izin browser. Workspace memeriksa ringkasan chat personal/grup setiap 6 detik selama halamannya masih terbuka, termasuk saat tab di background; browser dapat memperlambat atau menangguhkan polling tab background. Notifikasi dan badge hanya dibuat untuk pesan masuk dari anggota lain, bukan pesan sendiri. Fungsi `chatNotificationSummary` di bawah mengembalikan `lastFrom` untuk membedakan pengirim dan membaca ringkasan kedua jenis chat dalam satu request.
+Tambahkan endpoint berikut ke `api_()` (jangan hapus endpoint lama): `updateProfilePhoto`, `deletePost`, `togglePostLike`, `togglePostPin`, `postComments`, `addPostComment`, `deleteChatGroup`, `globalChatHistory`, dan `sendGlobalChat`. Jalankan `setup()` satu kali untuk membuat `PostLikes`, `PostPins`, `PostComments`, serta menambahkan header kolom foto bila belum ada. Foto feed/profil diunggah lewat endpoint `uploadImg` yang sudah ada; endpoint baru hanya menyimpan URL Google Drive hasil upload.
 
-Notifikasi browser dapat muncul saat tab workspace berada di background, tetapi tidak dapat dijamin setelah tab/browser ditutup atau sistem menghentikan halaman. Itu memerlukan Web Push dengan service worker dan server pengirim push. Gunakan hosting HTTPS. Tambahkan fungsi baru berikut dan daftarkan `chatNotificationSummary` pada `api_()`, lalu simpan dan deploy versi baru Apps Script.
+#### Endpoint interaksi feed
+
+Tempel helper dan endpoint ini di Code.gs. Ganti fungsi `socialFeed`, `recentPosts`, dan `createPost` versi lama dengan implementasi di bawah. Postingan hanya dapat dihapus oleh pemiliknya; BM/DM dapat menyematkan dan melepas sematan postingan. Komentar dan suka tersedia untuk semua akun aktif.
+
+```javascript
+function updateProfilePhoto(t, photoUrl) {
+  const username = user_(t);
+  const account = username && findUser_(username);
+  if (!account || String(account[3]).toUpperCase() != 'Y') return { err: 'AUTH' };
+  photoUrl = String(photoUrl || '').trim();
+  if (!/^https:\/\/.+/i.test(photoUrl) || photoUrl.length > 2000) {
+    return { err: 'URL foto profil tidak valid' };
+  }
+  users_().getRange(account.idx, 6).setValue(photoUrl);
+  return { ok: 1, photoUrl: photoUrl };
+}
+
+function socialUsers_() {
+  const users = {};
+  users_().getDataRange().getValues().slice(1).forEach(r => {
+    const key = String(r[0] || '').toLowerCase();
+    if (key) users[key] = {
+      nama: String(r[2] || r[0]),
+      role: String(r[4] || 'BDO').toUpperCase(),
+      photoUrl: String(r[5] || '')
+    };
+  });
+  return users;
+}
+
+function enrichSocialPosts_(rows, viewer) {
+  const likes = {};
+  const likedByViewer = {};
+  postsLikes_().getDataRange().getValues().slice(1).forEach(r => {
+    const id = String(r[0] || '');
+    if (!id) return;
+    likes[id] = (likes[id] || 0) + 1;
+    if (String(r[1] || '').toLowerCase() == String(viewer).toLowerCase()) {
+      likedByViewer[id] = true;
+    }
+  });
+  const pins = {};
+  postsPins_().getDataRange().getValues().slice(1).forEach(r => {
+    pins[String(r[0] || '')] = true;
+  });
+  const commentCounts = {};
+  postComments_().getDataRange().getValues().slice(1).forEach(r => {
+    const id = String(r[1] || '');
+    if (id) commentCounts[id] = (commentCounts[id] || 0) + 1;
+  });
+  const users = socialUsers_();
+  return rows.map(post => {
+    const profile = users[String(post.username).toLowerCase()] || {};
+    return Object.assign({}, post, {
+      nama: post.nama || profile.nama || post.username,
+      role: profile.role || '',
+      profilePhoto: profile.photoUrl || '',
+      likes: likes[String(post.id)] || 0,
+      liked: !!likedByViewer[String(post.id)],
+      pinned: !!pins[String(post.id)],
+      commentsCount: commentCounts[String(post.id)] || 0
+    });
+  }).sort((a, b) =>
+    Number(b.pinned) - Number(a.pinned) || Number(b.ts) - Number(a.ts)
+  );
+}
+
+function postsLikes_() {
+  const sheet = ss_().getSheetByName('PostLikes');
+  if (!sheet) throw new Error('Sheet PostLikes belum ada. Jalankan setup().');
+  return sheet;
+}
+
+function postsPins_() {
+  const sheet = ss_().getSheetByName('PostPins');
+  if (!sheet) throw new Error('Sheet PostPins belum ada. Jalankan setup().');
+  return sheet;
+}
+
+function postComments_() {
+  const sheet = ss_().getSheetByName('PostComments');
+  if (!sheet) throw new Error('Sheet PostComments belum ada. Jalankan setup().');
+  return sheet;
+}
+
+function socialPostRows_(limit) {
+  const sheet = posts_();
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return [];
+  const startRow = Math.max(2, lastRow - limit + 1);
+  const selected = {};
+  sheet.getRange(startRow, 1, lastRow - startRow + 1, 6).getValues()
+    .filter(r => String(r[3] || '').trim() || String(r[5] || '').trim())
+    .forEach(r => { selected[String(r[0])] = r; });
+  const pinnedIds = postsPins_().getDataRange().getValues().slice(1)
+    .map(r => String(r[0] || '')).filter(Boolean);
+  pinnedIds.forEach(id => {
+    if (selected[id]) return;
+    const match = sheet.getRange(2, 1, lastRow - 1, 1)
+      .createTextFinder(id).matchEntireCell(true).findNext();
+    if (match) selected[id] = sheet.getRange(match.getRow(), 1, 1, 6).getValues()[0];
+  });
+  return Object.keys(selected).map(id => {
+    const r = selected[id];
+    return {
+      id: String(r[0]),
+      username: String(r[1]),
+      nama: String(r[2]),
+      text: String(r[3] || ''),
+      ts: Number(r[4]) || 0,
+      imageUrl: String(r[5] || ''),
+      kind: 'post'
+    };
+  });
+}
+
+function socialFeed(t) {
+  const username = user_(t);
+  const account = username && findUser_(username);
+  if (!account || String(account[3]).toUpperCase() != 'Y') return { err: 'AUTH' };
+  const profiles = socialUsers_();
+  const feed = enrichSocialPosts_(socialPostRows_(100), username);
+  const activeUsers = {};
+  users_().getDataRange().getValues().slice(1).forEach(r => {
+    if (String(r[3]).toUpperCase() == 'Y') {
+      activeUsers[String(r[0]).toLowerCase()] = true;
+    }
+  });
+  const chunks = {};
+  data_().getDataRange().getValues().slice(1).forEach(r => {
+    const key = String(r[0] || '').toLowerCase();
+    if (profiles[key] && activeUsers[key]) (chunks[key] = chunks[key] || []).push(r);
+  });
+  const labels = {
+    call: 'Mencatat panggilan', wa: 'Menghubungi calon nasabah',
+    meet: 'Melakukan pertemuan', post: 'Mencatat aktivitas promosi',
+    shot: 'Mengunggah bukti aktivitas'
+  };
+  const since = Date.now() - 30 * 864e5;
+  Object.keys(chunks).forEach(key => {
+    const savedRows = chunks[key].sort((a, b) => Number(a[1]) - Number(b[1]));
+    let state;
+    try {
+      state = JSON.parse(savedRows.map(r => String(r[2] || '')).join(''));
+    } catch (e) {
+      Logger.log('Feed melewati state JSON tidak valid untuk ' + key);
+      return;
+    }
+    (state.acts || []).forEach(activity => {
+      const ts = Number(activity.ts) || 0;
+      if (!ts || ts < since) return;
+      const profile = profiles[key];
+      feed.push({
+        id: 'activity-' + key + '-' + String(activity.id || ts),
+        username: savedRows[0][0], nama: profile.nama,
+        role: profile.role, profilePhoto: profile.photoUrl,
+        text: labels[activity.type] || 'Mencatat aktivitas penjualan',
+        ts: ts, kind: 'activity'
+      });
+    });
+  });
+  feed.sort((a, b) =>
+    Number(b.pinned) - Number(a.pinned) || Number(b.ts) - Number(a.ts)
+  );
+  return { rows: feed.slice(0, 100) };
+}
+
+function recentPosts(t) {
+  const username = user_(t);
+  const account = username && findUser_(username);
+  if (!account || String(account[3]).toUpperCase() != 'Y') return { err: 'AUTH' };
+  return { rows: enrichSocialPosts_(socialPostRows_(100), username) };
+}
+
+function createPost(t, text, imageUrl) {
+  const username = user_(t);
+  const account = username && findUser_(username);
+  if (!account || String(account[3]).toUpperCase() != 'Y') return { err: 'AUTH' };
+  text = String(text || '').trim();
+  imageUrl = String(imageUrl || '').trim();
+  if (!text && !imageUrl) return { err: 'Isi postingan atau foto wajib diisi' };
+  if (text.length > 500) return { err: 'Postingan maksimal 500 karakter' };
+  if (imageUrl && (!/^https:\/\/.+/i.test(imageUrl) || imageUrl.length > 2000)) {
+    return { err: 'URL foto postingan tidak valid' };
+  }
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    posts_().appendRow([
+      Utilities.getUuid(), String(account[0]), String(account[2]),
+      text, Date.now(), imageUrl
+    ]);
+  } finally {
+    lock.releaseLock();
+  }
+  return { ok: 1 };
+}
+
+function deletePost(t, postId) {
+  const username = user_(t);
+  const account = username && findUser_(username);
+  if (!account || String(account[3]).toUpperCase() != 'Y') return { err: 'AUTH' };
+  postId = String(postId || '').trim();
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const sheet = posts_();
+    const rows = sheet.getDataRange().getValues();
+    const index = rows.findIndex((r, i) => i > 0 && String(r[0]) == postId);
+    if (index < 1) return { err: 'Postingan tidak ditemukan' };
+    if (String(rows[index][1]).toLowerCase() != String(username).toLowerCase()) {
+      return { err: 'Anda hanya dapat menghapus postingan sendiri' };
+    }
+    sheet.deleteRow(index + 1);
+    [
+      { sheet: postsLikes_(), column: 1 },
+      { sheet: postsPins_(), column: 1 },
+      { sheet: postComments_(), column: 2 }
+    ].forEach(meta => {
+      const values = meta.sheet.getDataRange().getValues();
+      for (let i = values.length - 1; i >= 1; i--) {
+        if (String(values[i][meta.column - 1]) == postId) {
+          meta.sheet.deleteRow(i + 1);
+        }
+      }
+    });
+  } finally {
+    lock.releaseLock();
+  }
+  return { ok: 1 };
+}
+
+function togglePostLike(t, postId) {
+  const username = user_(t);
+  const account = username && findUser_(username);
+  if (!account || String(account[3]).toUpperCase() != 'Y') return { err: 'AUTH' };
+  postId = String(postId || '').trim();
+  const post = posts_().getDataRange().getValues().slice(1)
+    .some(r => String(r[0]) == postId);
+  if (!post) return { err: 'Postingan tidak ditemukan' };
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const sheet = postsLikes_();
+    const values = sheet.getDataRange().getValues();
+    const index = values.findIndex((r, i) => i > 0 &&
+      String(r[0]) == postId &&
+      String(r[1]).toLowerCase() == String(username).toLowerCase());
+    if (index > 0) {
+      sheet.deleteRow(index + 1);
+      return { ok: 1, liked: false };
+    }
+    sheet.appendRow([postId, username, Date.now()]);
+    return { ok: 1, liked: true };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function togglePostPin(t, postId) {
+  const username = user_(t);
+  const account = username && findUser_(username);
+  if (!account || String(account[3]).toUpperCase() != 'Y') return { err: 'AUTH' };
+  if (!['BM', 'DM'].includes(String(account[4]).toUpperCase())) {
+    return { err: 'Hanya BM/DM yang dapat menyematkan postingan' };
+  }
+  postId = String(postId || '').trim();
+  const exists = posts_().getDataRange().getValues().slice(1)
+    .some(r => String(r[0]) == postId);
+  if (!exists) return { err: 'Postingan tidak ditemukan' };
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const sheet = postsPins_();
+    const values = sheet.getDataRange().getValues();
+    const index = values.findIndex((r, i) => i > 0 && String(r[0]) == postId);
+    if (index > 0) {
+      sheet.deleteRow(index + 1);
+      return { ok: 1, pinned: false };
+    }
+    sheet.appendRow([postId, username, Date.now()]);
+    return { ok: 1, pinned: true };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function postComments(t, postId) {
+  const username = user_(t);
+  const account = username && findUser_(username);
+  if (!account || String(account[3]).toUpperCase() != 'Y') return { err: 'AUTH' };
+  postId = String(postId || '').trim();
+  const exists = posts_().getDataRange().getValues().slice(1)
+    .some(r => String(r[0]) == postId);
+  if (!exists) return { err: 'Postingan tidak ditemukan' };
+  const users = socialUsers_();
+  const rows = postComments_().getDataRange().getValues().slice(1)
+    .filter(r => String(r[1]) == postId)
+    .slice(-100)
+    .map(r => {
+      const commenter = users[String(r[2]).toLowerCase()] || {};
+      return {
+        id: String(r[0]), username: String(r[2]),
+        nama: commenter.nama || String(r[2]), photoUrl: commenter.photoUrl || '',
+        text: String(r[3]), ts: Number(r[4]) || 0
+      };
+    });
+  return { rows: rows };
+}
+
+function addPostComment(t, postId, text) {
+  const username = user_(t);
+  const account = username && findUser_(username);
+  if (!account || String(account[3]).toUpperCase() != 'Y') return { err: 'AUTH' };
+  postId = String(postId || '').trim();
+  text = String(text || '').trim();
+  if (!text) return { err: 'Komentar tidak boleh kosong' };
+  if (text.length > 500) return { err: 'Komentar maksimal 500 karakter' };
+  const exists = posts_().getDataRange().getValues().slice(1)
+    .some(r => String(r[0]) == postId);
+  if (!exists) return { err: 'Postingan tidak ditemukan' };
+  postComments_().appendRow([Utilities.getUuid(), postId, username, text, Date.now()]);
+  return { ok: 1 };
+}
+```
+
+Pada `loadState(t)`, tambahkan `photoUrl: String(account[5] || '')` ke object sukses yang dikembalikan; gunakan nama variabel akun aktual yang sudah dipakai fungsi tersebut (`u`/`userRow` jika bukan `account`). Jalankan `setup()` supaya kolom F di `Users` tersedia. Feed menampilkan role BM/DM di samping nama, avatar profil, foto postingan, tombol suka/komentar, dan sematan.
+
+Di `purgeSocialData_(username)`, setelah mendapatkan `postRows`, simpan ID postingan akun itu sebelum baris dihapus:
+
+```javascript
+const ownedPostIds = {};
+postRows.slice(1).forEach(r => {
+  if (String(r[1]).toLowerCase() == key) ownedPostIds[String(r[0])] = true;
+});
+```
+
+Di akhir fungsi tersebut, sebelum `}`, bersihkan interaksi postingan agar penghapusan akun tidak meninggalkan suka, pin, atau komentar yatim:
+
+```javascript
+[
+  { sheet: postsLikes_(), postColumn: 1, userColumn: 2 },
+  { sheet: postsPins_(), postColumn: 1, userColumn: 2 },
+  { sheet: postComments_(), postColumn: 2, userColumn: 3 }
+].forEach(meta => {
+  const values = meta.sheet.getDataRange().getValues();
+  for (let i = values.length - 1; i >= 1; i--) {
+    const belongsToDeletedUser =
+      String(values[i][meta.userColumn - 1]).toLowerCase() == key;
+    const belongsToDeletedPost = !!ownedPostIds[String(values[i][meta.postColumn - 1])];
+    if (belongsToDeletedUser || belongsToDeletedPost) meta.sheet.deleteRow(i + 1);
+  }
+});
+```
+
+#### Hapus grup chat dan chat global
+
+Tambahkan endpoint berikut. Hapus grup dibatasi ke pembuat grup atau BM/DM, dan riwayat grup ikut dihapus. Chat global memakai `Messages.to = 'global'`; semua akun aktif dapat membaca dan membalas di satu ruang yang sama.
+
+```javascript
+function deleteChatGroup(t, groupId) {
+  const username = user_(t);
+  const account = username && findUser_(username);
+  if (!account || String(account[3]).toUpperCase() != 'Y') return { err: 'AUTH' };
+  groupId = String(groupId || '').trim();
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const groups = chatGroups_();
+    const values = groups.getDataRange().getValues();
+    const index = values.findIndex((r, i) => i > 0 && String(r[0]) == groupId);
+    if (index < 1) return { err: 'Grup tidak ditemukan' };
+    const owner = String(values[index][2] || '');
+    if (owner.toLowerCase() != String(username).toLowerCase() &&
+        !['BM', 'DM'].includes(String(account[4]).toUpperCase())) {
+      return { err: 'Hanya pembuat grup atau BM/DM yang dapat menghapus grup' };
+    }
+    const messages = messages_();
+    const messageRows = messages.getDataRange().getValues();
+    for (let i = messageRows.length - 1; i >= 1; i--) {
+      if (String(messageRows[i][2]) == 'group:' + groupId) messages.deleteRow(i + 1);
+    }
+    groups.deleteRow(index + 1);
+  } finally {
+    lock.releaseLock();
+  }
+  return { ok: 1 };
+}
+
+function globalChatHistory(t) {
+  const username = user_(t);
+  const account = username && findUser_(username);
+  if (!account || String(account[3]).toUpperCase() != 'Y') return { err: 'AUTH' };
+  const profiles = socialUsers_();
+  const rows = messages_().getDataRange().getValues().slice(1)
+    .filter(r => String(r[2]) == 'global')
+    .sort((a, b) => Number(a[4]) - Number(b[4]))
+    .slice(-200)
+    .map(r => {
+      const sender = profiles[String(r[1]).toLowerCase()] || {};
+      return {
+        id: String(r[0]), from: String(r[1]),
+        nama: sender.nama || String(r[1]), role: sender.role || '',
+        photoUrl: sender.photoUrl || '', text: String(r[3]),
+        ts: Number(r[4]) || 0
+      };
+    });
+  return { rows: rows };
+}
+
+function sendGlobalChat(t, unusedTarget, text) {
+  const username = user_(t);
+  const account = username && findUser_(username);
+  if (!account || String(account[3]).toUpperCase() != 'Y') return { err: 'AUTH' };
+  text = String(text || '').trim();
+  if (!text) return { err: 'Pesan tidak boleh kosong' };
+  if (text.length > 1000) return { err: 'Pesan maksimal 1000 karakter' };
+  messages_().appendRow([Utilities.getUuid(), username, 'global', text, Date.now()]);
+  return { ok: 1 };
+}
+```
+
+Pada `chatGroups(t)`, tambahkan properti ini ke object grup:
+
+```javascript
+owner: String(r[2] || ''),
+```
+
+Pada `chatContacts(t)`, tambahkan properti ini pada object kontak:
+
+```javascript
+photoUrl: String(r[5] || ''),
+```
+
+Di fungsi `chatHistory` dan `groupHistory`, sebelum membuat hasil pesan siapkan lookup profil:
+
+```javascript
+const profiles = socialUsers_();
+```
+
+Lalu pada `.map(r => ({ ... }))` di `chatHistory`, tambahkan properti pengirim:
+
+```javascript
+nama: (profiles[String(r[1]).toLowerCase()] || {}).nama || String(r[1]),
+role: (profiles[String(r[1]).toLowerCase()] || {}).role || '',
+photoUrl: (profiles[String(r[1]).toLowerCase()] || {}).photoUrl || '',
+```
+
+Di `groupHistory`, properti `nama` sudah dibuat dari lookup yang ada; pertahankan dan tambahkan hanya `role` serta `photoUrl` dengan ekspresi yang sama. Jangan menghilangkan properti pesan yang sudah dikembalikan. Pada `chatNotificationSummary(t)`, ganti fungsi lama dengan implementasi berikut; kontak sekaligus membawa foto profil dan summary global:
 
 ```javascript
 function chatNotificationSummary(t) {
@@ -854,17 +1400,16 @@ function chatNotificationSummary(t) {
   if (!account || String(account[3]).toUpperCase() != 'Y') return { err: 'AUTH' };
 
   const userKey = String(username).toLowerCase();
+  const profiles = socialUsers_();
   const contacts = {};
   users_().getDataRange().getValues().slice(1).forEach(r => {
     const peer = String(r[0] || '');
+    const profile = profiles[peer.toLowerCase()] || {};
     if (String(r[3]).toUpperCase() != 'Y' || peer.toLowerCase() == userKey) return;
     contacts[peer.toLowerCase()] = {
-      username: peer,
-      nama: String(r[2] || peer),
-      role: String(r[4] || 'BDO').toUpperCase(),
-      lastText: '',
-      lastTs: 0,
-      lastFrom: ''
+      username: peer, nama: profile.nama || peer,
+      role: profile.role || 'BDO', photoUrl: profile.photoUrl || '',
+      lastText: '', lastTs: 0, lastFrom: ''
     };
   });
 
@@ -874,19 +1419,23 @@ function chatNotificationSummary(t) {
     const members = groupMembers_(r);
     if (members.indexOf(userKey) < 0) return;
     groups[id] = {
-      id: id,
-      name: String(r[1]),
-      memberCount: members.length,
-      lastText: '',
-      lastTs: 0,
-      lastFrom: ''
+      id: id, name: String(r[1]), owner: String(r[2] || ''),
+      memberCount: members.length, lastText: '', lastTs: 0, lastFrom: ''
     };
   });
+  const global = { id: 'global', lastText: '', lastTs: 0, lastFrom: '' };
 
   messages_().getDataRange().getValues().slice(1).forEach(r => {
-    const from = String(r[1] || '');
-    const to = String(r[2] || '');
+    const from = String(r[1] || ''), to = String(r[2] || '');
     const ts = Number(r[4]) || 0;
+    if (to == 'global') {
+      if (ts >= global.lastTs) {
+        global.lastText = String(r[3] || '');
+        global.lastTs = ts;
+        global.lastFrom = from;
+      }
+      return;
+    }
     if (to.indexOf('group:') == 0) {
       const group = groups[to.slice(6)];
       if (group && ts >= group.lastTs) {
@@ -896,7 +1445,6 @@ function chatNotificationSummary(t) {
       }
       return;
     }
-
     let peer = '';
     if (from.toLowerCase() == userKey) peer = to.toLowerCase();
     else if (to.toLowerCase() == userKey) peer = from.toLowerCase();
@@ -912,12 +1460,17 @@ function chatNotificationSummary(t) {
     contacts: Object.keys(contacts).map(key => contacts[key])
       .sort((a, b) => b.lastTs - a.lastTs || a.nama.localeCompare(b.nama)),
     groups: Object.keys(groups).map(key => groups[key])
-      .sort((a, b) => b.lastTs - a.lastTs || a.name.localeCompare(b.name))
+      .sort((a, b) => b.lastTs - a.lastTs || a.name.localeCompare(b.name)),
+    global: global
   };
 }
 ```
 
-Setelah endpoint ini dan semua perubahan di atas ditempel, jalankan `setup()` sekali untuk membuat sheet `Posts`, `Messages`, dan `ChatGroups`, simpan, lalu **deploy versi baru** Web App. Fungsi `setup()` hanya menambahkan sheet yang belum ada; tidak menghapus pesan personal yang sudah tersimpan di `Messages`.
+### Notifikasi pesan baru
+
+`index.html` menggunakan Notification API bawaan browser, tanpa Firebase, Supabase, atau layanan push eksternal. Di halaman Chat, pengguna harus menekan **Aktifkan notifikasi** dan menyetujui izin browser. Workspace memeriksa ringkasan chat personal/grup/global setiap 6 detik selama halamannya masih terbuka, termasuk saat tab di background; browser dapat memperlambat atau menangguhkan polling tab background. Notifikasi dan badge hanya dibuat untuk pesan masuk dari anggota lain, bukan pesan sendiri. Gunakan implementasi `chatNotificationSummary(t)` pada bagian **Hapus grup chat dan chat global** di atas; fungsi tersebut juga mengembalikan ringkasan global.
+
+Notifikasi browser dapat muncul saat tab workspace berada di background, tetapi tidak dapat dijamin setelah tab/browser ditutup atau sistem menghentikan halaman. Itu memerlukan Web Push dengan service worker dan server pengirim push. Gunakan hosting HTTPS.
 
 ## 7. Diagnostik jika login atau chat mendapat respons kosong
 
@@ -925,8 +1478,8 @@ Frontend mengharapkan setiap request Apps Script mengembalikan JSON dengan prope
 
 1. Fungsi `loadState(t)` harus selalu mengembalikan `{ err: 'AUTH' }` untuk token tidak valid, atau object `{ state, name, user, role }` untuk sesi aktif. Jangan menghapus `return` pada hasil sesi.
 2. Fungsi `doPost(e)` harus membungkus hasil fungsi API sebagai `{ result: f.apply(null, req.args || []) }`.
-3. Pastikan `loadState`, `socialFeed`, `recentPosts`, `createPost`, `chatContacts`, `chatNotificationSummary`, `chatHistory`, `sendChat`, `chatGroups`, `createChatGroup`, `groupHistory`, dan `sendGroupChat` terdaftar pada `api_()` dan masing-masing mengembalikan hasil.
-4. Jalankan `setup()` agar sheet `Posts`, `Messages`, dan `ChatGroups` tersedia, lalu deploy sebagai **versi baru**. Menyimpan kode saja tidak memperbarui deployment Web App.
+3. Pastikan fungsi lama dan baru terdaftar pada `api_()`: `loadState`, `socialFeed`, `recentPosts`, `createPost`, `deletePost`, `togglePostLike`, `togglePostPin`, `postComments`, `addPostComment`, `updateProfilePhoto`, `chatContacts`, `chatNotificationSummary`, `chatHistory`, `sendChat`, `chatGroups`, `createChatGroup`, `deleteChatGroup`, `groupHistory`, `sendGroupChat`, `globalChatHistory`, dan `sendGlobalChat`.
+4. Jalankan `setup()` agar sheet `Posts`, `PostLikes`, `PostPins`, `PostComments`, `Messages`, dan `ChatGroups` tersedia serta kolom foto tersedia di `Posts` dan `Users`, lalu deploy sebagai **versi baru**. Menyimpan kode saja tidak memperbarui deployment Web App.
 5. Keluar dari aplikasi, login kembali, lalu buka Feed/Chat. Token yang lama dapat tidak berlaku setelah akun dihapus atau sesi berakhir.
 
 ## 8. Feed dan chat terasa lambat
