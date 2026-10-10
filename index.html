@@ -1019,13 +1019,7 @@ margin:0;
 padding:14px 16px;
 border:0;
 border-bottom:1px solid var(--line);
-border-radius:0;
-animation:feed-in .24s ease both
-}
-
-@keyframes feed-in{
-from{opacity:0;transform:translateY(7px)}
-to{opacity:1;transform:translateY(0)}
+border-radius:0
 }
 
 .social-author{
@@ -2567,7 +2561,11 @@ throw new Error('Endpoint socialFeed harus mengembalikan rows berupa array.');
 FEED=mergeFeedRows(r.rows);
 
 if(tab=='feed'||dmTab=='feed'){
+if($('#socialFeedList')){
+renderSocialFeedList();
+}else{
 render();
+}
 }
 
 }catch(e){
