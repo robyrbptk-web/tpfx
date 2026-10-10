@@ -814,10 +814,29 @@ align-items:flex-start
 }
 
 .social-feed-title{
+display:flex;
+align-items:center;
+justify-content:space-between;
+gap:10px;
 padding:14px 16px;
 border-bottom:1px solid var(--line);
 font-size:17px;
 font-weight:800
+}
+
+.feed-refresh{
+flex:none;
+padding:7px 12px;
+border:1px solid var(--line);
+border-radius:999px;
+color:var(--social);
+font-size:12px;
+font-weight:700
+}
+
+.feed-refresh:disabled{
+opacity:.6;
+cursor:wait
 }
 
 .social-compose-card{
@@ -1454,7 +1473,6 @@ FEED_COMMENT_SUBMITTING={},
 FEED_LOADING=false,
 FEED_RECENT_LOADING=false,
 FEED_POSTING=false,
-FEED_TIMER=null,
 FEED_IMAGE='',
 PROFILE_PHOTO='',
 PROFILE_PHOTO_DRAFT='',
@@ -2518,6 +2536,11 @@ async function refreshRecentPosts(){
 
 if(FEED_RECENT_LOADING||document.visibilityState=='hidden')return;
 FEED_RECENT_LOADING=true;
+const refreshButton=$('#feedRefreshButton');
+if(refreshButton){
+refreshButton.disabled=true;
+refreshButton.textContent='Memuat...';
+}
 
 try{
 const r=await rpc('recentPosts',TOK);
@@ -2537,9 +2560,14 @@ if(tab=='feed'||dmTab=='feed'){
 renderSocialFeedList();
 }
 }catch(e){
-console.warn('Feed cepat gagal diperbarui:',String((e&&e.message)||e));
+toast('Feed gagal diperbarui: '+String((e&&e.message)||e));
 }finally{
 FEED_RECENT_LOADING=false;
+const button=$('#feedRefreshButton');
+if(button){
+button.disabled=false;
+button.textContent='Muat ulang';
+}
 }
 
 }
@@ -2628,7 +2656,10 @@ ${FEED_IMAGE?`<div class="feed-image-preview"><img src="${FEED_IMAGE}" alt="Prat
 </div>
 </div>
 
-<div class="social-feed-title">Postingan tim</div>
+<div class="social-feed-title">
+<span>Postingan tim</span>
+<button class="feed-refresh" id="feedRefreshButton" type="button" onclick="refreshRecentPosts()">${FEED_RECENT_LOADING?'Memuat...':'Muat ulang'}</button>
+</div>
 
 <div id="socialFeedList">${socialFeedItems()}</div>
 
@@ -3670,20 +3701,6 @@ refreshChatHistory();
 },
 1500
 );
-
-FEED_TIMER=setInterval(
-()=>{
-if(
-TOK &&
-document.visibilityState!='hidden' &&
-(tab=='feed'||dmTab=='feed')
-){
-refreshRecentPosts();
-}
-},
-10000
-);
-
 
 function home(){
 
@@ -6072,8 +6089,10 @@ isDue
 }
 
 
-const dmLC=l=>
-`<div
+const dmLC=l=>{
+const phone=String(l.phone||'').trim();
+const hasWhatsAppNumber=phone.replace(/\D/g,'').length>0;
+return`<div
 class="card lead"
 style="--c:var(${COL[l.status]})"
 >
@@ -6148,7 +6167,18 @@ l.notes
 :''
 }
 
+</div>
+
+<div class="row" style="margin-top:10px">
+${
+hasWhatsAppNumber
+?`<a class="btn wa" href="${esc(wa(phone))}" target="_blank" rel="noopener noreferrer">Chat WhatsApp</a>`
+:'<span class="mut">Nomor WhatsApp tidak tersedia</span>'
+}
+</div>
+
 </div>`;
+};
 
 
 const dmActRow=a=>
