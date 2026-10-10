@@ -1224,7 +1224,7 @@ function uploadImg(t, dataUrl) {
     DriveApp.Permission.VIEW
   );
 
-  return 'https://drive.google.com/uc?export=view&id=' + f.getId();
+  return 'https://drive.google.com/thumbnail?id=' + f.getId() + '&sz=w1200';
 }
 
 

@@ -19,12 +19,12 @@
 <style>
 :root{
 color-scheme:light;
---bg:#fff;
+--bg:#f7f9fc;
 --card:#fff;
 --ink:#192238;
 --mut:#758096;
 --line:#e8ebf2;
---pri:#3158d8;
+--pri:#1d9bf0;
 --new:#8a93a8;
 --contacted:#2f7bea;
 --warm:#f08a1c;
@@ -32,9 +32,9 @@ color-scheme:light;
 --followup:#7c4dff;
 --deal:#1f9d55;
 --lost:#4a5060;
---social:#3158d8;
---social-soft:#f0f4ff;
---shadow:0 8px 26px rgba(30,45,80,.055);
+--social:#1d9bf0;
+--social-soft:#e8f5fd;
+--shadow:0 1px 3px rgba(15,20,25,.08);
 box-sizing:border-box;
 padding-top:env(safe-area-inset-top,0px);
 padding-bottom:env(safe-area-inset-bottom,0px)
@@ -176,7 +176,7 @@ max-width:900px;
 margin:0 auto;
 padding:12px 20px;
 border-bottom:1px solid rgba(232,235,242,.9);
-background:rgba(255,255,255,.94);
+background:rgba(255,255,255,.96);
 backdrop-filter:blur(14px)
 }
 
@@ -316,7 +316,7 @@ font-size:12.5px
 .card{
 background:var(--card);
 border:1px solid var(--line);
-border-radius:20px;
+border-radius:16px;
 padding:14px;
 box-shadow:var(--shadow);
 transition:border-color .18s,box-shadow .18s,transform .18s
@@ -352,9 +352,9 @@ outline-offset:2px
 background:var(--pri);
 color:#fff;
 font-weight:700;
-border-radius:14px;
+border-radius:999px;
 padding:11px 16px;
-box-shadow:0 5px 14px rgba(39,67,214,.16)
+box-shadow:none
 }
 
 .btn.sec{
@@ -553,7 +553,7 @@ position:fixed;
 left:0;
 right:0;
 bottom:0;
-background:color-mix(in srgb,var(--card) 94%,transparent);
+background:color-mix(in srgb,var(--card) 96%,transparent);
 border-top:1px solid var(--line);
 padding:6px 0 calc(6px + env(safe-area-inset-bottom,0px));
 backdrop-filter:blur(16px);
@@ -573,6 +573,7 @@ display:none
 }
 
 .nav button{
+position:relative;
 flex:1 0 62px;
 padding:7px 3px;
 font-size:10.5px;
@@ -581,19 +582,26 @@ color:var(--mut);
 display:flex;
 flex-direction:column;
 align-items:center;
-gap:1px
+gap:3px
 }
 
-.nav button span{
-font-size:20px
+.nav button svg{
+width:21px;
+height:21px;
+fill:none;
+stroke:currentColor;
+stroke-width:1.8;
+stroke-linecap:round;
+stroke-linejoin:round
 }
 
 .nav button.on{
-color:var(--pri)
+color:var(--ink);
+font-weight:800
 }
 
-.nav button.on span{
-transform:translateY(-1px)
+.nav button.on svg{
+stroke-width:2.2
 }
 
 .nav button .nav-badge{
@@ -731,7 +739,9 @@ display:flex;
 align-items:center;
 justify-content:space-between;
 gap:12px;
-margin:0 0 16px
+margin:0;
+padding:14px 16px;
+border-bottom:1px solid var(--line)
 }
 
 .home-welcome{
@@ -770,12 +780,14 @@ background:#f7f8fb
 }
 
 .social-post{
-border-color:#e9ecf2;
-box-shadow:0 5px 18px rgba(30,45,80,.035)
+border-color:transparent;
+border-radius:0;
+box-shadow:none
 }
 
 .social-post:hover{
-border-color:#dfe5f5
+border-color:transparent;
+background:#fbfcff
 }
 
 .social-brand{
@@ -791,7 +803,7 @@ font-size:13px
 }
 
 .social-wrap{
-max-width:720px;
+max-width:600px;
 margin:0 auto
 }
 
@@ -801,8 +813,27 @@ gap:12px;
 align-items:flex-start
 }
 
+.social-feed-title{
+padding:14px 16px;
+border-bottom:1px solid var(--line);
+font-size:17px;
+font-weight:800
+}
+
+.social-compose-card{
+padding:16px;
+border:0;
+border-bottom:1px solid var(--line);
+border-radius:0;
+box-shadow:none
+}
+
+.social-compose-card:hover{
+box-shadow:none
+}
+
 .social-composer textarea{
-min-height:84px;
+min-height:64px;
 resize:vertical;
 margin:0
 }
@@ -829,8 +860,28 @@ font-size:14px
 }
 
 .photo-avatar{
-object-fit:cover;
+position:relative;
 overflow:hidden
+}
+
+.social-avatar.photo-avatar>img{
+width:100%;
+height:100%;
+border-radius:inherit;
+object-fit:cover
+}
+
+.avatar-photo-fallback{
+width:100%;
+height:100%;
+place-items:center;
+border-radius:inherit;
+background:linear-gradient(145deg,#3158d8,#8b5cf6);
+color:#fff
+}
+
+.avatar-photo-fallback:not([hidden]){
+display:grid
 }
 
 .social-avatar.small{
@@ -872,11 +923,13 @@ gap:9px
 .feed-image-pick input{position:absolute;inset:0;opacity:0;cursor:pointer}
 .feed-image-preview{display:flex;align-items:flex-start;gap:10px;margin:12px 0 0 54px}
 .feed-image-preview img{max-width:min(100%,280px);max-height:200px;object-fit:cover;border-radius:12px}
-.feed-post-image{display:block;max-width:100%;max-height:480px;object-fit:contain;border-radius:14px;margin:0 0 12px}
+.feed-post-image{display:block;width:calc(100% - 52px);max-height:600px;object-fit:cover;border-radius:16px;margin:0 0 8px 52px;background:#f2f4f7}
+.feed-post-image[hidden]{display:none}
+.feed-image-unavailable:not([hidden]){margin:0 0 8px 52px;padding:18px;border:1px dashed var(--line);border-radius:16px;color:var(--mut);text-align:center}
 .feed-post-tools{display:flex;align-items:center;gap:8px}
 .feed-post-actions{flex-wrap:wrap;padding-top:10px;border-top:1px solid var(--line)}
 .feed-post-actions .btn{min-height:34px;padding:7px 10px;font-size:12px}
-.feed-comments{border-top:1px solid var(--line);margin-top:10px;padding-top:10px}
+.feed-comments{border-top:1px solid var(--line);margin:10px 0 0 52px;padding-top:10px}
 .feed-comment{display:flex;align-items:flex-start;gap:8px;padding:7px 0}
 .feed-comment time{display:block;color:var(--mut);font-size:11px}
 .feed-comment-form{margin-top:8px}
@@ -892,8 +945,11 @@ gap:9px
 .chat-group-delete{min-height:32px;padding:6px 9px;color:#b42318}
 
 .social-post{
-margin-top:12px;
-padding:16px;
+margin:0;
+padding:14px 16px;
+border:0;
+border-bottom:1px solid var(--line);
+border-radius:0;
 animation:feed-in .24s ease both
 }
 
@@ -914,10 +970,14 @@ display:block;
 font-size:14px
 }
 
+.social-author .mut{
+font-size:13px
+}
+
 .social-copy{
 white-space:pre-wrap;
 overflow-wrap:anywhere;
-margin:14px 0 12px;
+margin:8px 0 10px 52px;
 font-size:14.5px;
 line-height:1.6
 }
@@ -929,6 +989,67 @@ gap:5px;
 color:var(--social);
 font-weight:700;
 font-size:11px
+}
+
+.feed-post-actions{
+justify-content:space-between;
+border-top:0;
+padding:4px 0 0 48px
+}
+
+.feed-post-actions .btn.sec{
+min-height:34px;
+padding:6px 8px;
+border:0;
+border-radius:99px;
+background:transparent;
+color:var(--mut);
+box-shadow:none
+}
+
+.feed-post-actions .btn.sec:hover{
+background:var(--social-soft);
+color:var(--social)
+}
+
+.feed-comment-error{
+display:flex;
+align-items:center;
+justify-content:space-between;
+gap:8px;
+padding:8px 0;
+color:#b42318;
+font-size:12px
+}
+
+.feed-comment-error button{
+color:var(--social);
+font-weight:700
+}
+
+.social-feed-title,.profile h1,h1{
+color:var(--ink)
+}
+
+.social-compose-card .social-actions .mut{
+font-size:12px
+}
+
+.social-compose-card .social-actions .btn{
+min-width:96px;
+padding:9px 18px;
+border-radius:99px;
+box-shadow:none
+}
+
+.social-top .social-brand{
+font-size:20px;
+letter-spacing:-.5px;
+color:var(--ink)
+}
+
+.social-top .social-subtitle{
+font-size:12px
 }
 
 .chat-layout{
@@ -1118,7 +1239,7 @@ gap:7px
 .nav{padding:5px 4px calc(5px + env(safe-area-inset-bottom,0px))}
 .nav div{gap:1px}
 .nav button{flex:1 1 0;min-width:0;padding:6px 1px;font-size:8.5px}
-.nav button span{font-size:17px}
+.nav button svg{width:19px;height:19px}
 .home-welcome{padding:16px;min-height:96px}
 .home-welcome h1{font-size:21px}
 .home-progress{padding:15px}
@@ -1141,7 +1262,7 @@ gap:7px
 }
 
 @media(hover:hover){
-.card:hover{
+.card:not(.social-post):not(.social-compose-card):hover{
 border-color:color-mix(in srgb,var(--pri) 22%,var(--line));
 box-shadow:0 14px 36px rgba(24,35,70,.09)
 }
@@ -1229,6 +1350,22 @@ post:'🔗 Posting',
 shot:'📸 Screenshot'
 };
 
+const NAV_ICONS={
+home:'<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+feed:'<path d="M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M7 8h10M7 12h10M7 16h6"/>',
+dash:'<path d="M3 3h8v8H3zM13 3h8v5h-8zM13 10h8v11h-8zM3 13h8v8H3z"/>',
+leads:'<circle cx="9" cy="8" r="4"/><path d="M3 21v-2a6 6 0 0 1 12 0v2zM16 4a4 4 0 0 1 0 8M18 15a5 5 0 0 1 3 4v2"/>',
+pipeline:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+activity:'<path d="m5 12 4 4L19 6"/><circle cx="12" cy="12" r="10"/>',
+chat:'<path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z"/>',
+database:'<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/>',
+profile:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+tim:'<circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20a6 6 0 0 1 12 0M15 15a5 5 0 0 1 6 5"/>',
+akt:'<path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="9"/>'
+};
+
+const navIcon=key=>`<svg viewBox="0 0 24 24" aria-hidden="true">${NAV_ICONS[key]||NAV_ICONS.feed}</svg>`;
+
 const $=s=>document.querySelector(s);
 
 const lday=x=>
@@ -1290,7 +1427,7 @@ header.innerHTML=`
 <div class="app-user">
 <span class="app-user-name">${esc(S.name)}</span>
 <span class="badge s-contacted">${esc(ROLE||'BDO')}</span>
-<span class="app-user-avatar">${PROFILE_PHOTO&&/^https:\/\//i.test(PROFILE_PHOTO)?`<img src="${esc(PROFILE_PHOTO)}" alt="Foto profil">`:esc(initials(S.name))}</span>
+<span class="app-user-avatar">${PROFILE_PHOTO&&/^https:\/\//i.test(PROFILE_PHOTO)?`<img src="${esc(imageUrlForDisplay(PROFILE_PHOTO))}" alt="Foto profil" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><span class="avatar-photo-fallback" hidden>${initials(S.name)}</span>`:esc(initials(S.name))}</span>
 </div>
 `;
 
@@ -1310,6 +1447,8 @@ per='hari',
 USER='',
 FEED=[],
 FEED_LOCAL_ECHOES=[],
+FEED_TEXT='',
+FEED_COMMENT_DRAFTS={},
 FEED_COMMENT_LOADING={},
 FEED_COMMENT_SUBMITTING={},
 FEED_LOADING=false,
@@ -2013,6 +2152,8 @@ S=seed();
 USER='';
 FEED=[];
 FEED_IMAGE='';
+FEED_TEXT='';
+FEED_COMMENT_DRAFTS={};
 PROFILE_PHOTO='';
 PROFILE_PHOTO_DRAFT='';
 TEAM=[];
@@ -2312,10 +2453,18 @@ minute:'2-digit'
 );
 };
 
+const imageUrlForDisplay=photo=>{
+const source=String(photo||'').trim();
+const driveFile=source.match(/^https:\/\/drive\.google\.com\/uc\?export=view&id=([A-Za-z0-9_-]+)$/i);
+return driveFile
+?`https://drive.google.com/thumbnail?id=${driveFile[1]}&sz=w1200`
+:source;
+};
+
 const socialAvatar=(name,photo,className='social-avatar')=>{
-const source=String(photo||'');
-return source&&/^https?:\/\//i.test(source)
-?`<img class="${className} photo-avatar" src="${esc(source)}" alt="Foto profil ${esc(name||'anggota')}" loading="lazy">`
+const source=imageUrlForDisplay(photo);
+return source&&/^https:\/\//i.test(source)
+?`<span class="${className} photo-avatar"><img src="${esc(source)}" alt="Foto profil ${esc(name||'anggota')}" loading="lazy" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><span class="avatar-photo-fallback" hidden>${initials(name)}</span></span>`
 :`<div class="${className}">${initials(name)}</div>`;
 };
 
@@ -2385,8 +2534,7 @@ FEED=mergeFeedRows(activities.concat(r.rows).sort((a,b)=>
 ).slice(0,100));
 
 if(tab=='feed'||dmTab=='feed'){
-const list=$('#socialFeedList');
-if(list)list.innerHTML=socialFeedItems();
+renderSocialFeedList();
 }
 }catch(e){
 console.warn('Feed cepat gagal diperbarui:',String((e&&e.message)||e));
@@ -2399,9 +2547,20 @@ FEED_RECENT_LOADING=false;
 
 function mergeFeedRows(rows){
 
+const previousById=new Map(FEED.map(item=>[String(item.id),item]));
 const serverRows=rows.filter(item=>
 !String(item.id||'').startsWith('local-post-')
-);
+).map(item=>{
+const previous=previousById.get(String(item.id));
+return previous&&previous.commentsOpen
+?Object.assign({},item,{
+commentsOpen:true,
+comments:Array.isArray(previous.comments)?previous.comments:[],
+commentsLoading:Boolean(previous.commentsLoading),
+commentsError:String(previous.commentsError||'')
+})
+:item;
+});
 const keep=[];
 const now=Date.now();
 
@@ -2447,16 +2606,16 @@ return`
 
 <div class="social-top">
 <div>
-<div class="social-brand">TPFX Connect</div>
-<div class="social-subtitle">Kabar tim dan aktivitas penjualan</div>
+<div class="social-brand">Beranda</div>
+<div class="social-subtitle">Update terbaru dari tim</div>
 </div>
 ${socialAvatar(S.name,PROFILE_PHOTO)}
 </div>
 
-<div class="card">
+<div class="card social-compose-card">
 <div class="social-composer">
 ${socialAvatar(S.name,PROFILE_PHOTO)}
-<textarea id="feedText" maxlength="500" placeholder="Bagikan kabar atau update singkat ke tim..." aria-label="Tulis postingan"></textarea>
+<textarea id="feedText" maxlength="500" placeholder="Bagikan kabar atau update singkat ke tim..." aria-label="Tulis postingan" oninput="FEED_TEXT=this.value">${esc(FEED_TEXT)}</textarea>
 </div>
 <div class="feed-image-tools">
 <label class="btn sec feed-image-pick">📷 Foto<input id="feedImageFile" type="file" accept="image/*" onchange="prepareFeedImage(this)"></label>
@@ -2469,13 +2628,18 @@ ${FEED_IMAGE?`<div class="feed-image-preview"><img src="${FEED_IMAGE}" alt="Prat
 </div>
 </div>
 
-<h2>Feed tim</h2>
+<div class="social-feed-title">Postingan tim</div>
 
 <div id="socialFeedList">${socialFeedItems()}</div>
 
 </div>
 `;
 
+}
+
+function renderSocialFeedList(){
+const list=$('#socialFeedList');
+if(list)list.innerHTML=socialFeedItems();
 }
 
 
@@ -2500,7 +2664,7 @@ ${item.kind=='post'&&item.username==USER?`<button class="feed-icon-btn" aria-lab
 </div>
 </div>
 <div class="social-copy">${esc(item.text||'')}</div>
-${item.imageUrl?`<img class="feed-post-image" src="${esc(item.imageUrl)}" alt="Foto postingan" loading="lazy">`:''}
+${item.imageUrl?`<img class="feed-post-image" src="${esc(imageUrlForDisplay(item.imageUrl))}" alt="Foto postingan" loading="lazy" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><div class="feed-image-unavailable" hidden>Foto tidak dapat dimuat.</div>`:''}
 ${item.kind=='post'?`
 <div class="feed-post-actions">
 <button class="btn sec" onclick="togglePostLike(decodeURIComponent('${encodeURIComponent(String(item.id))}'))">${item.liked?'♥':'♡'} Suka${Number(item.likes)?' · '+Number(item.likes):''}</button>
@@ -2508,8 +2672,10 @@ ${item.kind=='post'?`
 ${['BM','DM'].includes(String(ROLE).toUpperCase())?`<button class="btn sec" onclick="togglePostPin(decodeURIComponent('${encodeURIComponent(String(item.id))}'))">${item.pinned?'📌 Lepas sematan':'📌 Sematkan'}</button>`:''}
 </div>
 ${item.commentsOpen?`<div class="feed-comments">
-<div>${(item.comments||[]).map(c=>`<div class="feed-comment">${socialAvatar(c.nama,c.photoUrl,'social-avatar small')}<div><b>${esc(c.nama||c.username)}</b><div>${esc(c.text)}</div><time>${socialTime(c.ts)}</time></div></div>`).join('')||'<div class="mut">Belum ada komentar.</div>'}</div>
-<form class="feed-comment-form" onsubmit="submitPostComment(event,decodeURIComponent('${encodeURIComponent(String(item.id))}'))"><input name="commentText" maxlength="500" placeholder="Tulis komentar..." required><button class="btn" type="submit">Kirim</button></form>
+${item.commentsLoading?'<div class="mut">Memuat komentar...</div>':''}
+${item.commentsError?`<div class="feed-comment-error"><span>${esc(item.commentsError)}</span><button type="button" onclick="retryPostComments(decodeURIComponent('${encodeURIComponent(String(item.id))}'))">Coba lagi</button></div>`:''}
+<div>${(item.comments||[]).map(c=>`<div class="feed-comment">${socialAvatar(c.nama,c.photoUrl,'social-avatar small')}<div><b>${esc(c.nama||c.username)}</b><div>${esc(c.text)}</div><time>${socialTime(c.ts)}</time></div></div>`).join('')||(!item.commentsLoading&&!item.commentsError?'<div class="mut">Belum ada komentar.</div>':'')}</div>
+<form class="feed-comment-form" data-post-id="${esc(String(item.id))}" onsubmit="submitPostComment(event,decodeURIComponent('${encodeURIComponent(String(item.id))}'))"><input name="commentText" maxlength="500" placeholder="Tulis komentar..." value="${esc(FEED_COMMENT_DRAFTS[String(item.id)]||'')}" oninput="FEED_COMMENT_DRAFTS[decodeURIComponent('${encodeURIComponent(String(item.id))}')]=this.value" required><button class="btn" type="submit">Kirim</button></form>
 </div>`:''}
 `:''}
 </article>
@@ -2549,6 +2715,7 @@ async function publishSocialPost(){
 if(FEED_POSTING)return;
 const input=$('#feedText');
 const text=input.value.trim();
+FEED_TEXT=text;
 
 if(!text&&!FEED_IMAGE){
 toast('Tulis isi postingan atau pilih foto terlebih dahulu');
@@ -2573,6 +2740,7 @@ FEED=mergeFeedRows(FEED);
 FEED_POSTING=true;
 const photo=FEED_IMAGE;
 FEED_IMAGE='';
+FEED_TEXT='';
 input.value='';
 if(tab=='feed'||dmTab=='feed')render();
 
@@ -2616,10 +2784,9 @@ FEED_LOCAL_ECHOES=FEED_LOCAL_ECHOES.filter(item=>item.id!=local.id);
 FEED=FEED.filter(item=>item.id!=local.id);
 FEED_IMAGE=photo;
 FEED_POSTING=false;
+FEED_TEXT=text;
 if(tab=='feed'||dmTab=='feed'){
 render();
-const restored=$('#feedText');
-if(restored)restored.value=text;
 }
 toast('Postingan gagal dikirim: '+String((e&&e.message)||e));
 
@@ -2659,31 +2826,50 @@ async function togglePostComments(postId){
 const post=FEED.find(item=>String(item.id)==String(postId));
 if(!post)return;
 post.commentsOpen=!post.commentsOpen;
-render();
-if(!post.commentsOpen)return;
+if(!post.commentsOpen){
+renderSocialFeedList();
+return;
+}
 const key=String(postId);
-if(FEED_COMMENT_LOADING[key])return;
+if(FEED_COMMENT_LOADING[key]){
+renderSocialFeedList();
+return;
+}
 FEED_COMMENT_LOADING[key]=true;
+post.commentsLoading=true;
+post.commentsError='';
+renderSocialFeedList();
 try{
-const result=await rpc('postComments',TOK,postId);
-if(!result||typeof result!='object')throw new Error('Respons komentar tidak valid.');
-if(result.err){
-if(result.err=='AUTH'){logout();return;}
-throw new Error(result.err);
-}
-if(!Array.isArray(result.rows))throw new Error('Respons komentar tidak valid.');
-const latestPost=FEED.find(item=>String(item.id)==key);
-if(latestPost&&latestPost.commentsOpen){
-latestPost.comments=result.rows;
-if(tab=='feed'||dmTab=='feed')render();
-}
+await loadPostComments(postId);
 }catch(e){
 const latestPost=FEED.find(item=>String(item.id)==key);
-if(latestPost)latestPost.commentsOpen=false;
-render();
+if(latestPost){
+latestPost.commentsLoading=false;
+latestPost.commentsError=String((e&&e.message)||e);
+}
 toast('Komentar gagal dimuat: '+String((e&&e.message)||e));
 }finally{
 delete FEED_COMMENT_LOADING[key];
+renderSocialFeedList();
+}
+}
+
+async function retryPostComments(postId){
+const post=FEED.find(item=>String(item.id)==String(postId));
+if(!post||FEED_COMMENT_LOADING[String(postId)])return;
+post.commentsLoading=true;
+post.commentsError='';
+FEED_COMMENT_LOADING[String(postId)]=true;
+renderSocialFeedList();
+try{
+await loadPostComments(postId);
+}catch(e){
+post.commentsLoading=false;
+post.commentsError=String((e&&e.message)||e);
+toast('Komentar gagal dimuat: '+String((e&&e.message)||e));
+}finally{
+delete FEED_COMMENT_LOADING[String(postId)];
+renderSocialFeedList();
 }
 }
 
@@ -2709,14 +2895,36 @@ if(result.ok!==1)throw new Error('Komentar gagal disimpan.');
 const post=FEED.find(item=>String(item.id)==key);
 if(post){
 post.commentsOpen=true;
-await loadPostComments(postId);
+FEED_COMMENT_DRAFTS[key]='';
+post.comments=Array.isArray(post.comments)?post.comments:[];
+post.comments.push({
+id:'local-comment-'+Date.now(),
+username:USER,
+nama:S.name,
+role:ROLE,
+photoUrl:PROFILE_PHOTO,
+text:text,
+ts:Date.now()
+});
 post.commentsCount=Math.max(
 (Number(post.commentsCount)||0)+1,
 (post.comments||[]).length
 );
-if(tab=='feed'||dmTab=='feed')render();
+if(tab=='feed'||dmTab=='feed')renderSocialFeedList();
 }
 toast('Komentar ditambahkan.');
+try{
+await loadPostComments(postId);
+if(tab=='feed'||dmTab=='feed')renderSocialFeedList();
+}catch(e){
+const post=FEED.find(item=>String(item.id)==key);
+if(post){
+post.commentsError='Komentar tersimpan, tetapi daftar gagal diperbarui.';
+post.commentsLoading=false;
+}
+if(tab=='feed'||dmTab=='feed')renderSocialFeedList();
+toast('Komentar tersimpan, tetapi daftar gagal diperbarui: '+String((e&&e.message)||e));
+}
 }catch(e){
 toast('Komentar gagal dikirim: '+String((e&&e.message)||e));
 }finally{
@@ -2727,10 +2935,14 @@ if(submit&&submit.isConnected)submit.disabled=false;
 
 async function loadPostComments(postId){
 const result=await rpc('postComments',TOK,postId);
-if(result&&result.err=='AUTH'){logout();return;}
+if(result&&result.err=='AUTH'){logout();throw new Error('Sesi telah berakhir.');}
 if(!result||!Array.isArray(result.rows))throw new Error(result&&result.err||'Respons komentar tidak valid.');
 const post=FEED.find(item=>String(item.id)==String(postId));
-if(post)post.comments=result.rows;
+if(post){
+post.comments=result.rows;
+post.commentsLoading=false;
+post.commentsError='';
+}
 }
 
 
@@ -7383,14 +7595,14 @@ dmTab=='dash'
 $('#nav').innerHTML=
 
 [
-['dash','📊','Dashboard'],
-['feed','📰','Feed'],
-['tim','👥','Tim'],
-['leads','🔥','Leads'],
-['akt','✅','Aktivitas'],
-['chat','💬','Chat'],
-['database','🗂️','Database'],
-['profile','👤','Profile']
+['dash','Dashboard'],
+['feed','Feed'],
+['tim','Tim'],
+['leads','Leads'],
+['akt','Aktivitas'],
+['chat','Chat'],
+['database','Database'],
+['profile','Profile']
 ]
 .map(
 n=>
@@ -7408,11 +7620,8 @@ scrollTo(0,0)
 "
 >
 
-<span>
+${navIcon(n[0])}
 ${n[1]}
-</span>
-
-${n[2]}
 
 </button>`
 )
@@ -7453,6 +7662,13 @@ scrollTo(
 
 function render(){
 
+const feedTextInput=$('#feedText');
+if(feedTextInput)FEED_TEXT=feedTextInput.value;
+document.querySelectorAll('.feed-comment-form input[name="commentText"]').forEach(input=>{
+const form=input.closest('.feed-comment-form');
+if(form)FEED_COMMENT_DRAFTS[form.dataset.postId]=input.value;
+});
+
 if(
 ROLE=='DM' ||
 ROLE=='BM'
@@ -7478,14 +7694,14 @@ profile
 $('#nav').innerHTML=
 
 [
-['home','🏠','Home'],
-['feed','📰','Feed'],
-['leads','👥','Leads'],
-['pipeline','📊','Pipeline'],
-['activity','✅','Activity'],
-['chat','💬','Chat'],
-['database','🗂️','Database'],
-['profile','👤','Profile']
+['home','Home'],
+['feed','Feed'],
+['leads','Leads'],
+['pipeline','Pipeline'],
+['activity','Activity'],
+['chat','Chat'],
+['database','Database'],
+['profile','Profile']
 ]
 .map(
 n=>
@@ -7495,11 +7711,8 @@ class="${tab==n[0]?'on':''}"
 onclick="${n[0]=='database'?'window.location.href=\'database.html\'':'go(\''+n[0]+'\')'}"
 >
 
-<span>
+${navIcon(n[0])}
 ${n[1]}
-</span>
-
-${n[2]}
 
 </button>`
 )
