@@ -1671,6 +1671,20 @@ return j.result;
 };
 
 
+function isAuthError(e){
+
+const m=
+String(
+(e&&e.message)||e
+).trim().toLowerCase();
+
+return m=='auth' ||
+m.indexOf('sesi telah berakhir')==0 ||
+m.indexOf('sesi habis')==0;
+
+}
+
+
 // ============================================================
 // SAVE
 // ============================================================
@@ -2196,7 +2210,7 @@ currentButton.textContent='Masuk';
 // LOGOUT
 // ============================================================
 
-function logout(){
+function logout(msg){
 
 if(TOK){
 
@@ -2243,6 +2257,9 @@ ROLE='';
 LOGIN_PENDING=false;
 $('#appHeader').hidden=true;
 
+const layer=$('#layer');
+if(layer)layer.innerHTML='';
+
 try{
 
 localStorage.removeItem(
@@ -2255,7 +2272,7 @@ localStorage.removeItem(
 
 }catch(e){}
 
-loginView();
+loginView(msg);
 
 }
 
@@ -2859,6 +2876,14 @@ if(tab=='feed'||dmTab=='feed')render();
 toast('Postingan dibagikan');
 
 }catch(e){
+
+if(isAuthError(e)){
+
+logout('Sesi login berakhir. Silakan login kembali.');
+
+return;
+
+}
 
 FEED_LOCAL_ECHOES=FEED_LOCAL_ECHOES.filter(item=>item.id!=local.id);
 FEED=FEED.filter(item=>item.id!=local.id);
@@ -5769,8 +5794,16 @@ img
 
 }catch(e){
 
+if(isAuthError(e)){
+
+logout('Sesi login berakhir. Silakan login kembali.');
+
+return;
+
+}
+
 toast(
-'Gagal unggah gambar'
+'Gagal unggah gambar: '+String((e&&e.message)||e)
 );
 
 return;
@@ -6863,7 +6896,10 @@ PROFILE_PHOTO_DRAFT='';
 renderAppHeader();
 render();
 toast('Foto profil diperbarui.');
-}catch(e){toast('Foto profil gagal disimpan: '+String((e&&e.message)||e));}
+}catch(e){
+if(isAuthError(e)){logout('Sesi login berakhir. Silakan login kembali.');return;}
+toast('Foto profil gagal disimpan: '+String((e&&e.message)||e));
+}
 }
 
 

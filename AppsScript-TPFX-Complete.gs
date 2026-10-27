@@ -1194,6 +1194,12 @@ function uploadImg(t, dataUrl) {
   if (!u) throw new Error('auth');
   if (!findUser_(u)) throw new Error('auth');
 
+  // Upload bisa menjadi aktivitas pertama setelah app lama dibiarkan terbuka,
+  // jadi sesi diperpanjang di sini juga.
+  PropertiesService
+    .getScriptProperties()
+    .setProperty('t_' + t, u + '|' + (Date.now() + DAYS * 864e5));
+
   const it = DriveApp.getFoldersByName('TPFX Bukti Aktivitas');
 
   const folder = it.hasNext()
