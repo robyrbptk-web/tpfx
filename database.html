@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>DATABASE CALON NASABAH TPFX</title>
+<title>Database Calon Nasabah TPFX</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#3158d8">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -10,228 +10,1236 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
 <link rel="icon" type="image/jpeg" href="tpfxlogo.jpg">
 <style>
-:root{color-scheme:light;--bg:#fff;--card:#fff;--ink:#192238;--mut:#758096;--line:#e8ebf2;--pri:#3158d8;--soft:#f0f4ff;--shadow:0 8px 26px rgba(30,45,80,.055);box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+:root{color-scheme:light;--bg:#f6f8ff;--card:#fff;--ink:#151f3c;--ink2:#3b4764;--mut:#6f7b96;--line:#e6eaf5;--pri:#3158d8;--pri2:#6c8cff;--pri-soft:#eef3ff;--ok:#0f9d6c;--warn:#d68910;--bad:#d13a3a;--grad:linear-gradient(135deg,#3158d8,#5a7cff 55%,#7f9dff);--shadow-sm:0 2px 10px rgba(25,40,80,.055);--shadow:0 22px 44px -26px rgba(24,45,110,.4);--radius:22px}
 *{box-sizing:border-box}
-html{scroll-padding-top:80px}
-body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 'Plus Jakarta Sans',system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+html{scroll-padding-top:90px}
+body{margin:0;min-height:100vh;background:radial-gradient(1100px 620px at 8% -12%,#e8eeff 0%,transparent 60%),radial-gradient(900px 540px at 102% 0%,#eef6ff 0%,transparent 55%),var(--bg);color:var(--ink);font:14px/1.45 'Plus Jakarta Sans',system-ui,sans-serif;-webkit-tap-highlight-color:transparent;padding-top:env(safe-area-inset-top,0px)}
 button,input,select,textarea{font:inherit}
 button{cursor:pointer}
-.app-topbar{position:sticky;top:0;z-index:4;display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:900px;margin:0 auto;padding:12px 20px;border-bottom:1px solid rgba(232,235,242,.9);background:rgba(255,255,255,.94);backdrop-filter:blur(14px)}
-.app-brand{display:flex;align-items:center;gap:10px;min-width:0;text-decoration:none;color:inherit}
-.app-brand-mark{width:116px;height:40px;display:block;flex:none;border-radius:8px;object-fit:cover;background:#fff}
-.app-brand-copy b,.app-brand-copy span{display:block;white-space:nowrap}
-.app-brand-copy b{font-size:14px;line-height:1.2}
-.app-brand-copy span{margin-top:2px;color:var(--mut);font-size:10.5px}
-.top-actions{display:flex;align-items:center;gap:8px}
-.top-link,.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;padding:10px 14px;border-radius:13px;text-decoration:none;font-weight:700}
-.top-link{border:1px solid var(--line);background:#fff;color:var(--ink)}
-.btn{border:0;background:var(--pri);color:#fff;box-shadow:0 5px 14px rgba(39,67,214,.16)}
-.btn.wa{background:#168a55;color:#fff}
-main{max-width:900px;margin:0 auto;padding:22px 16px calc(40px + env(safe-area-inset-bottom,0px))}
-.page-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin-bottom:18px}
-h1{font-size:24px;font-weight:800;letter-spacing:-.03em;line-height:1.2}
-.sub{margin-top:5px;color:var(--mut);font-size:13px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;box-shadow:var(--shadow)}
-.tabs{display:flex;gap:8px;overflow-x:auto;padding:3px 0 14px;scrollbar-width:none}
-.tabs::-webkit-scrollbar,.chips::-webkit-scrollbar{display:none}
-.tab{flex:none;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:9px 14px;font:inherit;font-weight:700;cursor:pointer}
-.tab[aria-selected=true]{background:var(--pri);color:#fff;border-color:var(--pri)}
-.bar{position:sticky;top:64px;z-index:2;margin:0 -2px 12px;padding:10px 2px;background:rgba(255,255,255,.96);backdrop-filter:blur(12px)}
-.prog{height:9px;background:var(--line);border-radius:9px;overflow:hidden;margin:3px 0 8px}
-.prog i{display:block;height:100%;background:var(--pri);width:0;transition:width .3s}
-.stat{font-size:12px;color:var(--mut);margin-bottom:9px}
-input[type=search],input[type=text],textarea,select{width:100%;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:13px;padding:12px 13px;font:inherit}
-input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--pri);outline-offset:2px}
-.chips{display:flex;gap:7px;overflow-x:auto;padding-top:9px;scrollbar-width:none}
-.chip{flex:none;border:0;background:var(--soft);color:var(--ink);border-radius:10px;padding:8px 12px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
-.chip[aria-pressed=true]{background:var(--pri);color:#fff}
-.item{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:15px;margin-top:10px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;box-shadow:var(--shadow)}
-.item.done{background:#fbfcff}
-.item-copy{min-width:0}
-.no{color:var(--mut);font-size:12px;overflow-wrap:anywhere}
-.tel{font-weight:800;font-size:19px;letter-spacing:.2px;margin-top:3px}
-.wa{grid-row:1/3;grid-column:2;min-width:112px}
-.item select{grid-column:1/3}
-.section-title{margin:10px 0 11px;font-size:15px;font-weight:800}
-details{margin-top:14px}
-summary{cursor:pointer;font-weight:700}
-textarea{display:block;margin-top:9px;min-height:100px;resize:vertical}
-.empty{text-align:center;color:var(--mut);padding:32px 12px}
-.status-message{margin:8px 0 12px;color:var(--mut)}
-.status-message.error{color:#b42318}
-.retry{margin-top:8px}
-@media(max-width:620px){.app-topbar{padding:9px 12px;gap:8px}.app-brand{gap:7px}.app-brand-mark{width:76px;height:30px}.app-brand-copy b{font-size:11px}.app-brand-copy span{display:none}.top-actions{gap:6px}.top-link,.btn{min-height:36px;padding:8px 10px;font-size:12px;border-radius:11px}main{padding:18px 12px calc(30px + env(safe-area-inset-bottom,0px))}.page-heading{align-items:flex-start}.page-heading h1{font-size:21px}.bar{top:50px}.item{padding:13px;border-radius:16px}.tel{font-size:17px}.wa{min-width:94px;padding:10px}.tabs{margin-right:-12px;padding-right:12px}}
 :focus-visible{outline:2px solid var(--pri);outline-offset:2px}
+.bg{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:-1}
+.blob{position:absolute;border-radius:50%;filter:blur(64px);opacity:.55;animation:float 20s ease-in-out infinite}
+.b1{width:360px;height:360px;background:#c7d6ff;top:-140px;left:-100px}
+.b2{width:300px;height:300px;background:#d9e8ff;top:28%;right:-120px;animation-delay:-6s;animation-duration:24s}
+.b3{width:280px;height:280px;background:#e6ddff;bottom:-130px;left:18%;animation-delay:-11s;animation-duration:28s}
+.app-topbar{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.82);backdrop-filter:blur(18px) saturate(150%);border-bottom:1px solid rgba(230,234,245,.85)}
+.topbar-inner{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:980px;margin:0 auto;padding:11px 20px}
+.app-brand{display:flex;align-items:center;gap:10px;min-width:0;text-decoration:none;color:inherit}
+.app-brand-mark{width:112px;height:38px;display:block;flex:none;border-radius:8px;object-fit:cover;background:#fff}
+.app-brand-copy b,.app-brand-copy span{display:block;white-space:nowrap}
+.app-brand-copy b{font-size:13.5px;line-height:1.2}
+.app-brand-copy span{margin-top:2px;color:var(--mut);font-size:10.5px}
+.top-link{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:8px 13px;border-radius:12px;border:1px solid var(--line);background:#fff;color:var(--ink);font-size:12.5px;font-weight:700;text-decoration:none;box-shadow:var(--shadow-sm);transition:transform .18s,box-shadow .18s}
+.top-link:hover{transform:translateY(-1px);box-shadow:var(--shadow)}
+main{max-width:980px;margin:0 auto;padding:24px 18px calc(46px + env(safe-area-inset-bottom,0px))}
+.page-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin:10px 0 20px;animation:rise .55s cubic-bezier(.22,1,.36,1) both}
+.eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--pri)}
+.eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--pri);box-shadow:0 0 0 4px rgba(49,88,216,.14);animation:pulse 2.6s infinite}
+.role-badge{padding:2px 8px;border-radius:999px;background:#eaf0ff;color:var(--pri);font-size:9.5px;letter-spacing:.06em}
+h1{font-size:clamp(26px,4.4vw,36px);font-weight:800;letter-spacing:-.035em;line-height:1.12;margin:8px 0 0}
+@supports ((-webkit-background-clip:text) or (background-clip:text)){h1{background:linear-gradient(120deg,#151f3c,#3158d8 78%);-webkit-background-clip:text;background-clip:text;color:transparent}}
+.sub{margin:7px 0 0;color:var(--mut);font-size:13px;max-width:560px}
+.hero-stat{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:96px;padding:13px 16px;border-radius:20px;background:var(--grad);color:#fff;box-shadow:0 18px 32px -16px rgba(49,88,216,.75);flex:none}
+.hero-stat span{font-size:24px;font-weight:800;line-height:1;letter-spacing:-.02em}
+.hero-stat small{font-size:10px;letter-spacing:.1em;text-transform:uppercase;opacity:.86;margin-top:5px}
+.card{background:rgba(255,255,255,.93);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow-sm);padding:16px}
+.import-card{position:relative;overflow:hidden;margin-bottom:18px;padding:18px;background:linear-gradient(180deg,rgba(255,255,255,.97),rgba(247,250,255,.97));box-shadow:var(--shadow);animation:rise .55s cubic-bezier(.22,1,.36,1) .06s both}
+.import-card::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:var(--grad)}
+.card-head{display:flex;gap:12px;align-items:flex-start;margin:2px 0 14px}
+.icon-badge{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;background:var(--pri-soft);color:var(--pri);flex:none}
+.card-head h2{font-size:16px;font-weight:800;margin:0 0 3px;letter-spacing:-.01em}
+.card-head p{margin:0;color:var(--mut);font-size:12.5px;line-height:1.5}
+.dropzone{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center;border:2px dashed #c9d5f5;border-radius:18px;background:rgba(240,245,255,.62);padding:22px 16px;cursor:pointer;transition:border-color .2s,background .2s,transform .2s,box-shadow .2s}
+.dropzone:hover{border-color:#9db2f5;background:#eef3ff;transform:translateY(-1px)}
+.dropzone.drag{border-color:var(--pri);background:#e9f0ff;box-shadow:0 0 0 6px rgba(49,88,216,.1);transform:translateY(-1px)}
+.dz-icon{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:#fff;color:var(--pri);box-shadow:var(--shadow-sm);animation:floatY 3.4s ease-in-out infinite;margin-bottom:3px}
+.dropzone b{font-size:14px}
+.dropzone span:not(.dz-icon){font-size:11.5px;color:var(--mut);line-height:1.5}
+.file-row{display:flex;align-items:center;gap:10px;margin-top:12px;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:#fbfcff;animation:cardIn .3s both}
+.file-ext{width:38px;height:38px;border-radius:10px;background:var(--pri-soft);color:var(--pri);display:grid;place-items:center;font-size:9.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;flex:none}
+.file-meta{min-width:0;flex:1}
+.file-meta b{display:block;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.file-meta span{display:block;font-size:11.5px;color:var(--mut);margin-top:1px}
+.icon-btn{width:32px;height:32px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--mut);display:grid;place-items:center;flex:none;transition:.18s}
+.icon-btn:hover{color:var(--bad);border-color:#f0c8c8;background:#fdf5f5}
+.field{display:block;margin-top:12px}
+.field span{display:block;font-size:11.5px;font-weight:700;color:var(--ink2);margin-bottom:6px}
+input[type=search],input[type=text],textarea,select{width:100%;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:13px;padding:11px 13px;font:inherit;transition:border-color .2s,box-shadow .2s,background .2s}
+input[type=search]:focus,input[type=text]:focus,textarea:focus,select:focus{border-color:#9db2f5;box-shadow:0 0 0 4px rgba(49,88,216,.1);outline:none}
+input::placeholder,textarea::placeholder{color:#9aa6bd}
+.status{margin:10px 0 0;padding:11px 13px;border-radius:13px;background:#f4f7ff;border:1px solid #e2e9fb;color:var(--ink2);font-size:12.5px;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.status.bad{background:#fdf2f2;border-color:#f7d4d4;color:#a12626}
+.status.ok{background:#f1fbf6;border-color:#cdeadd;color:#087a58}
+.status.busy{background:#f4f7ff;border-color:#dbe5fb;color:var(--pri)}
+.spinner{width:14px;height:14px;border-radius:50%;border:2px solid #c5d3f7;border-top-color:var(--pri);animation:spin .8s linear infinite;flex:none}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0}
+.stat-pill{background:#f7f9ff;border:1px solid var(--line);border-radius:14px;padding:10px 6px;text-align:center}
+.stat-pill b{display:block;font-size:18px;font-weight:800;line-height:1.2;letter-spacing:-.01em}
+.stat-pill span{font-size:10px;color:var(--mut);display:block;margin-top:2px}
+.stat-pill.good{border-color:#c9ecdd;background:#f1fbf6}
+.stat-pill.good b{color:var(--ok)}
+.stat-pill.warn{border-color:#f6e1ae;background:#fff9ea}
+.stat-pill.warn b{color:var(--warn)}
+.stat-pill.bad{border-color:#f5cfcf;background:#fdf3f3}
+.stat-pill.bad b{color:var(--bad)}
+.table-wrap{border:1px solid var(--line);border-radius:14px;overflow:auto;max-height:290px;background:#fff}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{position:sticky;top:0;background:#f6f8ff;color:var(--mut);font-size:10px;letter-spacing:.07em;text-transform:uppercase;text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);white-space:nowrap;z-index:1}
+td{padding:9px 12px;border-bottom:1px solid #f1f4fb;white-space:nowrap;max-width:190px;overflow:hidden;text-overflow:ellipsis}
+td.mono{font-variant-numeric:tabular-nums;font-weight:700;color:var(--ink2)}
+tr:last-child td{border-bottom:0}
+tbody tr{animation:fadeIn .3s both}
+tbody tr:hover td{background:#fafbff}
+tr.table-more td{text-align:center;color:var(--mut);font-size:11.5px;white-space:normal}
+.btn-import{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;margin-top:12px;min-height:46px;border:0;border-radius:14px;background:var(--grad);color:#fff;font-weight:800;font-size:14px;box-shadow:0 16px 28px -16px rgba(49,88,216,.9);position:relative;overflow:hidden;transition:transform .18s,box-shadow .18s,opacity .18s}
+.btn-import:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 20px 34px -16px rgba(49,88,216,.95)}
+.btn-import:disabled{opacity:.55;cursor:not-allowed;box-shadow:none}
+.btn-import::after{content:"";position:absolute;top:0;left:-60%;width:38%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.38),transparent);transform:skewX(-20deg);animation:shimmer 3s infinite}
+.btn-import:disabled::after,.btn-import.loading::after{display:none}
+.btn-import.loading{pointer-events:none}
+.btn-import.loading .btn-label{visibility:hidden}
+.btn-import.loading::before{content:"";position:absolute;left:50%;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;border:2px solid rgba(255,255,255,.45);border-top-color:#fff;animation:spin .8s linear infinite}
+.hint{font-size:11px;color:var(--mut);margin:9px 0 0;line-height:1.55}
+.summary{margin-top:14px;border:1px solid #cdeadd;background:linear-gradient(180deg,#f4fdf8,#fff);border-radius:16px;padding:14px;animation:cardIn .4s both}
+.summary-top{display:flex;align-items:center;gap:8px;font-size:13px;flex-wrap:wrap}
+.summary-top b{font-size:14px;letter-spacing:-.01em}
+.summary-total{margin-left:auto;font-size:11px;color:var(--mut)}
+.summary-sub{margin:6px 0 11px;font-size:12px;color:var(--mut);line-height:1.5}
+.ok-dot{width:9px;height:9px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 4px rgba(15,157,108,.14);animation:pulse 2.2s infinite;flex:none}
+.dist{display:grid;gap:8px}
+.dist-row{display:flex;align-items:center;gap:9px;font-size:12px}
+.dist-name{width:100px;flex:none;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dist-bar{flex:1;height:8px;background:#e8eef8;border-radius:999px;overflow:hidden}
+.dist-bar i{display:block;height:100%;width:0;background:var(--grad);border-radius:inherit;transition:width .85s cubic-bezier(.22,1,.36,1)}
+.dist-count{min-width:28px;text-align:right;font-weight:800;color:var(--pri);font-variant-numeric:tabular-nums}
+.tabs{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 14px;scrollbar-width:none}
+.tabs::-webkit-scrollbar,.chips::-webkit-scrollbar{display:none}
+.tab{flex:none;display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:#fff;color:var(--ink2);border-radius:999px;padding:9px 14px;font-size:12.5px;font-weight:700;box-shadow:var(--shadow-sm);transition:transform .18s,border-color .18s,box-shadow .18s,background .18s;animation:cardIn .35s both}
+.tab:hover{transform:translateY(-1px);border-color:#c9d5f5}
+.tab small{font-size:10.5px;font-weight:800;color:var(--mut);background:#f0f3fb;border-radius:999px;padding:2px 7px;transition:.18s}
+.tab[aria-selected=true]{background:var(--grad);color:#fff;border-color:transparent;box-shadow:0 14px 24px -14px rgba(49,88,216,.85)}
+.tab[aria-selected=true] small{background:rgba(255,255,255,.22);color:#fff}
+.bar{position:sticky;top:67px;z-index:10;margin-bottom:16px;background:rgba(255,255,255,.94);backdrop-filter:blur(16px);box-shadow:var(--shadow-sm)}
+.prog-row{display:flex;align-items:center;gap:10px}
+.prog{flex:1;height:8px;background:#edf1fb;border-radius:999px;overflow:hidden}
+.prog i{display:block;height:100%;width:0;background:var(--grad);border-radius:inherit;transition:width .55s cubic-bezier(.22,1,.36,1);position:relative;overflow:hidden}
+.prog i::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);transform:translateX(-100%);animation:sweep 2.4s infinite}
+.prog-label{font-size:11.5px;font-weight:800;color:var(--pri);min-width:34px;text-align:right;font-variant-numeric:tabular-nums}
+.stat-line{font-size:12px;color:var(--mut);margin:7px 0 10px}
+.search-wrap{position:relative}
+.search-wrap svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--mut);pointer-events:none}
+.search-wrap input{padding-left:37px}
+.chips{display:flex;gap:7px;overflow-x:auto;padding:10px 2px 2px;scrollbar-width:none}
+.chip{flex:none;border:1px solid var(--line);background:#fff;color:var(--ink2);border-radius:11px;padding:8px 12px;font-size:12px;font-weight:700;transition:.18s}
+.chip:hover{border-color:#c9d5f5;transform:translateY(-1px)}
+.chip[aria-pressed=true]{background:#16224a;color:#fff;border-color:#16224a;box-shadow:0 10px 18px -12px rgba(22,34,74,.8)}
+details{margin-top:12px}
+summary{cursor:pointer;font-weight:700;font-size:12.5px;color:var(--ink2);list-style:none;display:flex;align-items:center;gap:6px}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"▸";font-size:10px;color:var(--mut);transition:transform .2s}
+details[open] summary::before{transform:rotate(90deg)}
+textarea{display:block;margin-top:9px;min-height:96px;resize:vertical;line-height:1.55}
+.list-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:20px 0 10px}
+.section-title{font-size:16px;font-weight:800;margin:0;letter-spacing:-.015em}
+.chip-soft{font-size:11.5px;font-weight:700;color:var(--pri);background:var(--pri-soft);border-radius:999px;padding:5px 11px;white-space:nowrap}
+.item{background:#fff;border:1px solid var(--line);border-radius:18px;padding:14px;margin-top:10px;box-shadow:var(--shadow-sm);transition:transform .2s,box-shadow .2s,border-color .2s,background .2s;animation:cardIn .45s cubic-bezier(.22,1,.36,1) both;animation-delay:calc(var(--i,0)*35ms)}
+.item.no-anim{animation:none}
+.item:hover{transform:translateY(-2px);box-shadow:var(--shadow);border-color:#d8e1f8}
+.item.done{border-color:#cdeadd;background:linear-gradient(180deg,#fff,#f7fdf9)}
+.item-head{display:flex;align-items:flex-start;gap:11px}
+.avatar{width:42px;height:42px;border-radius:14px;flex:none;display:grid;place-items:center;font-size:13px;font-weight:800;color:#fff;background:linear-gradient(135deg,#3158d8,#7f9dff);box-shadow:0 10px 18px -10px rgba(49,88,216,.8);letter-spacing:.02em;transition:background .3s}
+.item.done .avatar{background:linear-gradient(135deg,#0f9d6c,#4cc79a);box-shadow:0 10px 18px -10px rgba(15,157,108,.75)}
+.item-copy{min-width:0;flex:1}
+.item-line{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.item-name{font-size:14.5px;font-weight:800;letter-spacing:-.01em;overflow-wrap:anywhere;line-height:1.3}
+.tag{font-size:10px;font-weight:800;color:var(--pri);background:var(--pri-soft);border-radius:999px;padding:3px 8px;white-space:nowrap}
+.item-phone{font-size:15.5px;font-weight:800;letter-spacing:.01em;margin-top:3px;color:var(--ink);font-variant-numeric:tabular-nums}
+.item-meta{font-size:11.5px;color:var(--mut);margin-top:3px}
+.btn-wa{flex:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:38px;padding:8px 12px;border-radius:12px;background:#0f9d6c;color:#fff;font-size:12px;font-weight:800;text-decoration:none;box-shadow:0 12px 20px -14px rgba(15,157,108,.95);transition:transform .18s,box-shadow .18s,background .18s}
+.btn-wa:hover{transform:translateY(-1px);background:#0c8b5f;box-shadow:0 15px 24px -14px rgba(15,157,108,1)}
+.btn-wa svg{width:15px;height:15px;flex:none}
+.item-foot{display:flex;align-items:center;gap:8px;margin-top:11px;padding-top:10px;border-top:1px dashed #edf0f8}
+.item-foot label{font-size:10px;font-weight:800;color:var(--mut);letter-spacing:.08em;text-transform:uppercase;flex:none}
+.item-foot select{flex:1;min-height:36px;padding:6px 10px;font-size:12px;font-weight:700;border-radius:10px}
+select.s-0{color:#5b6884;background:#f5f7fc}
+select.s-1{color:#1f6fd6;background:#eef5ff;border-color:#cfe2ff}
+select.s-2{color:#a86c05;background:#fff8e8;border-color:#f6e1ae}
+select.s-3{color:#b02a2a;background:#fdf0f0;border-color:#f5cfcf}
+select.s-4{color:#0b7f86;background:#e9fbfc;border-color:#c3ecef}
+select.s-5{color:#087a58;background:#ebfaf3;border-color:#c3ecd9}
+select.s-6{color:#fff;background:linear-gradient(135deg,#0f9d6c,#39b982);border-color:transparent}
+select.s-7{color:#8a4b4b;background:#faf0f0;border-color:#ecd7d7}
+select:disabled{opacity:.72;cursor:not-allowed}
+.item.hold{border-color:#f6e1ae;background:linear-gradient(180deg,#fff,#fffaf0)}
+.item.hold .avatar{background:linear-gradient(135deg,#b7790a,#e0a93a);box-shadow:0 10px 18px -10px rgba(183,121,10,.7)}
+.item.neg{border-color:#f5cfcf;background:linear-gradient(180deg,#fff,#fdf6f6)}
+.item.neg .avatar{background:linear-gradient(135deg,#a63a3a,#d16a6a);box-shadow:0 10px 18px -10px rgba(166,58,58,.7)}
+.item.piped{border-color:#bfe8d5;background:linear-gradient(180deg,#fff,#f2fcf7);box-shadow:0 14px 28px -22px rgba(15,157,108,.55)}
+.item.piped .avatar{background:linear-gradient(135deg,#0f9d6c,#4cc79a);box-shadow:0 10px 18px -10px rgba(15,157,108,.75)}
+.tag.pipe-tag{color:#087a58;background:#e7f8f0}
+.item-actions{margin-top:9px}
+.btn-pipe{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:38px;border:0;border-radius:12px;background:linear-gradient(135deg,#0f9d6c,#2bb37f);color:#fff;font-size:12.5px;font-weight:800;box-shadow:0 12px 22px -14px rgba(15,157,108,.9);transition:transform .18s,box-shadow .18s,opacity .18s}
+.btn-pipe:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 15px 26px -14px rgba(15,157,108,1)}
+.btn-pipe:disabled{opacity:.62;cursor:wait}
+.btn-pipe.loading{position:relative;color:transparent}
+.btn-pipe.loading svg{display:none}
+.btn-pipe.loading::after{content:"";position:absolute;width:17px;height:17px;border-radius:50%;border:2px solid rgba(255,255,255,.45);border-top-color:#fff;animation:spin .8s linear infinite}
+.pipe-state{display:flex;align-items:center;justify-content:center;gap:7px;min-height:36px;border-radius:12px;background:#eaf9f2;border:1px solid #c9ecdd;color:#087a58;font-size:12px;font-weight:800}
+.tpl-hint{margin-top:7px}
+.btn-more{display:block;width:100%;margin-top:12px;min-height:44px;border:1px dashed #c9d5f5;background:#f7f9ff;color:var(--pri);border-radius:14px;font-weight:800;font-size:12.5px;transition:.2s}
+.btn-more:hover{background:#eef3ff;border-color:var(--pri)}
+.empty{text-align:center;padding:38px 18px;border-radius:18px;border:1px dashed #d5ddf2;background:rgba(255,255,255,.72);color:var(--mut);font-size:13px;animation:cardIn .4s both}
+.empty b{display:block;color:var(--ink);font-size:15px;margin-bottom:5px}
+.empty p{margin:0 0 12px}
+.empty .btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:9px 15px;border:0;border-radius:12px;background:var(--pri);color:#fff;font-weight:800;text-decoration:none;box-shadow:0 12px 20px -14px rgba(49,88,216,.9)}
+.empty .btn:hover{background:#2848c0}
+.skeleton{display:flex;gap:12px;align-items:center;padding:14px;border:1px solid var(--line);border-radius:18px;margin-top:10px;background:#fff;animation:fadeIn .4s both;animation-delay:calc(var(--i,0)*60ms)}
+.sk-avatar{width:42px;height:42px;border-radius:14px;background:#eef1f9;flex:none}
+.sk-lines{flex:1}
+.sk-lines i{display:block;height:10px;border-radius:6px;background:linear-gradient(90deg,#eef1f9,#f8faff,#eef1f9);background-size:200% 100%;animation:sk 1.4s infinite}
+.sk-lines i:first-child{width:58%;margin-bottom:8px}
+.sk-lines i:last-child{width:38%}
+.foot{text-align:center;font-size:11px;color:#9aa6bd;margin-top:26px}
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);opacity:0;pointer-events:none;z-index:50;background:#16224a;color:#fff;padding:12px 18px;border-radius:14px;font-size:12.5px;font-weight:700;box-shadow:0 20px 40px -18px rgba(10,20,50,.65);transition:opacity .25s,transform .25s;max-width:calc(100% - 32px);text-align:center;line-height:1.45}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast.bad{background:#9f2020}
+.toast.ok{background:#0d7a55}
+@keyframes float{0%,100%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(18px,-26px,0) scale(1.09)}}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes cardIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 3px rgba(49,88,216,.14)}50%{box-shadow:0 0 0 6px rgba(49,88,216,.05)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes sk{to{background-position:-200% 0}}
+@keyframes floatY{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+@keyframes shimmer{0%{left:-60%}58%,100%{left:135%}}
+@keyframes sweep{0%{transform:translateX(-100%)}65%,100%{transform:translateX(100%)}}
+@media(max-width:680px){
+.topbar-inner{padding:9px 12px}
+.app-brand{gap:7px}
+.app-brand-mark{width:76px;height:29px}
+.app-brand-copy b{font-size:11px}
+.app-brand-copy span{display:none}
+.top-link{min-height:36px;padding:7px 10px;font-size:12px;border-radius:11px}
+main{padding:16px 12px calc(38px + env(safe-area-inset-bottom,0px))}
+.page-heading{align-items:center;margin:6px 0 16px}
+.hero-stat{min-width:76px;padding:10px 12px;border-radius:16px}
+.hero-stat span{font-size:20px}
+.sub{font-size:12.5px}
+.import-card{padding:14px}
+.card-head h2{font-size:15px}
+.dropzone{padding:18px 12px}
+.stats{grid-template-columns:repeat(2,1fr)}
+.bar{position:static;top:auto}
+.item{padding:13px;border-radius:16px}
+.item-head{flex-wrap:wrap}
+.btn-wa{width:100%;margin-top:2px;min-height:40px}
+.item-phone{font-size:15px}
+.tabs{margin-right:-12px;padding-right:12px}
+.list-head{margin:16px 0 8px}
+}
+@media (prefers-reduced-motion:reduce){
+*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
+}
 </style></head><body>
+<div class="bg" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
 <header class="app-topbar">
+<div class="topbar-inner">
 <a class="app-brand" href="index.html" aria-label="Kembali ke TPFX Sales Workspace">
 <img class="app-brand-mark" src="tpfxlogo.jpg" alt="Logo TPFX">
 <span class="app-brand-copy"><b>Sales Workspace</b><span>Team community</span></span>
 </a>
-<div class="top-actions"><a class="top-link" href="index.html">← Workspace</a></div>
+<a class="top-link" href="index.html">← Workspace</a>
+</div>
 </header>
 <main>
 <div class="page-heading">
-<div><h1>Database Calon Nasabah</h1><div class="sub">Kontak dibagi merata ke seluruh BDO aktif. Pilih nama untuk melihat bagiannya.</div></div>
-<span class="chip" aria-label="Database tim">Database tim</span>
+<div>
+<span class="eyebrow"><span class="dot"></span>Database tim<span class="role-badge" id="roleBadge" hidden></span></span>
+<h1>Calon Nasabah</h1>
+<p class="sub">Kontak dibagi otomatis dan merata ke seluruh BDO aktif. Tidak ada perebutan data.</p>
 </div>
-<div class="tabs" id="tabs" role="tablist" aria-label="Pilih BDO"></div>
-<section class="card bar" aria-label="Cari dan filter kontak">
-<div class="prog" aria-hidden="true"><i id="pb"></i></div><div class="stat" id="stat"></div>
-<input type="search" id="q" placeholder="Cari kategori atau nomor kontak" aria-label="Cari">
-<div class="chips" id="chips"></div>
-<details><summary>Ubah pesan pembuka WhatsApp</summary><textarea id="tpl" aria-label="Pesan pembuka"></textarea></details>
+<div class="hero-stat" aria-label="Total kontak"><span id="heroTotal">0</span><small>kontak</small></div>
+</div>
+
+<section class="card import-card" id="importCard" aria-labelledby="importTitle" hidden>
+<div class="card-head">
+<span class="icon-badge" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg></span>
+<div>
+<h2 id="importTitle">Impor kontak massal</h2>
+<p>Unggah Excel, CSV, atau TXT. Kontak langsung dibagi rata ke semua BDO aktif.</p>
+</div>
+</div>
+<label class="dropzone" id="dropzone" for="fileInput" tabindex="0" role="button" aria-label="Pilih file Excel, CSV, atau TXT">
+<span class="dz-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v5h5"/><path d="M15 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-4-5Z"/><path d="M12 12v5"/><path d="m9.8 14.2 2.2-2.2 2.2 2.2"/></svg></span>
+<b>Pilih file atau tarik ke sini</b>
+<span>XLSX, XLS, CSV, TXT · maksimal 5 MB · 5.000 kontak per impor</span>
+<input id="fileInput" type="file" accept=".xlsx,.xls,.csv,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,text/plain" hidden>
+</label>
+<div class="file-row" id="fileRow" hidden>
+<span class="file-ext" id="fileExt">CSV</span>
+<span class="file-meta"><b id="fileName"></b><span id="fileSize"></span></span>
+<button class="icon-btn" id="removeFile" type="button" aria-label="Hapus file">
+<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+</button>
+</div>
+<label class="field"><span>Nama kelompok (opsional)</span><input id="groupName" type="text" maxlength="80" placeholder="Contoh: Prospek Oktober" autocomplete="off"></label>
+<div class="status" id="importStatus" role="status" hidden></div>
+<div id="previewWrap" hidden>
+<div class="stats">
+<div class="stat-pill good"><b id="pValid">0</b><span>siap diimpor</span></div>
+<div class="stat-pill warn"><b id="pDup">0</b><span>duplikat</span></div>
+<div class="stat-pill bad"><b id="pInvalid">0</b><span>tidak valid</span></div>
+<div class="stat-pill"><b id="pTotal">0</b><span>total baris</span></div>
+</div>
+<div class="table-wrap">
+<table aria-label="Pratinjau kontak">
+<thead><tr><th>Nama</th><th>Pekerjaan</th><th>Nomor</th><th>Kelompok</th></tr></thead>
+<tbody id="previewBody"></tbody>
+</table>
+</div>
+<button class="btn-import" id="importBtn" type="button" disabled><span class="btn-label">Impor <span id="importCount">0</span> kontak</span></button>
+<p class="hint">Hanya akun manager (BM/DM) yang dapat mengimpor. Nomor duplikat dan tidak valid dilewati otomatis.</p>
+</div>
+<div id="importSummary" hidden></div>
 </section>
-<div id="statusMessage" class="status-message mut" role="status">Memuat database...</div>
-<h2 class="section-title" id="contactHeading">Daftar kontak</h2>
-<div id="list"></div>
+
+<div class="tabs" id="tabs" role="tablist" aria-label="Pilih BDO"></div>
+
+<section class="card bar" aria-label="Cari dan filter kontak">
+<div class="prog-row">
+<div class="prog" aria-hidden="true"><i id="pb"></i></div>
+<span class="prog-label" id="pbText">0%</span>
+</div>
+<div class="stat-line" id="stat">0 kontak</div>
+<div class="search-wrap">
+<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
+<input type="search" id="q" placeholder="Cari nama, nomor, atau pekerjaan" aria-label="Cari kontak">
+</div>
+<div class="chips" id="chips"></div>
+<details><summary>Ubah pesan pembuka WhatsApp</summary><textarea id="tpl" aria-label="Pesan pembuka WhatsApp"></textarea><p class="hint tpl-hint">Dikirim atas nama <b id="tplName">BDO Anda</b> · gunakan <b>{bdo}</b> untuk nama Anda dan <b>{nama}</b> untuk nama kontak.</p></details>
+</section>
+
+<div class="list-head"><h2 class="section-title" id="contactHeading">Daftar kontak</h2><span class="chip-soft" id="listCount"></span></div>
+<div id="list" aria-live="polite"></div>
+<footer class="foot">TPFX Sales Workspace · Database internal tim</footer>
 </main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>
-let DATA=[];
-const ST=["Belum dihubungi","Sudah dichat","Menunggu balasan","Tertarik","Tidak tertarik","Closing"];
+let DATA=[],ROLE='',TOTAL=0,MY_USER='',MY_NAME='',SERVER_STATUS=false;
+let cur=0,job='Semua',PAGE=60,allowItemAnim=true,mem={},OVR={};
+const ST=[
+ {k:'new',t:'Belum dihubungi'},
+ {k:'contacted',t:'Sudah dihubungi'},
+ {k:'noanswer',t:'Tidak diangkat'},
+ {k:'inactive',t:'Nomor tidak aktif'},
+ {k:'answered',t:'Diangkat'},
+ {k:'responded',t:'Merespon'},
+ {k:'pipeline',t:'Tersambung ke pipeline'},
+ {k:'lost',t:'Tidak tertarik'}
+];
+const ST_KEYS=ST.map(s=>s.k);
+const LEGACY_STATUS=['new','contacted','contacted','responded','lost','pipeline'];
 const JOB_LABELS={
- "pegawai negeri sipil":"PNS",
- "pns":"PNS",
- "bumn/bumd":"BUMN/BUMD",
- "bumn":"BUMN",
- "bumd":"BUMD",
- "guru / dosen":"Guru / Dosen",
- "guru/dosen":"Guru / Dosen",
- "pengusaha":"Pengusaha"
+ 'pegawai negeri sipil':'PNS',
+ 'pns':'PNS',
+ 'bumn/bumd':'BUMN/BUMD',
+ 'bumn':'BUMN',
+ 'bumd':'BUMD',
+ 'guru / dosen':'Guru / Dosen',
+ 'guru/dosen':'Guru / Dosen',
+ 'pengusaha':'Pengusaha'
 };
-const DEF="Halo, selamat siang. Saya {bdo} dari TPFX. Boleh minta waktu sebentar untuk memperkenalkan peluang investasi dari kami?";
-const API="https://script.google.com/macros/s/AKfycbwCiMQjyvd_GHqc-TOzofoDEcpOj_-_uxs2ciX4wZG7VuG3hoZlInRuyO3cmPxSWS6F/exec";
-let cur=0,job="Semua",mem={};
-const K="tpfx-v1";
-try{mem=JSON.parse(localStorage.getItem(K)||"{}")}catch(e){}
-const save=()=>{try{localStorage.setItem(K,JSON.stringify(mem))}catch(e){}};
-mem.tpl=mem.tpl||DEF;mem.s=mem.s||{};
+const DEF_OLD='Halo, selamat siang. Saya {bdo} dari TPFX. Boleh minta waktu sebentar untuk memperkenalkan peluang investasi dari kami?';
+const DEF='Halo {nama}, selamat siang. Saya {bdo} dari TPFX. Boleh minta waktu sebentar untuk memperkenalkan peluang investasi dari kami?';
+const API='https://script.google.com/macros/s/AKfycbwCiMQjyvd_GHqc-TOzofoDEcpOj_-_uxs2ciX4wZG7VuG3hoZlInRuyO3cmPxSWS6F/exec';
+const K='tpfx-v1';
+const MAX_ROWS=5000,MAX_BYTES=5*1024*1024;
+const HEADER_KEYS={
+ group:['kelompok','group','grup','segmen','segment','kelompokdata','grupdata','namakelompok'],
+ phone:['telepon','telp','telephone','phone','handphone','hp','whatsapp','wa','nomor','nomorhp','nomortelepon','nomorwa','nomorwhatsapp','nohp','nowa','notelp','notelepon','notelpon','telpwa','hpwa','nomorhpwa','wahp','mobile','kontak','kontakwa'],
+ name:['nama','name','nasabah','namanasabah','customername','customer','namacustomer','pelanggan','namalengkap','namakontak','fullname'],
+ job:['pekerjaan','job','profesi','occupation','kategori','pekerjaankategori','statuspekerjaan','jenispekerjaan'],
+ seq:['no','nourut','nomorurut','urut','seq','sequence','index']
+};
 const $=id=>document.getElementById(id);
-async function rpc(fn,...args){
- const response=await fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({fn,args}),cache:"no-store"});
- if(!response.ok)throw new Error("Server HTTP "+response.status);
- const payload=await response.json();
- if(payload.error)throw new Error(payload.error);
- if(!Object.prototype.hasOwnProperty.call(payload,"result"))throw new Error("Endpoint "+fn+" tidak mengembalikan hasil.");
- return payload.result;
-}
-async function loadDatabase(){
- const status=$("statusMessage");
- status.className="status-message mut";
- status.replaceChildren(document.createTextNode("Memuat database..."));
- try{
-  const token=localStorage.getItem("swt")||"";
-  if(!token){
-   status.className="status-message error";
-   status.textContent="Silakan login ke Workspace untuk membuka database.";
-   const login=document.createElement("a");
-   login.className="btn retry";
-   login.href="index.html";
-   login.textContent="Login ke Workspace";
-   status.appendChild(login);
-   return;
-  }
-  const result=await rpc("databaseData",token);
-  if(result&&result.err){
-   if(result.err==="AUTH"){
-    status.className="status-message error";
-    status.textContent="Sesi login berakhir. Login kembali untuk membuka database.";
-    const login=document.createElement("a");
-    login.className="btn retry";
-    login.href="index.html";
-    login.textContent="Login kembali";
-    status.appendChild(login);
-    return;
-   }
-   throw new Error(typeof result.err==="string"?result.err:"Database tidak dapat dimuat");
-  }
-  if(!result||!Array.isArray(result.rows)||!result.rows.every(d=>d&&typeof d.n==="string"&&Array.isArray(d.r)&&d.r.every(r=>Array.isArray(r)&&r.length>=3))||new Set(result.rows.flatMap(d=>d.r.map(r=>digits(r[2]))).filter(Boolean)).size!==result.rows.reduce((count,d)=>count+d.r.length,0)){
-   throw new Error("Data database dari server tidak valid");
-  }
-  DATA=result.rows;
-  status.hidden=DATA.length>0;
-  if(!DATA.length)status.textContent="Belum ada data kontak yang tersedia di database.";
-  startDatabase();
- }catch(e){
-  status.className="status-message error";
-  status.replaceChildren(document.createTextNode("Database gagal dimuat: "+String(e&&e.message||e)+" "));
-  const retry=document.createElement("button");
-  retry.className="btn retry";
-  retry.textContent="Coba lagi";
-  retry.onclick=loadDatabase;
-  status.appendChild(retry);
- }
-}
-function digits(n){return String(n||"").replace(/\D/g,"")}
-function jobLabel(value){
- const label=String(value||"");
- return JOB_LABELS[label.trim().toLowerCase()]||label;
-}
+let IMPORT={records:[],invalid:0,duplicate:0,total:0,fileName:'',fileSize:0,group:'',busy:false,tooMany:false};
+
+try{mem=JSON.parse(localStorage.getItem(K)||'{}')}catch(e){}
+if(!mem||typeof mem!=='object')mem={};
+mem.s=mem.s&&typeof mem.s==='object'?mem.s:{};
+if(!mem.tpl||mem.tpl===DEF_OLD)mem.tpl=DEF;
+const save=()=>{try{localStorage.setItem(K,JSON.stringify(mem))}catch(e){}};
+Object.keys(mem.s).forEach(phone=>{
+ const value=mem.s[phone];
+ if(typeof value==='number')mem.s[phone]=LEGACY_STATUS[value]||'new';
+});
+save();
+
+function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=text;return n;}
+function formatNum(n){return Number(n||0).toLocaleString('id-ID');}
+function digits(n){return String(n||'').replace(/\D/g,'');}
+function jobLabel(value){const label=String(value||'');return JOB_LABELS[label.trim().toLowerCase()]||label;}
 function fmt(n){
  const value=digits(n);
- if(value.length<6)return String(n||"");
- return "+"+value.slice(0,2)+" "+value.slice(2,5)+"-"+value.slice(5,9)+"-"+value.slice(9);
+ if(value.length<6)return String(n||'');
+ return '+'+value.slice(0,2)+' '+value.slice(2,5)+'-'+value.slice(5,9)+'-'+value.slice(9);
+}
+function waHref(phone,bdo,contact){
+ const text=String(mem.tpl||DEF)
+  .replace(/\{bdo\}/g,String(bdo||''))
+  .replace(/\{nama\}/g,String(contact||'').trim()||'Bapak/Ibu');
+ return 'https://wa.me/'+digits(phone)+'?text='+encodeURIComponent(text);
+}
+function statusIndex(key){
+ const index=ST_KEYS.indexOf(String(key||'').toLowerCase());
+ return index<0?0:index;
+}
+function statusOf(r){
+ const phone=digits(r[2]);
+ const override=OVR[phone];
+ if(override&&ST_KEYS.indexOf(override)>=0)return ST_KEYS.indexOf(override);
+ const server=String(r[4]||'').toLowerCase();
+ const local=mem.s[phone];
+ const localIndex=local==null?-1:ST_KEYS.indexOf(String(local).toLowerCase());
+ if(ST_KEYS.indexOf(server)>=0){
+  if(server==='new'&&localIndex>0)return localIndex;
+  return ST_KEYS.indexOf(server);
+ }
+ return localIndex>0?localIndex:0;
+}
+function toneOf(key){
+ if(key==='pipeline')return 'piped';
+ if(key==='noanswer')return 'hold';
+ if(key==='inactive'||key==='lost')return 'neg';
+ return statusIndex(key)>0?'done':'';
+}
+function canEdit(d){
+ return ROLE==='BM'||ROLE==='DM'||
+  !!(MY_USER&&String(d.u||'').toLowerCase()===MY_USER);
+}
+function canPipe(d){
+ return ROLE==='BDO'&&!!(MY_USER&&String(d.u||'').toLowerCase()===MY_USER);
+}
+function bdoName(d){
+ return MY_NAME||(d&&d.n)||MY_USER||'';
+}
+function paintStatus(card,select,key){
+ card.classList.remove('done','hold','neg','piped');
+ const tone=toneOf(key);
+ if(tone)card.classList.add(tone);
+ if(select){
+  const index=statusIndex(key);
+  select.value=String(index);
+  select.className='s-'+index;
+ }
+ const line=card.querySelector('.item-line');
+ if(line){
+  let tag=line.querySelector('.pipe-tag');
+  if(key==='pipeline'&&!tag){
+   const badge=el('span','tag pipe-tag','Pipeline');
+   line.appendChild(badge);
+  }else if(key!=='pipeline'&&tag){
+   tag.remove();
+  }
+ }
+}
+function initials(name,fallback){
+ const parts=String(name||'').trim().split(/\s+/).filter(Boolean);
+ if(!parts.length)return String(fallback||'?').replace(/\W/g,'').slice(0,2).toUpperCase()||'?';
+ return (parts[0].charAt(0)+(parts[1]?parts[1].charAt(0):'')).toUpperCase();
+}
+function toast(msg,kind){
+ const node=$('toast');
+ node.textContent=String(msg);
+ node.className='toast show'+(kind?' '+kind:'');
+ clearTimeout(toast.timer);
+ toast.timer=setTimeout(()=>{node.className='toast'+(kind?' '+kind:'');},3200);
+}
+function animateNumber(node,to){
+ const target=Number(to)||0;
+ if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches){node.textContent=formatNum(target);return;}
+ const start=performance.now(),dur=750;
+ let done=false;
+ const finish=()=>{if(done)return;done=true;node.textContent=formatNum(target);};
+ const step=(now)=>{
+  const p=Math.min(1,(now-start)/dur);
+  const eased=1-Math.pow(1-p,3);
+  node.textContent=formatNum(Math.round(target*eased));
+  if(p<1)requestAnimationFrame(step);
+  else finish();
+ };
+ requestAnimationFrame(step);
+ setTimeout(finish,900);
+}
+async function rpc(fn,...args){
+ const response=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({fn,args}),cache:'no-store'});
+ if(!response.ok)throw new Error('Server HTTP '+response.status);
+ const payload=await response.json();
+ if(payload.error)throw new Error(payload.error);
+ if(!Object.prototype.hasOwnProperty.call(payload,'result'))throw new Error('Endpoint '+fn+' tidak mengembalikan hasil.');
+ return payload.result;
+}
+function showSkeleton(){
+ $('tabs').replaceChildren();
+ $('chips').replaceChildren();
+ $('contactHeading').textContent='Memuat kontak';
+ $('listCount').textContent='';
+ const frag=document.createDocumentFragment();
+ for(let i=0;i<5;i++){
+  const row=el('div','skeleton');
+  row.style.setProperty('--i',i);
+  const lines=el('div','sk-lines');
+  lines.append(el('i'),el('i'));
+  row.append(el('div','sk-avatar'),lines);
+  frag.appendChild(row);
+ }
+ $('list').replaceChildren(frag);
+}
+function showAuth(msg,label){
+ $('importCard').hidden=true;
+ $('tabs').replaceChildren();
+ $('chips').replaceChildren();
+ $('contactHeading').textContent='Daftar kontak';
+ $('listCount').textContent='';
+ $('pb').style.width='0';
+ $('pbText').textContent='0%';
+ $('stat').textContent='';
+ const box=el('div','empty');
+ box.append(el('b',null,'Sesi login diperlukan'),el('p',null,msg));
+ const link=el('a','btn',label);
+ link.href='index.html';
+ box.appendChild(link);
+ $('list').replaceChildren(box);
+}
+function showError(msg){
+ $('tabs').replaceChildren();
+ $('chips').replaceChildren();
+ $('contactHeading').textContent='Daftar kontak';
+ $('listCount').textContent='';
+ const box=el('div','empty');
+ box.append(el('b',null,'Database gagal dimuat'),el('p',null,msg));
+ const retry=el('button','btn','Coba lagi');
+ retry.type='button';
+ retry.onclick=loadDatabase;
+ box.appendChild(retry);
+ $('list').replaceChildren(box);
+}
+async function loadDatabase(){
+ showSkeleton();
+ try{
+  const token=localStorage.getItem('swt')||'';
+  if(!token){showAuth('Silakan login ke Workspace untuk membuka database.','Login ke Workspace');return;}
+  const result=await rpc('databaseData',token);
+  if(result&&result.err){
+   if(result.err==='AUTH'){showAuth('Sesi login berakhir. Login kembali untuk membuka database.','Login kembali');return;}
+   throw new Error(typeof result.err==='string'?result.err:'Database tidak dapat dimuat');
+  }
+  if(!result||!Array.isArray(result.rows))throw new Error('Data database dari server tidak valid');
+  const seen=new Set();
+  result.rows.forEach(d=>{
+   if(!d||typeof d.n!=='string'||!Array.isArray(d.r))throw new Error('Data database dari server tidak valid');
+   d.r.forEach(r=>{
+    if(!Array.isArray(r)||r.length<3)throw new Error('Data database dari server tidak valid');
+    const p=digits(r[2]);
+    if(!p||seen.has(p))throw new Error('Data database dari server tidak valid');
+    seen.add(p);
+   });
+  });
+  DATA=result.rows;
+  ROLE=String(result.role||'').toUpperCase();
+  TOTAL=Number(result.total)||DATA.reduce((n,d)=>n+d.r.length,0);
+  MY_USER=String(result.user||'').toLowerCase();
+  MY_NAME=String(result.name||'').trim();
+  SERVER_STATUS=Object.prototype.hasOwnProperty.call(result,'name');
+  OVR={};
+  if(ROLE!=='BM'&&ROLE!=='DM'){
+   const own=DATA.findIndex(d=>String(d.u||'').toLowerCase()===MY_USER);
+   if(own>=0)cur=own;
+  }
+  const isManager=ROLE==='BM'||ROLE==='DM';
+  $('importCard').hidden=!isManager;
+  $('roleBadge').hidden=false;
+  $('roleBadge').textContent=isManager?'Manager':(ROLE||'BDO');
+  animateNumber($('heroTotal'),TOTAL);
+  startDatabase();
+ }catch(e){
+  showError(String((e&&e.message)||e));
+ }
 }
 function tabs(){
- $("tabs").replaceChildren();
+ const wrap=$('tabs');
+ wrap.replaceChildren();
  DATA.forEach((d,i)=>{
-  const b=document.createElement("button");
-  b.className="tab";b.setAttribute("role","tab");b.setAttribute("aria-selected",i==cur);
-  b.textContent=d.n+" ("+d.r.length+")";
-  b.setAttribute("aria-label","Kontak "+d.n+", "+d.r.length+" calon nasabah");
-  b.onclick=()=>{cur=i;job="Semua";render()};
-  $("tabs").appendChild(b);
+  const b=el('button','tab');
+  b.type='button';
+  b.setAttribute('role','tab');
+  b.setAttribute('aria-selected',String(i===cur));
+  b.setAttribute('aria-label','Kontak '+d.n+', '+d.r.length+' calon nasabah');
+  b.append(el('span',null,d.n),el('small',null,String(d.r.length)));
+  b.onclick=()=>{if(cur===i)return;cur=i;job='Semua';PAGE=60;allowItemAnim=true;render();};
+  wrap.appendChild(b);
  });
+}
+function updateProgress(d){
+ const done=d.r.filter(r=>statusOf(r)>0).length;
+ const pct=d.r.length?Math.round(done/d.r.length*100):0;
+ $('pb').style.width=pct+'%';
+ $('pbText').textContent=pct+'%';
+ $('stat').textContent=done+' dari '+d.r.length+' kontak sudah diproses';
 }
 function render(){
- if(!DATA.length){
-  const empty=document.createElement("div");empty.className="card empty";empty.textContent="Belum ada data kontak yang tersedia di database.";
-  $("tabs").replaceChildren();
-  $("chips").replaceChildren();
-  $("list").replaceChildren(empty);
-  $("contactHeading").textContent="Daftar kontak";
-  $("pb").style.width="0";
-  $("stat").textContent="";
+ if(!DATA.length||!DATA.some(d=>d.r.length>0)){
+  $('tabs').replaceChildren();
+  $('chips').replaceChildren();
+  $('contactHeading').textContent='Daftar kontak';
+  $('listCount').textContent='';
+  $('pb').style.width='0';
+  $('pbText').textContent='0%';
+  $('stat').textContent='0 kontak';
+  const box=el('div','empty');
+  box.append(el('b',null,'Belum ada kontak'),el('p',null,ROLE==='BM'||ROLE==='DM'?'Gunakan kartu impor di atas untuk memasukkan kontak dari Excel atau CSV.':'Database belum diisi manager.'));
+  $('list').replaceChildren(box);
   return;
  }
-  if(cur>=DATA.length)cur=0;
-  tabs();
- const d=DATA[cur],jobs=["Semua",...new Set(d.r.map(r=>String(r[1]||"")))];
- if(!jobs.includes(job))job="Semua";
- $("contactHeading").textContent="Kontak — "+d.n;
- $("chips").replaceChildren();
+ if(cur>=DATA.length)cur=0;
+ const d=DATA[cur];
+ tabs();
+ const jobs=['Semua',...new Set(d.r.map(r=>String(r[1]||'')))];
+ if(jobs.indexOf(job)<0)job='Semua';
+ $('contactHeading').textContent='Kontak — '+d.n;
+ $('chips').replaceChildren();
  jobs.forEach(j=>{
-  const b=document.createElement("button");b.className="chip";b.setAttribute("aria-pressed",j==job);b.textContent=jobLabel(j);
-  b.onclick=()=>{job=j;render()};$("chips").appendChild(b);
+  const b=el('button','chip',jobLabel(j));
+  b.type='button';
+  b.setAttribute('aria-pressed',String(j===job));
+  b.onclick=()=>{if(job===j)return;job=j;PAGE=60;allowItemAnim=true;render();};
+  $('chips').appendChild(b);
  });
- const key=r=>digits(r[2])||cur+"-"+r[0],st=r=>Number(mem.s[key(r)])||0;
- const done=d.r.filter(r=>st(r)>0).length;
- $("pb").style.width=(d.r.length?done/d.r.length*100:0)+"%";
- $("stat").textContent=done+" dari "+d.r.length+" kontak sudah diproses";
- const q=$("q").value.trim().toLowerCase();
- const rows=d.r.filter(r=>(job=="Semua"||String(r[1])==job)&&(String(r[1])+" "+jobLabel(r[1])+" "+String(r[2])).toLowerCase().includes(q));
- const list=$("list");list.replaceChildren();
- if(!rows.length){const empty=document.createElement("div");empty.className="card empty";empty.textContent="Tidak ada kontak yang cocok.";list.appendChild(empty);return}
- rows.forEach(r=>{
+ updateProgress(d);
+ const q=$('q').value.trim().toLowerCase();
+ const qDigits=q.replace(/\D/g,'');
+ const filtered=d.r.filter(r=>{
+  if(job!=='Semua'&&String(r[1])!==job)return false;
+  if(!q)return true;
+  const hay=(String(r[3]||'')+' '+String(r[1]||'')+' '+jobLabel(r[1])+' '+String(r[2]||'')+' '+String(r[0]||'')).toLowerCase();
+  if(hay.indexOf(q)>=0)return true;
+  return !!(qDigits&&digits(r[2]).indexOf(qDigits)>=0);
+ });
+ $('listCount').textContent=filtered.length===d.r.length?formatNum(d.r.length)+' kontak':formatNum(filtered.length)+' dari '+formatNum(d.r.length);
+ const list=$('list');
+ list.replaceChildren();
+ if(!filtered.length){
+  const box=el('div','empty');
+  box.append(el('b',null,'Tidak ada kontak yang cocok'),el('p',null,'Coba kata kunci atau filter lain.'));
+  list.appendChild(box);
+  return;
+ }
+ const visible=filtered.slice(0,PAGE);
+ visible.forEach((r,i)=>{
   const phone=digits(r[2]);
-  const el=document.createElement("article");el.className="item"+(st(r)>0?" done":"");
-  const copy=document.createElement("div");copy.className="item-copy";
-  const number=document.createElement("div");number.className="no";number.textContent="No. "+String(r[0])+" · "+jobLabel(r[1]);
-  const tel=document.createElement("div");tel.className="tel";tel.textContent=fmt(phone);
-  copy.append(number,tel);
-  const wa=document.createElement("a");wa.className="btn wa";wa.target="_blank";wa.rel="noopener noreferrer";wa.href="https://wa.me/"+phone+"?text="+encodeURIComponent(mem.tpl.replace("{bdo}",d.n));wa.textContent="Chat WA";
-  wa.addEventListener("click",()=>{if(!st(r)){mem.s[key(r)]=1;save();el.classList.add("done");setTimeout(render,400)}});
-  const s=document.createElement("select");s.setAttribute("aria-label","Status kontak "+String(r[0]));
-  ST.forEach((t,i)=>{const o=new Option(t,i);o.selected=i==st(r);s.add(o)});
-  s.onchange=()=>{mem.s[key(r)]=+s.value;save();render()};
-  el.append(copy,wa,s);list.appendChild(el);
+  const name=String(r[3]||'').trim();
+  const jobText=jobLabel(r[1]);
+  const seq=String(r[0]==null?'':r[0]).trim();
+  const status=statusOf(r);
+  const key=ST[status].k;
+  const editable=canEdit(d);
+  const card=el('article','item');
+  const tone=toneOf(key);
+  if(tone)card.classList.add(tone);
+  if(allowItemAnim)card.style.setProperty('--i',Math.min(i,14));
+  else card.classList.add('no-anim');
+  const head=el('div','item-head');
+  const avatar=el('div','avatar',initials(name,seq||'K'));
+  const copy=el('div','item-copy');
+  const line=el('div','item-line');
+  line.appendChild(el('span','item-name',name||('Kontak '+(seq||'baru'))));
+  if(jobText)line.appendChild(el('span','tag',jobText));
+  if(key==='pipeline')line.appendChild(el('span','tag pipe-tag','Pipeline'));
+  const phoneLine=el('div','item-phone',fmt(phone));
+  const meta=el('div','item-meta','No. '+(seq||'-'));
+  copy.append(line,phoneLine,meta);
+  const actions=el('div','item-actions');
+  actions.hidden=true;
+  const foot=el('div','item-foot');
+  foot.appendChild(el('label',null,'Status'));
+  const select=el('select');
+  select.className='s-'+status;
+  select.setAttribute('aria-label','Status kontak '+String(seq||phone));
+  ST.forEach((s,index)=>{const o=new Option(s.t,index);o.selected=index===status;select.add(o);});
+  select.disabled=!editable;
+  if(!editable)select.title='Hanya BDO pemilik kontak atau manager yang dapat mengubah status';
+  select.onchange=()=>{
+   const nextKey=ST[Number(select.value)]?ST[Number(select.value)].k:'new';
+   const prevKey=ST[statusOf(r)].k;
+   if(nextKey===prevKey){select.value=String(statusIndex(prevKey));return;}
+   if(!editable){
+    select.value=String(statusIndex(prevKey));
+    toast('Kontak ini milik '+d.n+'.','bad');
+    return;
+   }
+   if(nextKey==='pipeline'){
+    select.value=String(statusIndex(prevKey));
+    connectPipeline(d,r,card,select,actions);
+    return;
+   }
+   saveStatus(d,r,card,select,actions,nextKey);
+  };
+  const wa=el('a','btn-wa');
+  wa.href=waHref(phone,bdoName(d),name);
+  wa.target='_blank';
+  wa.rel='noopener noreferrer';
+  wa.dataset.phone=phone;
+  wa.dataset.bdo=bdoName(d);
+  wa.dataset.name=name;
+  wa.innerHTML='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.04 2C6.6 2 2.2 6.4 2.2 11.84c0 1.9.52 3.68 1.44 5.2L2 22l5.08-1.6a9.9 9.9 0 0 0 4.96 1.32h.01c5.43 0 9.84-4.4 9.84-9.84C21.89 6.4 17.47 2 12.04 2Zm5.76 14.02c-.24.68-1.4 1.3-1.94 1.36-.5.06-1.12.08-1.8-.12-.42-.12-.96-.3-1.66-.6-2.92-1.26-4.82-4.2-4.96-4.4-.14-.2-1.18-1.56-1.18-2.98 0-1.42.74-2.12 1-2.4.26-.3.56-.36.76-.36l.54.01c.18 0 .42-.06.64.5.24.58.82 2 .9 2.14.06.14.1.3.02.48-.08.18-.12.3-.24.46-.12.14-.26.32-.36.42-.12.12-.24.26-.1.5.14.24.62 1.02 1.32 1.64.9.8 1.66 1.06 1.9 1.18.24.12.38.1.52-.06.14-.16.6-.7.76-.94.16-.24.32-.2.54-.12.22.08 1.4.66 1.64.78.24.12.4.18.46.28.06.1.06.58-.18 1.26Z"/></svg><span>Chat WA</span>';
+  wa.addEventListener('click',()=>{
+   if(!editable||statusOf(r)>0)return;
+   saveStatus(d,r,card,select,actions,'contacted',{silent:true});
+  });
+  foot.appendChild(select);
+  head.append(avatar,copy,wa);
+  card.append(head,foot,actions);
+  buildActions(d,r,card,select,actions);
+  list.appendChild(card);
  });
+ if(filtered.length>PAGE){
+  const left=Math.min(PAGE+60,filtered.length)-PAGE;
+  const more=el('button','btn-more','Tampilkan '+left+' kontak lagi ('+(filtered.length-PAGE)+' tersisa)');
+  more.type='button';
+  more.onclick=()=>{PAGE+=60;allowItemAnim=false;render();};
+  list.appendChild(more);
+ }
+}
+async function saveStatus(d,r,card,select,actions,nextKey,opts={}){
+ const phone=digits(r[2]);
+ const prevKey=ST[statusOf(r)].k;
+ if(nextKey===prevKey)return;
+ if(!canEdit(d)){
+  if(select)select.value=String(statusIndex(prevKey));
+  toast('Kontak ini milik '+d.n+'.','bad');
+  return;
+ }
+ const prevOverride=OVR[phone];
+ const revert=()=>{
+  if(prevOverride)OVR[phone]=prevOverride;
+  else delete OVR[phone];
+  mem.s[phone]=prevKey;
+  save();
+  paintStatus(card,select,prevKey);
+  buildActions(d,r,card,select,actions);
+  updateProgress(d);
+ };
+ OVR[phone]=nextKey;
+ mem.s[phone]=nextKey;
+ save();
+ paintStatus(card,select,nextKey);
+ buildActions(d,r,card,select,actions);
+ updateProgress(d);
+ if(!SERVER_STATUS){
+  if(!opts.silent)toast('Status disimpan di perangkat ini.','ok');
+  return;
+ }
+ const token=localStorage.getItem('swt')||'';
+ if(!token){
+  revert();
+  showAuth('Sesi login berakhir. Login kembali untuk mengubah status.','Login kembali');
+  return;
+ }
+ try{
+  const result=await rpc('setContactStatus',token,phone,nextKey);
+  if(result&&result.err){
+   if(result.err==='AUTH'){
+    revert();
+    showAuth('Sesi login berakhir. Login kembali untuk mengubah status.','Login kembali');
+    return;
+   }
+   throw new Error(typeof result.err==='string'?result.err:'Status gagal disimpan');
+  }
+  if(!opts.silent)toast('Status: '+ST[statusIndex(nextKey)].t,'ok');
+ }catch(e){
+  revert();
+  toast('Status gagal disimpan: '+String((e&&e.message)||e),'bad');
+ }
+}
+function buildActions(d,r,card,select,actions){
+ if(!actions)return;
+ actions.replaceChildren();
+ const key=ST[statusOf(r)].k;
+ if(key==='pipeline'){
+  actions.hidden=false;
+  actions.appendChild(el('div','pipe-state',canPipe(d)?'✓ Tersambung ke pipeline Anda':'✓ Tersambung ke pipeline'));
+  return;
+ }
+ if(key==='responded'&&canPipe(d)){
+  actions.hidden=false;
+  const btn=el('button','btn-pipe');
+  btn.type='button';
+  btn.innerHTML='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 13h5l2-2h5"/><path d="M16 7v6"/><path d="M13 10h6"/></svg><span>Sambung ke pipeline</span>';
+  btn.onclick=()=>connectPipeline(d,r,card,select,actions,btn);
+  actions.appendChild(btn);
+  return;
+ }
+ actions.hidden=true;
+}
+async function connectPipeline(d,r,card,select,actions,trigger){
+ if(!canPipe(d)){
+  toast('Hanya BDO pemilik kontak yang dapat menyambungkan pipeline.','bad');
+  return;
+ }
+ if(!SERVER_STATUS){
+  toast('Fitur pipeline membutuhkan backend terbaru.','bad');
+  return;
+ }
+ const phone=digits(r[2]);
+ const token=localStorage.getItem('swt')||'';
+ if(!token){
+  showAuth('Sesi login berakhir. Login kembali untuk menyambungkan pipeline.','Login kembali');
+  return;
+ }
+ if(trigger){
+  trigger.disabled=true;
+  trigger.classList.add('loading');
+ }
+ if(select)select.disabled=true;
+ try{
+  const result=await rpc('addContactToPipeline',token,phone);
+  if(result&&result.err){
+   if(result.err==='AUTH'){
+    showAuth('Sesi login berakhir. Login kembali untuk menyambungkan pipeline.','Login kembali');
+    return;
+   }
+   throw new Error(typeof result.err==='string'?result.err:'Pipeline gagal');
+  }
+  OVR[phone]='pipeline';
+  mem.s[phone]='pipeline';
+  save();
+  paintStatus(card,select,'pipeline');
+  buildActions(d,r,card,select,actions);
+  updateProgress(d);
+  toast(result&&result.already?'Kontak sudah ada di pipeline Anda':'Kontak tersambung ke pipeline Anda','ok');
+ }catch(e){
+  toast('Gagal menyambung pipeline: '+String((e&&e.message)||e),'bad');
+  if(trigger){
+   trigger.disabled=false;
+   trigger.classList.remove('loading');
+  }
+ }finally{
+  if(select)select.disabled=!canEdit(d);
+ }
 }
 function startDatabase(){
- $("tpl").value=mem.tpl;
- $("tpl").oninput=e=>{mem.tpl=e.target.value||DEF;save();render()};
- $("q").oninput=render;
+ $('tpl').value=mem.tpl;
+ const tplName=$('tplName');
+ if(tplName)tplName.textContent=MY_NAME||'BDO Anda';
+ $('q').oninput=()=>{PAGE=60;allowItemAnim=false;render();};
+ $('tpl').oninput=()=>{
+  mem.tpl=$('tpl').value||DEF;
+  save();
+  document.querySelectorAll('a.btn-wa[data-phone]').forEach(a=>{a.href=waHref(a.dataset.phone,a.dataset.bdo,a.dataset.name);});
+ };
  render();
 }
+
+function normHeader(value){
+ return String(value==null?'':value).toLowerCase().replace(/[^a-z0-9]/g,'');
+}
+function cleanCell(value){
+ return String(value==null?'':value).trim();
+}
+function normalizePhone(value){
+ let s=cleanCell(value);
+ if(/^\d+(?:\.\d+)?e\+?\d+$/i.test(s)){
+  const n=Number(s);
+  if(isFinite(n))s=String(Math.round(n));
+ }
+ let d=s.replace(/\D/g,'');
+ if(!d)return '';
+ if(d.indexOf('00')===0)d=d.slice(2);
+ if(d.indexOf('620')===0)d='62'+d.slice(3);
+ else if(d.charAt(0)==='0')d='62'+d.slice(1);
+ else if(d.charAt(0)==='8')d='62'+d;
+ return d;
+}
+function mapHeaderRow(cells){
+ const map={},used={};
+ ['group','phone','name','job','seq'].forEach(kind=>{
+  for(let i=0;i<cells.length;i++){
+   if(used[i])continue;
+   const key=normHeader(cells[i]);
+   if(key&&HEADER_KEYS[kind].indexOf(key)>=0){map[kind]=i;used[i]=true;break;}
+  }
+ });
+ return map;
+}
+function bestPhoneColumn(data,width,used){
+ let best=-1,bestScore=0;
+ for(let c=0;c<width;c++){
+  if(used[c])continue;
+  let hits=0;
+  data.forEach(r=>{if(/^62\d{8,13}$/.test(normalizePhone(r[c])))hits++;});
+  const score=hits/Math.max(1,data.length);
+  if(score>=0.4&&score>bestScore){bestScore=score;best=c;}
+ }
+ return best;
+}
+function bestTextColumn(data,width,used){
+ let best=-1,bestScore=0;
+ for(let c=0;c<width;c++){
+  if(used[c])continue;
+  let filled=0,alpha=0,spaced=0,lenSum=0,phoneish=0;
+  data.forEach(r=>{
+   const v=cleanCell(r[c]);
+   if(!v)return;
+   filled++;
+   lenSum+=v.length;
+   if(/[A-Za-z]/.test(v))alpha++;
+   if(/\s/.test(v))spaced++;
+   if(/^62\d{8,13}$/.test(normalizePhone(v)))phoneish++;
+  });
+  if(filled<Math.max(1,Math.round(data.length*0.4)))continue;
+  if(phoneish/filled>0.3)continue;
+  const alphaRatio=alpha/filled;
+  if(alphaRatio<0.4)continue;
+  const avgLen=lenSum/filled;
+  const score=alphaRatio*0.6+(spaced/filled)*0.25+(avgLen>=3&&avgLen<=40?0.15:0);
+  if(score>bestScore){bestScore=score;best=c;}
+ }
+ return best;
+}
+function analyzeMatrix(matrix){
+ const rows=(Array.isArray(matrix)?matrix:[])
+  .map(r=>(Array.isArray(r)?r:[]).map(cleanCell))
+  .filter(r=>r.some(c=>c!==''));
+ if(!rows.length)return {error:'File kosong atau tidak memiliki baris data.'};
+ let width=0;
+ rows.forEach(r=>{if(r.length>width)width=r.length;});
+ rows.forEach(r=>{while(r.length<width)r.push('');});
+
+ let header=null;
+ for(let i=0;i<Math.min(rows.length,8);i++){
+  const map=mapHeaderRow(rows[i]);
+  const found=Object.keys(map).length;
+  if(found>=2||map.phone!=null){header={index:i,map};break;}
+ }
+ const start=header?header.index+1:0;
+ const data=rows.slice(start);
+ if(!data.length)return {error:'File hanya berisi judul kolom tanpa data kontak.'};
+
+ const map=header?header.map:{};
+ const used={};
+ Object.keys(map).forEach(k=>{used[map[k]]=true;});
+ let phoneCol=map.phone!=null?map.phone:-1;
+ let nameCol=map.name!=null?map.name:-1;
+ let jobCol=map.job!=null?map.job:-1;
+ let groupCol=map.group!=null?map.group:-1;
+ let seqCol=map.seq!=null?map.seq:-1;
+
+ if(phoneCol<0){
+  phoneCol=bestPhoneColumn(data,width,used);
+  if(phoneCol>=0)used[phoneCol]=true;
+ }
+ if(nameCol<0){
+  nameCol=bestTextColumn(data,width,used);
+  if(nameCol>=0)used[nameCol]=true;
+ }
+ if(jobCol<0){
+  jobCol=bestTextColumn(data,width,used);
+  if(jobCol>=0)used[jobCol]=true;
+ }
+
+ if(phoneCol<0){
+  return {error:'Kolom nomor telepon tidak ditemukan. Pastikan file memiliki kolom Nomor, Telepon, HP, atau WhatsApp.',total:data.length,invalid:data.length,duplicate:0,records:[]};
+ }
+
+ const records=[],seen=new Set();
+ let invalid=0,duplicate=0,total=0;
+ for(let i=0;i<data.length;i++){
+  const row=data[i];
+  const rawPhone=row[phoneCol];
+  const name=nameCol>=0?cleanCell(row[nameCol]).slice(0,120):'';
+  const job=jobCol>=0?cleanCell(row[jobCol]).slice(0,120):'';
+  const group=groupCol>=0?cleanCell(row[groupCol]).slice(0,80):'';
+  const seq=seqCol>=0?cleanCell(row[seqCol]).slice(0,20):'';
+  if(!cleanCell(rawPhone)&&!name)continue;
+  total++;
+  const phone=normalizePhone(rawPhone);
+  if(!/^62\d{8,13}$/.test(phone)){invalid++;continue;}
+  if(seen.has(phone)){duplicate++;continue;}
+  seen.add(phone);
+  records.push({name,job,group,seq:seq||String(records.length+1),phone});
+ }
+ return {records,invalid,duplicate,total};
+}
+function pickDelimiter(line){
+ const counts={',':0,';':0,'\t':0};
+ let quoted=false;
+ for(let i=0;i<line.length;i++){
+  const ch=line.charAt(i);
+  if(ch==='"'){quoted=!quoted;continue;}
+  if(!quoted&&counts[ch]!=null)counts[ch]++;
+ }
+ return Object.keys(counts).sort((a,b)=>counts[b]-counts[a])[0];
+}
+function parseCsv(text){
+ text=String(text||'').replace(/^\uFEFF/,'').replace(/\r\n?/g,'\n');
+ const delim=pickDelimiter(text.split('\n').slice(0,5).join('\n'));
+ const rows=[];
+ let row=[],cell='',quoted=false;
+ for(let i=0;i<text.length;i++){
+  const c=text.charAt(i);
+  if(quoted){
+   if(c==='"'){
+    if(text.charAt(i+1)==='"'){cell+='"';i++;}
+    else quoted=false;
+   }else cell+=c;
+  }else if(c==='"'){
+   quoted=true;
+  }else if(c===delim){
+   row.push(cell);cell='';
+  }else if(c==='\n'){
+   row.push(cell);rows.push(row);row=[];cell='';
+  }else{
+   cell+=c;
+  }
+ }
+ row.push(cell);
+ rows.push(row);
+ return rows.filter(r=>r.some(c=>String(c).trim()!==''));
+}
+function loadSheetJs(){
+ if(window.XLSX)return Promise.resolve(window.XLSX);
+ if(loadSheetJs.pending)return loadSheetJs.pending;
+ loadSheetJs.pending=new Promise((resolve,reject)=>{
+  const s=document.createElement('script');
+  s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  s.async=true;
+  s.onload=()=>{window.XLSX?resolve(window.XLSX):reject(new Error('Pustaka Excel gagal dimuat'));};
+  s.onerror=()=>reject(new Error('Pustaka Excel gagal dimuat. Periksa koneksi internet.'));
+  document.head.appendChild(s);
+ });
+ return loadSheetJs.pending;
+}
+async function parseXlsx(file){
+ const XLSX=await loadSheetJs();
+ const buffer=await file.arrayBuffer();
+ const workbook=XLSX.read(buffer,{type:'array'});
+ const sheet=workbook.Sheets[workbook.SheetNames[0]];
+ if(!sheet)throw new Error('File Excel tidak memiliki lembar data');
+ return XLSX.utils.sheet_to_json(sheet,{header:1,raw:true,defval:''});
+}
+function fmtBytes(n){
+ const size=Number(n)||0;
+ if(size<1024)return size+' B';
+ if(size<1048576)return (size/1024).toFixed(1)+' KB';
+ return (size/1048576).toFixed(1)+' MB';
+}
+function guessGroup(name){
+ return String(name||'').replace(/\.[^.]+$/,'').replace(/[_]+/g,' ').trim().slice(0,80);
+}
+function setImportStatus(msg,kind){
+ const node=$('importStatus');
+ if(!msg){node.hidden=true;node.className='status';node.replaceChildren();return;}
+ node.hidden=false;
+ node.className='status'+(kind?' '+kind:'');
+ node.replaceChildren();
+ if(kind==='busy'){
+  const spinner=el('span','spinner');
+  spinner.setAttribute('aria-hidden','true');
+  node.appendChild(spinner);
+ }
+ node.appendChild(document.createTextNode(String(msg)));
+}
+function effectiveGroup(record){
+ return record.group||$('groupName').value.trim()||'Otomatis';
+}
+function renderPreview(){
+ const records=IMPORT.records;
+ $('pValid').textContent=formatNum(records.length);
+ $('pDup').textContent=formatNum(IMPORT.duplicate);
+ $('pInvalid').textContent=formatNum(IMPORT.invalid);
+ $('pTotal').textContent=formatNum(IMPORT.total);
+ $('importCount').textContent=formatNum(records.length);
+ $('previewWrap').hidden=!IMPORT.total;
+ const body=$('previewBody');
+ body.replaceChildren();
+ records.slice(0,10).forEach((r,i)=>{
+  const tr=el('tr');
+  tr.style.animationDelay=(i*25)+'ms';
+  const cells=[r.name||'—',r.job?jobLabel(r.job):'—',fmt(r.phone),effectiveGroup(r)];
+  cells.forEach((text,index)=>{
+   const td=el('td',index===2?'mono':null,text);
+   tr.appendChild(td);
+  });
+  body.appendChild(tr);
+ });
+ if(records.length>10){
+  const tr=el('tr','table-more');
+  const td=el('td',null,'… dan '+formatNum(records.length-10)+' kontak lainnya');
+  td.colSpan=4;
+  tr.appendChild(td);
+  body.appendChild(tr);
+ }
+ $('importBtn').disabled=IMPORT.busy||!records.length||IMPORT.tooMany;
+}
+function setImportBusy(busy){
+ IMPORT.busy=busy;
+ $('importBtn').classList.toggle('loading',busy);
+ $('importBtn').disabled=busy||!IMPORT.records.length||IMPORT.tooMany;
+ $('fileInput').disabled=busy;
+ $('groupName').disabled=busy;
+ $('removeFile').disabled=busy;
+}
+function resetImportFile(){
+ IMPORT={records:[],invalid:0,duplicate:0,total:0,fileName:'',fileSize:0,group:'',busy:false,tooMany:false};
+ $('fileInput').value='';
+ $('fileInput').disabled=false;
+ $('groupName').value='';
+ $('groupName').disabled=false;
+ $('removeFile').disabled=false;
+ $('fileRow').hidden=true;
+ $('previewWrap').hidden=true;
+ $('importSummary').hidden=true;
+ $('importSummary').replaceChildren();
+ $('importBtn').classList.remove('loading');
+ $('importBtn').disabled=true;
+ setImportStatus('','');
+}
+async function handleFile(file){
+ if(!file)return;
+ const name=String(file.name||'file');
+ const ext=(name.split('.').pop()||'').toLowerCase();
+ if(['csv','txt','xlsx','xls'].indexOf(ext)<0){toast('Format file harus Excel, CSV, atau TXT.','bad');return;}
+ if(file.size>MAX_BYTES){toast('Ukuran file maksimal 5 MB.','bad');return;}
+ $('importSummary').hidden=true;
+ $('importSummary').replaceChildren();
+ setImportStatus('Membaca '+name+'...','busy');
+ try{
+  const matrix=(ext==='csv'||ext==='txt')?parseCsv(await file.text()):await parseXlsx(file);
+  const analysis=analyzeMatrix(matrix);
+  if(analysis.error)throw new Error(analysis.error);
+  IMPORT={
+   records:analysis.records,
+   invalid:analysis.invalid,
+   duplicate:analysis.duplicate,
+   total:analysis.total,
+   fileName:name,
+   fileSize:file.size,
+   group:guessGroup(name),
+   busy:false,
+   tooMany:analysis.records.length>MAX_ROWS
+  };
+  $('groupName').value=IMPORT.group;
+  $('fileExt').textContent=ext;
+  $('fileName').textContent=name;
+  $('fileSize').textContent=fmtBytes(file.size)+' · '+formatNum(analysis.total)+' baris dibaca';
+  $('fileRow').hidden=false;
+  renderPreview();
+  if(IMPORT.tooMany)setImportStatus('File berisi '+formatNum(analysis.records.length)+' kontak valid. Maksimal 5.000 per impor, pecah menjadi beberapa file.','bad');
+  else if(!IMPORT.records.length)setImportStatus('Tidak ada kontak valid yang bisa diimpor. Periksa kembali kolom nomor telepon.','bad');
+  else setImportStatus('File siap diimpor. Periksa pratinjau sebelum melanjutkan.','ok');
+ }catch(e){
+  resetImportFile();
+  const msg=String((e&&e.message)||e);
+  setImportStatus('Gagal membaca file: '+msg,'bad');
+  toast('Gagal membaca file: '+msg,'bad');
+ }
+}
+function renderSummary(result){
+ const wrap=$('importSummary');
+ wrap.replaceChildren();
+ wrap.hidden=false;
+ const top=el('div','summary-top');
+ top.append(el('span','ok-dot'),el('b',null,formatNum(result.added)+' kontak dibagikan'));
+ top.appendChild(el('span','summary-total','Total database: '+formatNum(result.total)));
+ const skipped=[];
+ if(Number(result.duplicate))skipped.push(formatNum(result.duplicate)+' duplikat');
+ if(Number(result.invalid))skipped.push(formatNum(result.invalid)+' tidak valid');
+ const sub=el('p','summary-sub',skipped.length?skipped.join(' dan ')+' dilewati otomatis.':'Semua nomor berhasil dimasukkan.');
+ const dist=el('div','dist');
+ const perBdo=Array.isArray(result.perBdo)?result.perBdo:[];
+ const max=perBdo.reduce((n,b)=>Math.max(n,Number(b.count)||0),0)||1;
+ const bars=[];
+ perBdo.forEach(b=>{
+  const row=el('div','dist-row');
+  row.appendChild(el('span','dist-name',b.name||b.username));
+  const bar=el('div','dist-bar');
+  const fill=el('i');
+  bar.appendChild(fill);
+  row.append(bar,el('b','dist-count',formatNum(b.count)));
+  dist.appendChild(row);
+  bars.push({fill,count:Number(b.count)||0});
+ });
+ wrap.append(top,sub,dist);
+ const applyWidths=()=>{
+  bars.forEach(({fill,count})=>{fill.style.width=Math.round(count/max*100)+'%';});
+ };
+ requestAnimationFrame(applyWidths);
+ setTimeout(applyWidths,350);
+}
+async function runImport(){
+ if(IMPORT.busy)return;
+ if(!(ROLE==='BM'||ROLE==='DM')){toast('Hanya akun manager yang dapat mengimpor kontak.','bad');return;}
+ if(!IMPORT.records.length){setImportStatus('Belum ada kontak yang siap diimpor.','bad');return;}
+ if(IMPORT.records.length>MAX_ROWS){setImportStatus('Maksimal 5.000 kontak per impor.','bad');return;}
+ const token=localStorage.getItem('swt')||'';
+ if(!token){setImportStatus('Sesi login berakhir. Silakan login kembali.','bad');return;}
+ const groupName=$('groupName').value.trim().slice(0,80);
+ const payload=IMPORT.records.map(r=>[r.group||'',r.name||'',r.seq||'',r.job||'',r.phone]);
+ setImportBusy(true);
+ setImportStatus('Mengimpor '+formatNum(payload.length)+' kontak dan membaginya ke BDO aktif...','busy');
+ try{
+  const result=await rpc('importContacts',token,groupName,payload);
+  if(!result||result.ok!==1){
+   const msg=String((result&&result.err)||'Impor tidak berhasil');
+   if(msg==='AUTH'){
+    showAuth('Sesi login berakhir. Login kembali untuk mengimpor kontak.','Login kembali');
+    toast('Sesi login berakhir.','bad');
+    return;
+   }
+   throw new Error(msg);
+  }
+  const summary=result;
+  resetImportFile();
+  renderSummary(summary);
+  const targets=Array.isArray(summary.perBdo)?summary.perBdo.filter(b=>Number(b.count)>0).length:0;
+  toast(formatNum(summary.added)+' kontak berhasil dibagikan ke '+targets+' BDO.','ok');
+  await loadDatabase();
+ }catch(e){
+  const msg=String((e&&e.message)||e);
+  setImportStatus('Impor gagal: '+msg,'bad');
+  toast('Impor gagal: '+msg,'bad');
+ }finally{
+  setImportBusy(false);
+ }
+}
+function initImport(){
+ const input=$('fileInput'),dz=$('dropzone');
+ input.addEventListener('change',()=>handleFile(input.files&&input.files[0]));
+ ['dragenter','dragover'].forEach(type=>{
+  dz.addEventListener(type,e=>{e.preventDefault();e.stopPropagation();dz.classList.add('drag');});
+ });
+ ['dragleave','dragend'].forEach(type=>{
+  dz.addEventListener(type,e=>{e.preventDefault();dz.classList.remove('drag');});
+ });
+ dz.addEventListener('drop',e=>{
+  e.preventDefault();
+  dz.classList.remove('drag');
+  const file=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];
+  if(file)handleFile(file);
+ });
+ dz.addEventListener('keydown',e=>{
+  if(e.key==='Enter'||e.key===' '){e.preventDefault();input.click();}
+ });
+ $('removeFile').addEventListener('click',e=>{
+  e.preventDefault();
+  e.stopPropagation();
+  if(!IMPORT.busy)resetImportFile();
+ });
+ $('importBtn').addEventListener('click',runImport);
+ $('groupName').addEventListener('input',()=>{if(IMPORT.records.length)renderPreview();});
+}
+initImport();
 loadDatabase();
 </script></body></html>

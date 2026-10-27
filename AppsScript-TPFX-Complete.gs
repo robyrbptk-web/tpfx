@@ -300,7 +300,7 @@ function ensureManager_(username, password, nama, role) {
 // API
 // ============================================================
 
-const API_VERSION = '2026-10-09-team-social';
+const API_VERSION = '2026-10-27-contact-pipeline';
 
 function doGet() {
   return out_({
@@ -336,6 +336,9 @@ function api_() {
     updateProfilePhoto: updateProfilePhoto,
     deleteUser: deleteUser,
     databaseData: databaseData,
+    importContacts: importContacts,
+    setContactStatus: setContactStatus,
+    addContactToPipeline: addContactToPipeline,
     teamLeads: teamLeads,
     chatNotificationSummary: chatNotificationSummary,
     checkSession: checkSession,
@@ -1242,19 +1245,41 @@ function uploadImg(t, dataUrl) {
 // database hanya dikirim kepada akun dengan sesi aktif.
 // JANGAN membuat endpoint publik untuk database ini.
 
-// Menggabungkan semua kontak dari DATABASE_DATA, lalu membaginya bergiliran
-// ke SETIAP akun aktif (aktif = 'Y') dengan role BDO di sheet Users.
-// Akun BDO baru otomatis ikut terbagi. Jumlah kontak tiap BDO berbeda
-// paling banyak satu. Pembagian dibatalkan bila kontak kurang dari jumlah
-// BDO, atau ada nomor kosong/duplikat.
+// Kontak disimpan di sheet Contacts. Setiap baris punya assignedTo (username
+// BDO) supaya pembagian stabil: impor baru hanya menambah beban BDO yang
+// paling sedikit, bukan mengacak ulang kontak yang sudah dibagikan.
+// DATABASE_DATA lama tetap dibaca sebagai fallback dan dimigrasikan otomatis
+// saat impor pertama.
 
-function databaseData(t) {
+const CONTACT_HEADERS = [
+  'id', 'group', 'name', 'seq', 'job', 'phone',
+  'assignedTo', 'createdBy', 'createdAt', 'status', 'statusAt'
+];
 
-  const session = loadState(t);
+const CONTACT_STATUSES = [
+  'new', 'contacted', 'noanswer', 'inactive',
+  'answered', 'responded', 'pipeline', 'lost'
+];
 
-  if (!session || session.err) return { err: 'AUTH' };
+function contacts_() {
+  const sheet = sheetEnsure_('Contacts', CONTACT_HEADERS);
+  if (sheet.getLastColumn() < CONTACT_HEADERS.length) {
+    const have = sheet.getLastColumn()
+      ? sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]
+      : [];
+    const matches = have.length === 0 || have.every((h, i) =>
+      i < CONTACT_HEADERS.length && String(h) == CONTACT_HEADERS[i]
+    );
+    if (matches) {
+      sheet.getRange(1, have.length + 1, 1, CONTACT_HEADERS.length - have.length)
+        .setValues([CONTACT_HEADERS.slice(have.length)]);
+    }
+  }
+  return sheet;
+}
 
-  const activeBDOs = users_().getDataRange().getValues().slice(1)
+function activeBdos_() {
+  return users_().getDataRange().getValues().slice(1)
     .filter(r =>
       String(r[3]).toUpperCase() == 'Y' &&
       String(r[4]).toUpperCase() == 'BDO'
@@ -1262,66 +1287,493 @@ function databaseData(t) {
     .map(r => ({
       username: String(r[0]),
       name: String(r[2] || r[0]),
-      rows: []
+      key: String(r[0]).toLowerCase()
     }));
+}
 
-  if (!activeBDOs.length) {
+function normalizePhone_(value) {
+  let d = String(value == null ? '' : value).replace(/\D/g, '');
+  if (!d) return '';
+  if (d.indexOf('00') == 0) d = d.slice(2);
+  if (d.indexOf('620') == 0) d = '62' + d.slice(3);
+  else if (d.indexOf('0') == 0) d = '62' + d.slice(1);
+  else if (d.indexOf('8') == 0) d = '62' + d;
+  return d;
+}
+
+function legacyContacts_() {
+  const rows = [];
+  if (!Array.isArray(DATABASE_DATA)) return rows;
+  DATABASE_DATA.forEach(group => {
+    if (!group || !Array.isArray(group.r)) return;
+    group.r.forEach(row => {
+      if (!Array.isArray(row) || row.length < 3) return;
+      rows.push({
+        group: String(group.n || ''),
+        name: '',
+        seq: row[0],
+        job: String(row[1] || ''),
+        phone: normalizePhone_(row[2]),
+        assignedTo: '',
+        status: ''
+      });
+    });
+  });
+  return rows.filter(r => r.phone);
+}
+
+function pickLeastLoaded_(bdos, counts) {
+  let best = bdos[0];
+  bdos.forEach(bdo => {
+    if ((counts[bdo.key] || 0) < (counts[best.key] || 0)) best = bdo;
+  });
+  return best;
+}
+
+function migrateLegacyContacts_(sheet, bdos, username) {
+  if (sheet.getLastRow() > 1) return;
+  const legacy = legacyContacts_();
+  if (!legacy.length) return;
+  const counts = {};
+  const values = legacy.map((row, index) => {
+    const target = pickLeastLoaded_(bdos, counts);
+    counts[target.key] = (counts[target.key] || 0) + 1;
+    return [
+      'c_' + Date.now() + '_' + index,
+      row.group,
+      row.name,
+      row.seq,
+      row.job,
+      row.phone,
+      target.username,
+      String(username || ''),
+      Date.now(),
+      '',
+      0
+    ];
+  });
+  sheet.getRange(2, 1, values.length, CONTACT_HEADERS.length).setValues(values);
+}
+
+function importContacts(t, group, rows) {
+  const session = loadState(t);
+  if (!session || session.err) return { err: session.err || 'AUTH' };
+
+  const role = String(session.role || '').toUpperCase();
+  if (role != 'BM' && role != 'DM') {
+    return { err: 'Impor kontak hanya untuk akun manager (BM/DM)' };
+  }
+
+  const bdos = activeBdos_();
+  if (!bdos.length) {
     return { err: 'Belum ada akun BDO aktif untuk pembagian kontak' };
   }
 
-  const contacts = [];
-
-  DATABASE_DATA.forEach(group => {
-
-    if (!group || !Array.isArray(group.r)) {
-      throw new Error('Format data database lama tidak valid');
-    }
-
-    group.r.forEach(row => {
-
-      if (!Array.isArray(row) || row.length < 3) {
-        throw new Error('Format kontak database lama tidak valid');
-      }
-
-      contacts.push(row);
-
-    });
-
-  });
-
-  if (contacts.length < activeBDOs.length) {
-    return {
-      err: 'Jumlah kontak (' + contacts.length +
-        ') lebih sedikit daripada BDO aktif (' + activeBDOs.length +
-        '); semua BDO belum dapat menerima minimal satu kontak'
-    };
+  if (!Array.isArray(rows) || !rows.length) {
+    return { err: 'Tidak ada kontak untuk diimpor' };
+  }
+  if (rows.length > 5000) {
+    return { err: 'Maksimal 5000 kontak per impor' };
   }
 
-  const phoneNumbers = {};
+  const groupName = String(group || '').trim().slice(0, 80) ||
+    ('Impor ' + Utilities.formatDate(
+      new Date(), Session.getScriptTimeZone(), 'dd MMM yyyy'
+    ));
 
-  contacts.forEach(contact => {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
 
-    const phone = String(contact[2] || '').replace(/\D/g, '');
+  try {
+    const sheet = contacts_();
+    migrateLegacyContacts_(sheet, bdos, session.user);
 
-    if (!phone) throw new Error('Kontak database tidak memiliki nomor telepon');
+    const lastRow = sheet.getLastRow();
+    const existing = lastRow > 1
+      ? sheet.getRange(2, 1, lastRow - 1, CONTACT_HEADERS.length).getValues()
+      : [];
 
-    if (phoneNumbers[phone]) {
-      throw new Error('Nomor kontak duplikat ditemukan; pembagian dibatalkan');
+    const counts = {};
+    const seen = {};
+
+    existing.forEach(r => {
+      const phone = normalizePhone_(r[5]);
+      if (phone) seen[phone] = true;
+      const owner = String(r[6] || '').toLowerCase();
+      const bdo = bdos.find(b => b.key == owner);
+      if (bdo) counts[bdo.key] = (counts[bdo.key] || 0) + 1;
+    });
+
+    const values = [];
+    let skipped = 0;
+    let duplicate = 0;
+    let invalid = 0;
+
+    rows.forEach(row => {
+      if (!Array.isArray(row)) {
+        invalid++;
+        skipped++;
+        return;
+      }
+
+      const rowGroup = String(row[0] || '').trim().slice(0, 80) || groupName;
+      const name = String(row[1] == null ? '' : row[1]).trim().slice(0, 120);
+      const seq = String(row[2] == null ? '' : row[2]).trim();
+      const job = String(row[3] == null ? '' : row[3]).trim().slice(0, 120);
+      const phone = normalizePhone_(row[4]);
+
+      if (!/^62\d{8,13}$/.test(phone)) {
+        invalid++;
+        skipped++;
+        return;
+      }
+      if (seen[phone]) {
+        duplicate++;
+        skipped++;
+        return;
+      }
+
+      seen[phone] = true;
+      const target = pickLeastLoaded_(bdos, counts);
+      counts[target.key] = (counts[target.key] || 0) + 1;
+
+      values.push([
+        'c_' + Date.now() + '_' + values.length,
+        rowGroup,
+        name,
+        seq,
+        job,
+        phone,
+        target.username,
+        String(session.user || ''),
+        Date.now(),
+        '',
+        0
+      ]);
+    });
+
+    if (values.length) {
+      sheet.getRange(
+        sheet.getLastRow() + 1, 1, values.length, CONTACT_HEADERS.length
+      ).setValues(values);
     }
 
-    phoneNumbers[phone] = true;
+    return {
+      ok: 1,
+      group: groupName,
+      added: values.length,
+      skipped: skipped,
+      duplicate: duplicate,
+      invalid: invalid,
+      total: lastRow - 1 + values.length,
+      perBdo: bdos.map(bdo => ({
+        username: bdo.username,
+        name: bdo.name,
+        count: counts[bdo.key] || 0
+      }))
+    };
+  } finally {
+    lock.releaseLock();
+  }
+}
 
+function normalizeContactStatus_(value) {
+  const key = String(value == null ? '' : value).toLowerCase().trim();
+  return CONTACT_STATUSES.indexOf(key) >= 0 ? key : 'new';
+}
+
+function contactRecords_(sheet) {
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return [];
+  return sheet
+    .getRange(2, 1, lastRow - 1, CONTACT_HEADERS.length)
+    .getValues()
+    .map((r, index) => ({
+      row: index + 2,
+      group: String(r[1] || ''),
+      name: String(r[2] || ''),
+      seq: r[3],
+      job: String(r[4] || ''),
+      phone: normalizePhone_(r[5]),
+      assignedTo: String(r[6] || ''),
+      status: normalizeContactStatus_(r[9]),
+      statusAt: Number(r[10] || 0)
+    }));
+}
+
+function contactByPhone_(sheet, phone) {
+  const target = normalizePhone_(phone);
+  if (!target) return null;
+  return contactRecords_(sheet).find(r => r.phone == target) || null;
+}
+
+function canManageContact_(session, record) {
+  const role = String(session.role || '').toUpperCase();
+  if (role == 'BM' || role == 'DM') return true;
+  return String(record.assignedTo || '').toLowerCase() ==
+    String(session.user || '').toLowerCase();
+}
+
+function ensureContactsMigrated_(sheet, bdos, username) {
+  if (sheet.getLastRow() > 1) return;
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    migrateLegacyContacts_(sheet, bdos, username);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function databaseData(t) {
+
+  const session = loadState(t);
+
+  if (!session || session.err) return { err: session.err || 'AUTH' };
+
+  const bdos = activeBdos_();
+
+  if (!bdos.length) {
+    return { err: 'Belum ada akun BDO aktif untuk pembagian kontak' };
+  }
+
+  const byKey = {};
+  const counts = {};
+  bdos.forEach(bdo => {
+    byKey[bdo.key] = bdo;
+    counts[bdo.key] = 0;
   });
 
-  contacts.forEach((contact, index) => {
-    activeBDOs[index % activeBDOs.length].rows.push(contact);
+  const sheet = contacts_();
+  ensureContactsMigrated_(sheet, bdos, session.user);
+
+  let records = contactRecords_(sheet);
+
+  if (!records.length) {
+    records = legacyContacts_().map(r => ({
+      group: r.group,
+      name: r.name,
+      seq: r.seq,
+      job: r.job,
+      phone: r.phone,
+      assignedTo: '',
+      status: 'new'
+    }));
+  }
+
+  const seen = {};
+  records = records.filter(r => {
+    if (!/^62\d{8,13}$/.test(r.phone)) return false;
+    if (seen[r.phone]) return false;
+    seen[r.phone] = true;
+    return true;
+  });
+
+  records.forEach(r => {
+    const key = String(r.assignedTo || '').toLowerCase();
+    if (byKey[key]) counts[key]++;
+  });
+
+  const rowsByKey = {};
+  const groups = [];
+  bdos.forEach(bdo => {
+    rowsByKey[bdo.key] = [];
+  });
+
+  records.forEach(r => {
+    let key = String(r.assignedTo || '').toLowerCase();
+    if (!byKey[key]) {
+      const target = pickLeastLoaded_(bdos, counts);
+      key = target.key;
+      counts[key]++;
+    }
+    if (r.group && groups.indexOf(r.group) < 0) groups.push(r.group);
+    rowsByKey[key].push([
+      r.seq, r.job, r.phone, r.name, normalizeContactStatus_(r.status)
+    ]);
+  });
+
+  bdos.forEach(bdo => {
+    rowsByKey[bdo.key].forEach((row, index) => {
+      if (String(row[0] == null ? '' : row[0]).trim() === '') row[0] = index + 1;
+    });
   });
 
   return {
-    rows: activeBDOs.map(bdo => ({
+    rows: bdos.map(bdo => ({
       n: bdo.name,
-      r: bdo.rows
-    }))
+      u: bdo.username,
+      r: rowsByKey[bdo.key]
+    })),
+    role: String(session.role || 'BDO').toUpperCase(),
+    user: String(session.user || ''),
+    name: String(session.name || ''),
+    groups: groups,
+    total: records.length
+  };
+}
+
+function setContactStatus(t, phone, status) {
+
+  const session = loadState(t);
+
+  if (!session || session.err) return { err: session.err || 'AUTH' };
+
+  const key = String(status == null ? '' : status).toLowerCase().trim();
+
+  if (CONTACT_STATUSES.indexOf(key) < 0) return { err: 'Status kontak tidak valid' };
+
+  if (key == 'pipeline') {
+    return { err: 'Gunakan tombol Sambung ke pipeline' };
+  }
+
+  const target = normalizePhone_(phone);
+
+  if (!/^62\d{8,13}$/.test(target)) return { err: 'Nomor kontak tidak valid' };
+
+  const bdos = activeBdos_();
+
+  if (!bdos.length) {
+    return { err: 'Belum ada akun BDO aktif untuk pembagian kontak' };
+  }
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+
+  try {
+
+    const sheet = contacts_();
+    migrateLegacyContacts_(sheet, bdos, session.user);
+
+    const record = contactByPhone_(sheet, target);
+
+    if (!record) {
+      return { err: 'Kontak tidak ditemukan. Muat ulang halaman.' };
+    }
+
+    if (!canManageContact_(session, record)) {
+      return { err: 'Kontak ini bukan milik Anda' };
+    }
+
+    const at = Date.now();
+    sheet.getRange(record.row, 10, 1, 2).setValues([[key, at]]);
+
+    return { ok: 1, phone: target, status: key, statusAt: at };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function addContactToPipeline(t, phone) {
+
+  const session = loadState(t);
+
+  if (!session || session.err) return { err: session.err || 'AUTH' };
+
+  const role = String(session.role || '').toUpperCase();
+
+  if (role != 'BDO') {
+    return { err: 'Pipeline hanya untuk akun BDO pemilik kontak' };
+  }
+
+  const target = normalizePhone_(phone);
+
+  if (!/^62\d{8,13}$/.test(target)) return { err: 'Nomor kontak tidak valid' };
+
+  const bdos = activeBdos_();
+
+  if (!bdos.length) {
+    return { err: 'Belum ada akun BDO aktif untuk pembagian kontak' };
+  }
+
+  const sheet = contacts_();
+
+  ensureContactsMigrated_(sheet, bdos, session.user);
+
+  const record = contactByPhone_(sheet, target);
+
+  if (!record) {
+    return { err: 'Kontak tidak ditemukan. Muat ulang halaman.' };
+  }
+
+  if (String(record.assignedTo || '').toLowerCase() !=
+      String(session.user || '').toLowerCase()) {
+    return { err: 'Kontak ini bukan milik Anda' };
+  }
+
+  const state = session.state && typeof session.state == 'object'
+    ? session.state
+    : {};
+
+  if (!Array.isArray(state.leads)) state.leads = [];
+  if (!Array.isArray(state.acts)) state.acts = [];
+  if (state.target == null) state.target = session.target || 10;
+
+  const existing = state.leads.find(l =>
+    l && normalizePhone_(l.phone) == target
+  );
+
+  const tz = Session.getScriptTimeZone();
+  const now = new Date();
+  const today = Utilities.formatDate(now, tz, 'yyyy-MM-dd');
+  const tomorrow = Utilities.formatDate(
+    new Date(now.getTime() + 864e5), tz, 'yyyy-MM-dd'
+  );
+
+  let lead = existing;
+
+  if (!lead) {
+    lead = {
+      id: Date.now(),
+      c: today,
+      log: [],
+      name: record.name || ('Kontak ' + target.slice(-4)),
+      phone: target,
+      product: '',
+      source: 'WhatsApp',
+      interest: 'Sedang',
+      status: 'warm',
+      last: today,
+      next: tomorrow,
+      notes: [record.group, record.job].filter(Boolean).join(' · ')
+    };
+    state.leads.unshift(lead);
+    state.acts.unshift({
+      id: Date.now() + 1,
+      type: 'wa',
+      text: 'Kontak database tersambung: ' + lead.name,
+      leadId: lead.id,
+      ts: Date.now()
+    });
+  }
+
+  const saved = saveState(t, JSON.stringify(state));
+
+  if (!saved || saved.err) {
+    return { err: (saved && saved.err) || 'Gagal menyimpan pipeline' };
+  }
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+
+  try {
+    const contactsSheet = contacts_();
+    const fresh = contactByPhone_(contactsSheet, target);
+    if (fresh) {
+      contactsSheet.getRange(fresh.row, 10, 1, 2)
+        .setValues([['pipeline', Date.now()]]);
+    }
+  } finally {
+    lock.releaseLock();
+  }
+
+  return {
+    ok: 1,
+    phone: target,
+    name: lead.name,
+    leadId: lead.id,
+    status: 'pipeline',
+    already: existing ? 1 : 0
   };
 }
 

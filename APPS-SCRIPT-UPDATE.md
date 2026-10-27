@@ -51,6 +51,9 @@ function api_() {
     updateProfilePhoto: updateProfilePhoto,
     deleteUser: deleteUser,
     databaseData: databaseData,
+    importContacts: importContacts,
+    setContactStatus: setContactStatus,
+    addContactToPipeline: addContactToPipeline,
     teamLeads: teamLeads,
     chatNotificationSummary: chatNotificationSummary,
     checkSession: checkSession,
@@ -331,75 +334,61 @@ function deleteUser(t, username) {
 }
 ```
 
-## 5. Database calon nasabah
+## 5. Database calon nasabah, impor massal, dan pipeline
 
-`database.html` memanggil endpoint `databaseData(TOKEN)` yang memerlukan sesi login. Token dibaca dari `localStorage` yang sama dengan workspace. Tab **Database** di navbar membuka halaman ini; jika sesi kedaluwarsa, halaman menyediakan tautan login. Data kontak tidak diletakkan di frontend atau Git. Pastikan sumber `DATABASE_DATA` di Apps Script berisi **seluruh** daftar calon nasabah, termasuk semua kategori, sebelum mengganti implementasi `databaseData(t)` di bawah. Fungsi menggabungkan record dari semua kelompok sumber lalu membaginya bergiliran kepada **setiap** akun di sheet `Users` yang statusnya `Y` dan role-nya `BDO`; akun baru (termasuk Marsiana, Yudha, dan BDO baru lainnya) otomatis masuk jika memenuhi kedua syarat. Semua akun login dapat melihat semua kelompok, sesuai pilihan pengguna. Setiap kelompok dikembalikan dengan nama akun BDO di sheet `Users`, sehingga bukan hanya nama dari kelompok BDO lama yang muncul. Jumlah kontak tiap BDO berbeda paling banyak satu, dan pemeriksaan menghentikan respons bila kontak kurang untuk memberi setiap BDO minimal satu atau bila nomor kosong/duplikat ditemukan. Label tab menampilkan nama BDO dan jumlah kontak untuk memudahkan verifikasi.
+`database.html` memanggil `databaseData(TOKEN)` untuk membaca data, `importContacts(TOKEN, group, rows)` untuk impor massal, `setContactStatus(TOKEN, phone, status)` untuk status follow-up, dan `addContactToPipeline(TOKEN, phone)` untuk menyambungkan kontak ke pipeline BDO. Semua endpoint memerlukan sesi login (token `swt` di `localStorage`). `importContacts` hanya menerima role `BM` atau `DM`.
+
+Kontak disimpan di sheet `Contacts` yang dibuat otomatis oleh `contacts_()`, bukan di frontend atau Git:
+
+| Kolom | Isi |
+| --- | --- |
+| `id` | id unik kontak |
+| `group` | nama kelompok/impor |
+| `name` | nama kontak (opsional) |
+| `seq` | nomor urut dari file |
+| `job` | pekerjaan/kategori |
+| `phone` | nomor ternormalisasi `62...` |
+| `assignedTo` | username BDO pemilik kontak |
+| `createdBy` | username manager yang mengimpor |
+| `createdAt` | timestamp |
+| `status` | status follow-up (lihat daftar di bawah) |
+| `statusAt` | timestamp perubahan status terakhir |
+
+`contacts_()` menambahkan dua kolom status secara otomatis jika sheet `Contacts` lama masih berisi 9 kolom. Status yang valid: `new`, `contacted`, `noanswer`, `inactive`, `answered`, `responded`, `pipeline`, `lost`. Nilai kosong atau tidak dikenal dibaca sebagai `new`.
+
+Pembagian bersifat stabil. Saat impor, setiap kontak langsung diberi `assignedTo` ke BDO aktif dengan beban paling sedikit, sehingga kontak yang sudah dibagikan tidak diacak ulang ketika BDO baru ditambahkan dan tidak ada perebutan data. `DATABASE_DATA` lama dimigrasikan otomatis ke sheet `Contacts` saat database pertama kali dibaca atau diimpor, dan tetap dibaca sebagai fallback sebelum migrasi.
+
+`importContacts` memvalidasi nomor dengan pola `^62\d{8,13}$`, melewati nomor duplikat (termasuk terhadap kontak yang sudah ada), membatasi 5.000 baris per impor, dan memakai `LockService` agar dua impor bersamaan tidak bentrok. Responsnya berisi `added`, `duplicate`, `invalid`, `total`, dan `perBdo`.
+
+`databaseData` mengembalikan bentuk berikut. Setiap baris kontak berisi `[seq, job, phone, name, status]`, dan `name` adalah nama lengkap akun yang login (dipakai template WhatsApp):
 
 ```javascript
-function databaseData(t) {
-  const session = loadState(t);
-  if (!session || session.err) return { err: 'AUTH' };
-
-  const activeBDOs = users_().getDataRange().getValues().slice(1)
-    .filter(r =>
-      String(r[3]).toUpperCase() == 'Y' &&
-      String(r[4]).toUpperCase() == 'BDO'
-    )
-    .map(r => ({
-      username: String(r[0]),
-      name: String(r[2] || r[0]),
-      rows: []
-    }));
-
-  if (!activeBDOs.length) {
-    return { err: 'Belum ada akun BDO aktif untuk pembagian kontak' };
-  }
-
-  const contacts = [];
-  DATABASE_DATA.forEach(group => {
-    if (!group || !Array.isArray(group.r)) {
-      throw new Error('Format data database lama tidak valid');
-    }
-    group.r.forEach(row => {
-      if (!Array.isArray(row) || row.length < 3) {
-        throw new Error('Format kontak database lama tidak valid');
-      }
-      contacts.push(row);
-    });
-  });
-
-  if (contacts.length < activeBDOs.length) {
-    return {
-      err: 'Jumlah kontak (' + contacts.length +
-        ') lebih sedikit daripada BDO aktif (' + activeBDOs.length +
-        '); semua BDO belum dapat menerima minimal satu kontak'
-    };
-  }
-
-  const phoneNumbers = {};
-  contacts.forEach(contact => {
-    const phone = String(contact[2] || '').replace(/\D/g, '');
-    if (!phone) throw new Error('Kontak database tidak memiliki nomor telepon');
-    if (phoneNumbers[phone]) {
-      throw new Error('Nomor kontak duplikat ditemukan; pembagian dibatalkan');
-    }
-    phoneNumbers[phone] = true;
-  });
-
-  contacts.forEach((contact, index) => {
-    activeBDOs[index % activeBDOs.length].rows.push(contact);
-  });
-
-  return {
-    rows: activeBDOs.map(bdo => ({
-      n: bdo.name,
-      r: bdo.rows
-    }))
-  };
+{
+  rows: [{ n: 'Nama BDO', u: 'username', r: [[1, 'PNS', '62812...', 'Budi', 'new']] }],
+  role: 'BM',
+  user: 'manager',
+  name: 'Kevin Ricardo',
+  groups: ['Prospek Oktober'],
+  total: 1200
 }
 ```
 
-Penyimpanan status kontak pada `database.html` memakai nomor kontak sebagai kunci lokal, agar status mengikuti kontak jika pembagian otomatis berubah setelah jumlah BDO aktif bertambah atau berkurang. Daftar nomor hanya diterima oleh browser setelah sesi berhasil divalidasi; jangan membuat endpoint publik untuk database ini.
+`setContactStatus` hanya mengizinkan role `BM`/`DM` atau BDO yang memiliki kontak (`assignedTo` sama dengan username sesi). Status `pipeline` tidak dapat diset melalui endpoint ini. `addContactToPipeline` hanya untuk BDO pemilik kontak: endpoint memeriksa duplikat nomor pada `state.leads` milik BDO tersebut, membuat lead baru (`source: 'WhatsApp'`, `status: 'warm'`, catatan dari kelompok/pekerjaan) beserta satu activity, menyimpan state melalui `saveState`, lalu mengubah status kontak menjadi `pipeline`. Responsnya berisi `ok`, `phone`, `leadId`, dan `already`.
+
+### Deploy database, status, dan pipeline
+
+Frontend `database.html` otomatis ter-deploy oleh Vercel setelah push ke GitHub. Backend harus diperbarui manual di Apps Script:
+
+1. Salin `CONTACT_HEADERS`, `CONTACT_STATUSES`, `contacts_`, `activeBdos_`, `normalizePhone_`, `legacyContacts_`, `pickLeastLoaded_`, `migrateLegacyContacts_`, `importContacts`, `normalizeContactStatus_`, `contactRecords_`, `contactByPhone_`, `canManageContact_`, `ensureContactsMigrated_`, `databaseData`, `setContactStatus`, dan `addContactToPipeline` dari `AppsScript-TPFX-Complete.gs`.
+2. Tambahkan `importContacts: importContacts`, `setContactStatus: setContactStatus`, dan `addContactToPipeline: addContactToPipeline` ke `api_()`.
+3. Jangan menimpa `DATABASE_DATA` asli dengan placeholder dari repo. Jika men-deploy file lengkap, salin dulu array asli ke file tersebut.
+4. Deploy versi baru Web App, lalu uji impor, perubahan status, dan tombol pipeline dengan akun BM/DM serta BDO.
+
+Frontend mendukung XLSX/XLS (SheetJS dimuat hanya saat dibutuhkan), CSV, dan TXT. Kolom Nama, Pekerjaan, Telepon, No, dan Kelompok dideteksi otomatis (termasuk file tanpa baris judul), nomor dinormalisasi dan dicek duplikatnya, lalu pratinjau serta hasil pembagian per BDO ditampilkan. Akun BDO tidak melihat kartu impor.
+
+Pesan WhatsApp memakai template yang dapat diubah BDO. Placeholder `{bdo}` diganti nama lengkap akun yang login dan `{nama}` diganti nama kontak (atau `Bapak/Ibu` bila kosong). Menekan tombol Chat WA pada kontak yang belum diproses otomatis menandai status `contacted` (bila server sudah versi terbaru). Tombol **Sambung ke pipeline** muncul setelah status `responded` dan hanya dapat dipakai BDO pemilik kontak.
+
+Status kini disimpan di sheet `Contacts` dan menjadi acuan semua perangkat. Browser tetap menyimpan salinan lokal sebagai fallback bila backend belum diperbarui. Daftar nomor hanya diterima oleh browser setelah sesi berhasil divalidasi; jangan membuat endpoint publik untuk database ini.
 
 ### Bagikan lead yang diinput BDO/Sales
 
