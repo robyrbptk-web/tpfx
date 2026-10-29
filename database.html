@@ -187,6 +187,28 @@ select:disabled{opacity:.72;cursor:not-allowed}
 .btn-pipe.loading::after{content:"";position:absolute;width:17px;height:17px;border-radius:50%;border:2px solid rgba(255,255,255,.45);border-top-color:#fff;animation:spin .8s linear infinite}
 .pipe-state{display:flex;align-items:center;justify-content:center;gap:7px;min-height:36px;border-radius:12px;background:#eaf9f2;border:1px solid #c9ecdd;color:#087a58;font-size:12px;font-weight:800}
 .tpl-hint{margin-top:7px}
+.maint-card{margin-bottom:18px;padding:14px 16px}
+.maint-card summary{font-size:13.5px;color:var(--ink)}
+.maint-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.btn-quiet{min-height:38px;padding:8px 14px;border:1px solid #c9d5f5;border-radius:12px;background:#f7f9ff;color:var(--pri);font-size:12px;font-weight:800;transition:.18s}
+.btn-quiet:hover:not(:disabled){background:#eef3ff;border-color:var(--pri)}
+.btn-quiet:disabled{opacity:.6;cursor:wait}
+.btn-quiet.danger{border-color:#f2cccc;background:#fdf3f3;color:#a83232}
+.btn-quiet.danger:hover:not(:disabled){background:#fbe9e9;border-color:#d98d8d}
+.maint-report{margin-top:14px;border-top:1px dashed #e6eaf5;padding-top:12px;font-size:12px;color:var(--ink2);line-height:1.55}
+.meter{margin-top:9px}
+.meter-top{display:flex;align-items:baseline;gap:8px;font-size:12px}
+.meter-top b{font-weight:800}
+.meter-top span{margin-left:auto;font-variant-numeric:tabular-nums;font-weight:800;color:var(--pri)}
+.meter-bar{height:7px;margin-top:5px;background:#edf1fb;border-radius:999px;overflow:hidden}
+.meter-bar i{display:block;height:100%;width:0;background:var(--grad);border-radius:inherit;transition:width .5s cubic-bezier(.22,1,.36,1)}
+.meter-bar i.warn{background:linear-gradient(135deg,#d68910,#f0b23f)}
+.meter-bar i.bad{background:linear-gradient(135deg,#b53434,#e06060)}
+.maint-facts{margin:12px 0 0;padding:0;list-style:none;display:grid;gap:5px;color:var(--mut);font-size:11.5px}
+.maint-facts b{color:var(--ink2);font-weight:700}
+.maint-warn{margin:12px 0 0;padding:9px 11px;border-radius:12px;background:#fff8e8;border:1px solid #f6e1ae;color:#8a5c05;font-size:11.5px;line-height:1.55}
+.maint-warn ul{margin:5px 0 0;padding-left:16px}
+.maint-warn li+li{margin-top:3px}
 .btn-more{display:block;width:100%;margin-top:12px;min-height:44px;border:1px dashed #c9d5f5;background:#f7f9ff;color:var(--pri);border-radius:14px;font-weight:800;font-size:12.5px;transition:.2s}
 .btn-more:hover{background:#eef3ff;border-color:var(--pri)}
 .empty{text-align:center;padding:38px 18px;border-radius:18px;border:1px dashed #d5ddf2;background:rgba(255,255,255,.72);color:var(--mut);font-size:13px;animation:cardIn .4s both}
@@ -303,6 +325,18 @@ main{padding:16px 12px calc(38px + env(safe-area-inset-bottom,0px))}
 <p class="hint">Hanya akun manager (BM/DM) yang dapat mengimpor. Nomor duplikat dan tidak valid dilewati otomatis.</p>
 </div>
 <div id="importSummary" hidden></div>
+</section>
+
+<section class="card maint-card" id="maintCard" aria-labelledby="maintTitle" hidden>
+<details>
+<summary id="maintTitle">Kapasitas &amp; perawatan database</summary>
+<p class="hint">Periksa pemakaian penyimpanan Google, lalu rapikan data ganda dan sel kosong. Perapian tidak menghapus kontak maupun data terbaru akun.</p>
+<div class="maint-actions">
+<button class="btn-quiet" id="capCheck" type="button">Cek kapasitas</button>
+<button class="btn-quiet danger" id="capClean" type="button">Rapikan database</button>
+</div>
+<div class="maint-report" id="capReport" role="status" hidden></div>
+</details>
 </section>
 
 <div class="tabs" id="tabs" role="tablist" aria-label="Pilih BDO"></div>
@@ -499,6 +533,7 @@ function showSkeleton(){
 }
 function showAuth(msg,label){
  $('importCard').hidden=true;
+ $('maintCard').hidden=true;
  $('tabs').replaceChildren();
  $('chips').replaceChildren();
  $('contactHeading').textContent='Daftar kontak';
@@ -560,6 +595,7 @@ async function loadDatabase(){
   }
   const isManager=ROLE==='BM'||ROLE==='DM';
   $('importCard').hidden=!isManager;
+  $('maintCard').hidden=!isManager;
   $('roleBadge').hidden=false;
   $('roleBadge').textContent=isManager?'Manager':(ROLE||'BDO');
   animateNumber($('heroTotal'),TOTAL);
@@ -1214,6 +1250,146 @@ async function runImport(){
   setImportBusy(false);
  }
 }
+function formatBytes(n){
+ n=Number(n)||0;
+ if(n<1024)return n+' B';
+ const units=['KB','MB','GB','TB'];
+ let i=-1;
+ do{n/=1024;i++;}while(n>=1024&&i<units.length-1);
+ return (n>=10?Math.round(n):Math.round(n*10)/10)+' '+units[i];
+}
+function capacityError(e){
+ const msg=String((e&&e.message)||e);
+ if(msg.indexOf('tidak mengembalikan hasil')>=0||msg.indexOf('tidak ditemukan')>=0){
+  return 'Backend belum diperbarui. Tempel AppsScript-TPFX-Complete.gs terbaru di Apps Script, lalu deploy ulang Web App.';
+ }
+ if(msg==='AUTH')return 'Sesi login berakhir. Silakan login kembali.';
+ return msg;
+}
+function meterRow(label,pct,detail){
+ const value=Math.max(0,Math.min(100,Number(pct)||0));
+ const row=el('div','meter');
+ const top=el('div','meter-top');
+ top.append(el('b',null,label),el('span',null,(Math.round(value*10)/10)+'%'));
+ const bar=el('div','meter-bar');
+ const fill=el('i');
+ if(value>=90)fill.className='bad';
+ else if(value>=75)fill.className='warn';
+ bar.appendChild(fill);
+ row.append(top,bar);
+ if(detail)row.appendChild(el('p','hint',detail));
+ return {row,fill,value};
+}
+function renderCapacity(r){
+ const box=$('capReport');
+ box.hidden=false;
+ box.replaceChildren();
+ const meters=[];
+ const cell=Number(r.cellPercent)||0;
+ meters.push(meterRow(
+  'Sel spreadsheet',cell,
+  formatNum(Number(r.allocatedCells)||0)+' dari '+formatNum(Number(r.cellLimit)||0)+' sel teralokasi'
+ ));
+ const props=r.properties||{};
+ meters.push(meterRow(
+  'Penyimpanan properti & sesi',Number(props.percent)||0,
+  formatBytes(props.bytes)+' dari '+formatBytes(props.limitBytes)
+ ));
+ const drive=r.drive||{};
+ if(drive.available&&Number(drive.limit)){
+  meters.push(meterRow(
+   'Google Drive',Number(drive.used)/Number(drive.limit)*100,
+   formatBytes(drive.used)+' dari '+formatBytes(drive.limit)
+  ));
+ }
+ meters.forEach(m=>box.appendChild(m.row));
+ const facts=el('ul','maint-facts');
+ const fact=(label,value)=>{
+  const li=el('li');
+  li.append(el('b',null,label+': '),document.createTextNode(value));
+  facts.appendChild(li);
+ };
+ fact('Sheet',formatNum(Array.isArray(r.sheets)?r.sheets.length:0));
+ fact('Baris penyimpanan data',formatNum(Number(r.data&&r.data.rows)||0));
+ fact('Sesi login',formatNum(Number(props.sessions)||0)+(Number(props.expiredSessions)?' ('+formatNum(Number(props.expiredSessions))+' kedaluwarsa)':''));
+ if(drive.available)fact('File bukti aktivitas',formatNum(Number(drive.folderFiles)||0)+' · '+formatBytes(drive.folderBytes));
+ if(drive.available===false&&drive.error)fact('Google Drive','tidak dapat dibaca');
+ box.appendChild(facts);
+ const warnings=(Array.isArray(r.warnings)?r.warnings:[]).filter(Boolean);
+ if(warnings.length){
+  const warn=el('div','maint-warn');
+  warn.appendChild(el('b',null,'Perlu perhatian'));
+  const ul=el('ul');
+  warnings.forEach(w=>ul.appendChild(el('li',null,String(w))));
+  warn.appendChild(ul);
+  box.appendChild(warn);
+ }
+ const applyWidths=()=>{
+  meters.forEach(m=>{m.fill.style.width=m.value+'%';});
+ };
+ requestAnimationFrame(applyWidths);
+ setTimeout(applyWidths,300);
+}
+async function checkCapacity(){
+ const btn=$('capCheck');
+ if(btn.disabled)return;
+ const token=localStorage.getItem('swt')||'';
+ if(!token){toast('Sesi login berakhir. Silakan login kembali.','bad');return;}
+ const label=btn.textContent;
+ btn.disabled=true;
+ btn.textContent='Memeriksa…';
+ try{
+  const result=await rpc('storageReport',token);
+  if(result&&result.err)throw new Error(String(result.err));
+  if(!result||result.ok!==1)throw new Error('Laporan kapasitas tidak valid.');
+  renderCapacity(result);
+ }catch(e){
+  const msg=capacityError(e);
+  const box=$('capReport');
+  box.hidden=false;
+  box.replaceChildren(el('div','maint-warn',msg));
+  toast(msg,'bad');
+ }finally{
+  btn.disabled=false;
+  btn.textContent=label;
+ }
+}
+async function cleanCapacity(){
+ const btn=$('capClean');
+ if(btn.disabled)return;
+ const token=localStorage.getItem('swt')||'';
+ if(!token){toast('Sesi login berakhir. Silakan login kembali.','bad');return;}
+ const label=btn.textContent;
+ btn.disabled=true;
+ btn.textContent='Merapikan…';
+ try{
+  const result=await rpc('storageCleanup',token);
+  if(result&&result.err)throw new Error(String(result.err));
+  if(!result||result.ok!==1)throw new Error('Perapian database tidak berhasil.');
+  const removed=Number(result.data&&result.data.removed)||0;
+  const sessions=Number(result.sessions&&result.sessions.removed)||0;
+  const trimmed=Array.isArray(result.trimmed)?result.trimmed.length:0;
+  const parts=[];
+  if(removed)parts.push(formatNum(removed)+' baris data ganda');
+  if(sessions)parts.push(formatNum(sessions)+' sesi lama');
+  if(trimmed)parts.push(formatNum(trimmed)+' sheet dirapikan');
+  toast(parts.length?'Database dirapikan: '+parts.join(', ')+'.':'Tidak ada data ganda yang perlu dihapus.','ok');
+  await checkCapacity();
+ }catch(e){
+  const msg=capacityError(e);
+  const box=$('capReport');
+  box.hidden=false;
+  box.replaceChildren(el('div','maint-warn',msg));
+  toast(msg,'bad');
+ }finally{
+  btn.disabled=false;
+  btn.textContent=label;
+ }
+}
+function initMaint(){
+ $('capCheck').addEventListener('click',checkCapacity);
+ $('capClean').addEventListener('click',cleanCapacity);
+}
 function initImport(){
  const input=$('fileInput'),dz=$('dropzone');
  input.addEventListener('change',()=>handleFile(input.files&&input.files[0]));
@@ -1241,5 +1417,6 @@ function initImport(){
  $('groupName').addEventListener('input',()=>{if(IMPORT.records.length)renderPreview();});
 }
 initImport();
+initMaint();
 loadDatabase();
 </script></body></html>

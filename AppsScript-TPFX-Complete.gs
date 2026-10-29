@@ -153,6 +153,86 @@ function chatGroups_() {
 
 const DAYS = 30;
 
+// Script Properties punya kuota total ~500 KB. Token login lama menumpuk
+// karena tidak selalu logout, sehingga penyimpanan bisa penuh dan upload gagal
+// saat sesi hendak diperpanjang. Simpan beberapa sesi terbaru per akun saja.
+const SESSION_KEEP = 8;
+
+function touchSession_(t, u) {
+  if (!t || !u) return;
+  const props = PropertiesService.getScriptProperties();
+  const value = u + '|' + (Date.now() + DAYS * 864e5);
+  try {
+    props.setProperty('t_' + t, value);
+    return;
+  } catch (e) {
+    // Penyimpanan properti penuh: bersihkan sesi lama lalu coba sekali lagi.
+  }
+  try {
+    pruneSessions_();
+    props.setProperty('t_' + t, value);
+  } catch (e) {
+    // Token saat ini tetap valid walau perpanjangan sesi gagal.
+  }
+}
+
+function createSession_(u) {
+  const props = PropertiesService.getScriptProperties();
+  const t = Utilities.getUuid();
+  const value = u + '|' + (Date.now() + DAYS * 864e5);
+  try {
+    props.setProperty('t_' + t, value);
+  } catch (e) {
+    pruneSessions_();
+    try {
+      props.setProperty('t_' + t, value);
+    } catch (e2) {
+      throw new Error(
+        'Penyimpanan sesi penuh. Minta manager membuka database.html dan ' +
+        'menekan "Rapikan database", lalu coba login lagi.'
+      );
+    }
+  }
+  return t;
+}
+
+function pruneSessions_() {
+  const props = PropertiesService.getScriptProperties();
+  const all = props.getProperties();
+  const now = Date.now();
+  const active = {};
+  let removed = 0;
+
+  Object.keys(all).forEach(key => {
+    if (key.indexOf('t_') !== 0) return;
+    const raw = String(all[key] || '');
+    const cut = raw.lastIndexOf('|');
+    const user = cut < 0 ? '' : raw.slice(0, cut);
+    const exp = Number(raw.slice(cut + 1));
+    if (!user || !exp || exp <= now) {
+      props.deleteProperty(key);
+      removed++;
+      return;
+    }
+    (active[user] = active[user] || []).push({ key: key, exp: exp });
+  });
+
+  Object.keys(active).forEach(user => {
+    const list = active[user].sort((a, b) => b.exp - a.exp);
+    list.slice(SESSION_KEEP).forEach(item => {
+      props.deleteProperty(item.key);
+      removed++;
+    });
+  });
+
+  let remaining = 0;
+  Object.keys(active).forEach(user => {
+    remaining += Math.min(active[user].length, SESSION_KEEP);
+  });
+
+  return { removed: removed, remaining: remaining };
+}
+
 
 // ============================================================
 // DATABASE CALON NASABAH
@@ -300,7 +380,7 @@ function ensureManager_(username, password, nama, role) {
 // API
 // ============================================================
 
-const API_VERSION = '2026-10-27-contact-pipeline';
+const API_VERSION = '2026-10-29-storage-maintenance';
 
 function doGet() {
   return out_({
@@ -339,6 +419,8 @@ function api_() {
     importContacts: importContacts,
     setContactStatus: setContactStatus,
     addContactToPipeline: addContactToPipeline,
+    storageReport: storageReport,
+    storageCleanup: storageCleanup,
     teamLeads: teamLeads,
     chatNotificationSummary: chatNotificationSummary,
     checkSession: checkSession,
@@ -516,12 +598,7 @@ function login(u, pw) {
     users_().getRange(r.idx, 2).setValue(hash_(r[0], pw));
   }
 
-  const t = Utilities.getUuid();
-
-  // Session 30 hari
-  PropertiesService
-    .getScriptProperties()
-    .setProperty('t_' + t, r[0] + '|' + (Date.now() + DAYS * 864e5));
+  const t = createSession_(r[0]);
 
   return { token: t };
 }
@@ -578,9 +655,7 @@ function loadState(t) {
   if (!u) return { err: 'AUTH' };
 
   // Perpanjang session otomatis setiap kali user aktif membuka data.
-  PropertiesService
-    .getScriptProperties()
-    .setProperty('t_' + t, u + '|' + (Date.now() + DAYS * 864e5));
+  touchSession_(t, u);
 
   const rows = data_()
     .getDataRange()
@@ -657,9 +732,7 @@ function saveState(t, json) {
   // PERPANJANG SESSION
   // ==========================================================
 
-  PropertiesService
-    .getScriptProperties()
-    .setProperty('t_' + t, u + '|' + (Date.now() + DAYS * 864e5));
+  touchSession_(t, u);
 
   // ==========================================================
   // LOCK
@@ -667,6 +740,47 @@ function saveState(t, json) {
 
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
+
+  try {
+
+    try {
+
+      writeStateRows_(u, parsed);
+
+    } catch (e) {
+
+      // Data baru sudah tertulis; yang gagal hanya menghapus baris lama.
+      // Jangan tulis ulang supaya tidak menambah salinan.
+      if (e && e.saved) {
+        try { recoverStorage_(); } catch (e2) {}
+        return { ok: 1 };
+      }
+
+      if (!isQuotaError_(e)) throw storageError_(e);
+
+      // Penyimpanan penuh: rapikan dulu, lalu ulangi sekali.
+      try { recoverStorage_(); } catch (e2) {}
+
+      try {
+        writeStateRows_(u, parsed);
+      } catch (e3) {
+        throw storageError_(e3);
+      }
+
+    }
+
+  } finally {
+
+    lock.releaseLock();
+
+  }
+
+  return { ok: 1 };
+}
+
+function writeStateRows_(u, parsed) {
+
+  let saved = false;
 
   try {
 
@@ -709,6 +823,8 @@ function saveState(t, json) {
 
     s.getRange(startRow, 1, rows.length, 3).setValues(rows);
 
+    saved = true;
+
     // ========================================================
     // BARU SETELAH DATA BARU BERHASIL DITULIS,
     // DATA LAMA DIHAPUS
@@ -718,13 +834,13 @@ function saveState(t, json) {
       s.deleteRow(oldRows[i]);
     }
 
-  } finally {
+  } catch (e) {
 
-    lock.releaseLock();
+    if (saved && e && typeof e === 'object') e.saved = true;
+
+    throw e;
 
   }
-
-  return { ok: 1 };
 }
 
 
@@ -1198,16 +1314,19 @@ function uploadImg(t, dataUrl) {
   if (!findUser_(u)) throw new Error('auth');
 
   // Upload bisa menjadi aktivitas pertama setelah app lama dibiarkan terbuka,
-  // jadi sesi diperpanjang di sini juga.
-  PropertiesService
-    .getScriptProperties()
-    .setProperty('t_' + t, u + '|' + (Date.now() + DAYS * 864e5));
+  // jadi sesi diperpanjang di sini juga (tanpa menggagalkan upload bila penuh).
+  touchSession_(t, u);
 
-  const it = DriveApp.getFoldersByName('TPFX Bukti Aktivitas');
+  let folder;
 
-  const folder = it.hasNext()
-    ? it.next()
-    : DriveApp.createFolder('TPFX Bukti Aktivitas');
+  try {
+    const it = DriveApp.getFoldersByName('TPFX Bukti Aktivitas');
+    folder = it.hasNext()
+      ? it.next()
+      : DriveApp.createFolder('TPFX Bukti Aktivitas');
+  } catch (e) {
+    throw driveError_(e);
+  }
 
   const raw = String(dataUrl || '');
 
@@ -1220,20 +1339,336 @@ function uploadImg(t, dataUrl) {
     throw new Error('Format gambar tidak valid');
   }
 
-  const f = folder.createFile(
-    Utilities.newBlob(
-      Utilities.base64Decode(match[1]),
-      'image/jpeg',
-      u + '_' + Date.now() + '.jpg'
-    )
-  );
+  try {
+    const f = folder.createFile(
+      Utilities.newBlob(
+        Utilities.base64Decode(match[1]),
+        'image/jpeg',
+        u + '_' + Date.now() + '.jpg'
+      )
+    );
 
-  f.setSharing(
-    DriveApp.Access.ANYONE_WITH_LINK,
-    DriveApp.Permission.VIEW
-  );
+    f.setSharing(
+      DriveApp.Access.ANYONE_WITH_LINK,
+      DriveApp.Permission.VIEW
+    );
 
-  return 'https://drive.google.com/thumbnail?id=' + f.getId() + '&sz=w1200';
+    return 'https://drive.google.com/thumbnail?id=' + f.getId() + '&sz=w1200';
+  } catch (e) {
+    throw driveError_(e);
+  }
+}
+
+function isQuotaError_(e) {
+  const msg = String((e && e.message) || e);
+  return /exceeded|quota|maximum|too many cells|too large|limit/i.test(msg);
+}
+
+function storageError_(e) {
+  const msg = String((e && e.message) || e);
+  // Jangan bungkus dua kali pesan yang sudah ramah untuk pengguna.
+  if (msg.indexOf('Penyimpanan Google penuh') === 0 ||
+      msg.indexOf('Penyimpanan Google Drive penuh') === 0) {
+    return e;
+  }
+  if (isQuotaError_(e)) {
+    return new Error(
+      'Penyimpanan Google penuh atau melewati batas. Ruang sudah dicoba ' +
+      'dirapikan otomatis; jika masih gagal, minta manager membuka ' +
+      'database.html lalu menekan "Rapikan database". Detail: ' + msg
+    );
+  }
+  return e instanceof Error ? e : new Error(msg);
+}
+
+function driveError_(e) {
+  const msg = String((e && e.message) || e);
+  if (/quota|exceeded|storage/i.test(msg)) {
+    return new Error(
+      'Penyimpanan Google Drive penuh. Hapus file bukti aktivitas lama atau ' +
+      'kosongkan Drive, lalu coba unggah lagi. Detail: ' + msg
+    );
+  }
+  return e instanceof Error ? e : new Error(msg);
+}
+
+// Perbaikan ringan yang aman dijalankan otomatis saat penyimpanan menolak
+// penulisan baru: buang sesi kedaluwarsa, salinan Data ganda, lalu kembalikan
+// baris/kolom kosong yang sudah terlanjur mengunci kuota sel.
+function recoverStorage_() {
+  const sessions = pruneSessions_();
+  const data = compactDataSheet_();
+  const trimmed = trimSheets_();
+  return { sessions: sessions, data: data, trimmed: trimmed };
+}
+
+// ============================================================
+// KAPASITAS & PERAWATAN DATABASE
+// ============================================================
+
+const SHEET_CELL_LIMIT = 10000000;
+const PROPERTY_STORAGE_LIMIT = 524288;
+
+function storageReport(t) {
+
+  // Sengaja tidak memakai loadState: laporan kapasitas harus tetap bisa dibuka
+  // walau JSON state manager sendiri sedang bermasalah.
+  const username = user_(t);
+
+  if (!username) return { err: 'AUTH' };
+
+  const me = findUser_(username);
+
+  if (!me) return { err: 'AUTH' };
+
+  const role = String(me[4] || '').toUpperCase();
+
+  if (role != 'BM' && role != 'DM') {
+    return { err: 'Hanya manager yang dapat memeriksa kapasitas database' };
+  }
+
+  const book = ss_();
+  const sheets = book.getSheets().map(sh => {
+    const allocatedRows = sh.getMaxRows();
+    const allocatedColumns = sh.getMaxColumns();
+    return {
+      name: sh.getName(),
+      rows: sh.getLastRow(),
+      columns: sh.getLastColumn(),
+      allocatedRows: allocatedRows,
+      allocatedColumns: allocatedColumns,
+      allocatedCells: allocatedRows * allocatedColumns
+    };
+  }).sort((a, b) => b.allocatedCells - a.allocatedCells);
+
+  const allocatedCells = sheets.reduce((n, s) => n + s.allocatedCells, 0);
+
+  const properties = PropertiesService.getScriptProperties().getProperties();
+  const propBytes = JSON.stringify(properties).length;
+  const now = Date.now();
+  let sessions = 0;
+  let expiredSessions = 0;
+
+  Object.keys(properties).forEach(key => {
+    if (key.indexOf('t_') !== 0) return;
+    sessions++;
+    const raw = String(properties[key] || '');
+    const exp = Number(raw.slice(raw.lastIndexOf('|') + 1));
+    if (!exp || exp <= now) expiredSessions++;
+  });
+
+  let drive = { available: false };
+  try {
+    const folders = DriveApp.getFoldersByName('TPFX Bukti Aktivitas');
+    const folder = folders.hasNext() ? folders.next() : null;
+    let files = 0;
+    let bytes = 0;
+    let truncated = false;
+    if (folder) {
+      const list = folder.getFiles();
+      while (list.hasNext()) {
+        const file = list.next();
+        files++;
+        bytes += Number(file.getSize() || 0);
+        if (files >= 5000) {
+          truncated = true;
+          break;
+        }
+      }
+    }
+    drive = {
+      available: true,
+      used: Number(DriveApp.getStorageUsed() || 0),
+      limit: Number(DriveApp.getStorageLimit() || 0),
+      folderFiles: files,
+      folderBytes: bytes,
+      truncated: truncated
+    };
+  } catch (e) {
+    drive = { available: false, error: String((e && e.message) || e) };
+  }
+
+  const dataSheet = book.getSheetByName('Data');
+  const dataRows = dataSheet ? Math.max(0, dataSheet.getLastRow() - 1) : 0;
+
+  const warnings = [];
+
+  if (allocatedCells >= SHEET_CELL_LIMIT * 0.8) {
+    warnings.push('Sel spreadsheet terpakai ' + Math.round(allocatedCells / SHEET_CELL_LIMIT * 100) + '% (batas 10.000.000).');
+  }
+  if (propBytes >= PROPERTY_STORAGE_LIMIT * 0.8) {
+    warnings.push('Penyimpanan properti/sesi terpakai ' + Math.round(propBytes / PROPERTY_STORAGE_LIMIT * 100) + '% (batas 500 KB).');
+  }
+  if (expiredSessions > 0) {
+    warnings.push(expiredSessions + ' sesi kedaluwarsa belum dibersihkan.');
+  }
+  if (drive.available && drive.limit && drive.used / drive.limit >= 0.9) {
+    warnings.push('Penyimpanan Google Drive terpakai ' + Math.round(drive.used / drive.limit * 100) + '%.');
+  }
+  if (drive.available && drive.truncated) {
+    warnings.push('Jumlah file bukti lebih dari 5.000; ukuran folder dihitung sebagian.');
+  }
+
+  return {
+    ok: 1,
+    spreadsheet: { name: book.getName(), url: book.getUrl() },
+    sheets: sheets,
+    allocatedCells: allocatedCells,
+    cellLimit: SHEET_CELL_LIMIT,
+    cellPercent: Math.round(allocatedCells / SHEET_CELL_LIMIT * 1000) / 10,
+    properties: {
+      keys: Object.keys(properties).length,
+      bytes: propBytes,
+      limitBytes: PROPERTY_STORAGE_LIMIT,
+      percent: Math.round(propBytes / PROPERTY_STORAGE_LIMIT * 1000) / 10,
+      sessions: sessions,
+      expiredSessions: expiredSessions
+    },
+    data: { rows: dataRows },
+    drive: drive,
+    warnings: warnings
+  };
+}
+
+function compactDataSheet_() {
+
+  const sheet = data_();
+  const lastRow = sheet.getLastRow();
+
+  if (lastRow < 2) return { removed: 0, users: 0, skipped: 0 };
+
+  const values = sheet.getRange(2, 1, lastRow - 1, 3).getValues();
+  const byUser = {};
+
+  values.forEach((row, index) => {
+    const user = String(row[0] || '');
+    if (!user) return;
+    (byUser[user] = byUser[user] || []).push({
+      row: index + 2,
+      seq: Number(row[1]),
+      json: String(row[2] || '')
+    });
+  });
+
+  const rowsToDelete = [];
+  let users = 0;
+  let skipped = 0;
+
+  Object.keys(byUser).forEach(user => {
+    const list = byUser[user].sort((a, b) => a.row - b.row);
+    const sets = [];
+    let current = null;
+    let lastSeq = -1;
+
+    list.forEach(item => {
+      if (!current || item.seq === 0 || item.seq <= lastSeq) {
+        current = [];
+        sets.push(current);
+      }
+      current.push(item);
+      lastSeq = item.seq;
+    });
+
+    let keep = null;
+
+    for (let i = sets.length - 1; i >= 0; i--) {
+      const set = sets[i];
+      let valid = true;
+      set.forEach((item, index) => {
+        if (item.seq !== index) valid = false;
+      });
+      if (!valid) continue;
+      try {
+        const parsed = JSON.parse(set.map(item => item.json).join(''));
+        if (parsed && typeof parsed === 'object' &&
+            Array.isArray(parsed.leads) && Array.isArray(parsed.acts)) {
+          keep = set;
+          break;
+        }
+      } catch (e) {}
+    }
+
+    if (!keep) {
+      skipped++;
+      return;
+    }
+
+    const keepRows = {};
+    keep.forEach(item => { keepRows[item.row] = true; });
+    const extra = list.filter(item => !keepRows[item.row]);
+
+    if (extra.length) {
+      users++;
+      extra.forEach(item => rowsToDelete.push(item.row));
+    }
+  });
+
+  rowsToDelete.sort((a, b) => b - a).forEach(row => sheet.deleteRow(row));
+
+  return { removed: rowsToDelete.length, users: users, skipped: skipped };
+}
+
+function trimSheets_() {
+  const report = [];
+
+  ss_().getSheets().forEach(sh => {
+    const maxRows = sh.getMaxRows();
+    const lastRow = Math.max(1, sh.getLastRow());
+    let removedRows = 0;
+    let removedColumns = 0;
+
+    if (maxRows - lastRow > 200) {
+      removedRows = maxRows - lastRow - 100;
+      sh.deleteRows(lastRow + 1, removedRows);
+    }
+
+    const maxColumns = sh.getMaxColumns();
+    const lastColumn = Math.max(1, sh.getLastColumn());
+
+    if (maxColumns - lastColumn > 5) {
+      removedColumns = maxColumns - lastColumn - 5;
+      sh.deleteColumns(lastColumn + 1, removedColumns);
+    }
+
+    if (removedRows || removedColumns) {
+      report.push({
+        sheet: sh.getName(),
+        removedRows: removedRows,
+        removedColumns: removedColumns
+      });
+    }
+  });
+
+  return report;
+}
+
+function storageCleanup(t) {
+
+  const username = user_(t);
+
+  if (!username) return { err: 'AUTH' };
+
+  const me = findUser_(username);
+
+  if (!me) return { err: 'AUTH' };
+
+  const role = String(me[4] || '').toUpperCase();
+
+  if (role != 'BM' && role != 'DM') {
+    return { err: 'Hanya manager yang dapat merapikan database' };
+  }
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+
+  try {
+    const sessions = pruneSessions_();
+    const data = compactDataSheet_();
+    const trimmed = trimSheets_();
+    return { ok: 1, sessions: sessions, data: data, trimmed: trimmed };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 
@@ -1453,9 +1888,19 @@ function importContacts(t, group, rows) {
     });
 
     if (values.length) {
-      sheet.getRange(
-        sheet.getLastRow() + 1, 1, values.length, CONTACT_HEADERS.length
-      ).setValues(values);
+      try {
+        sheet.getRange(
+          sheet.getLastRow() + 1, 1, values.length, CONTACT_HEADERS.length
+        ).setValues(values);
+      } catch (e) {
+        if (!isQuotaError_(e)) throw e;
+        // Tanpa ini impor selalu gagal ketika kuota sel sudah penuh:
+        // rapikan dulu, lalu tulis sekali lagi.
+        recoverStorage_();
+        sheet.getRange(
+          sheet.getLastRow() + 1, 1, values.length, CONTACT_HEADERS.length
+        ).setValues(values);
+      }
     }
 
     return {
@@ -1472,6 +1917,8 @@ function importContacts(t, group, rows) {
         count: counts[bdo.key] || 0
       }))
     };
+  } catch (e) {
+    throw storageError_(e);
   } finally {
     lock.releaseLock();
   }

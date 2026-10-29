@@ -54,6 +54,8 @@ function api_() {
     importContacts: importContacts,
     setContactStatus: setContactStatus,
     addContactToPipeline: addContactToPipeline,
+    storageReport: storageReport,
+    storageCleanup: storageCleanup,
     teamLeads: teamLeads,
     chatNotificationSummary: chatNotificationSummary,
     checkSession: checkSession,
@@ -336,7 +338,7 @@ function deleteUser(t, username) {
 
 ## 5. Database calon nasabah, impor massal, dan pipeline
 
-`database.html` memanggil `databaseData(TOKEN)` untuk membaca data, `importContacts(TOKEN, group, rows)` untuk impor massal, `setContactStatus(TOKEN, phone, status)` untuk status follow-up, dan `addContactToPipeline(TOKEN, phone)` untuk menyambungkan kontak ke pipeline BDO. Semua endpoint memerlukan sesi login (token `swt` di `localStorage`). `importContacts` hanya menerima role `BM` atau `DM`.
+`database.html` memanggil `databaseData(TOKEN)` untuk membaca data, `importContacts(TOKEN, group, rows)` untuk impor massal, `setContactStatus(TOKEN, phone, status)` untuk status follow-up, `addContactToPipeline(TOKEN, phone)` untuk menyambungkan kontak ke pipeline BDO, serta `storageReport(TOKEN)`/`storageCleanup(TOKEN)` untuk memeriksa dan merapikan kapasitas penyimpanan. Semua endpoint memerlukan sesi login (token `swt` di `localStorage`). `importContacts`, `storageReport`, dan `storageCleanup` hanya menerima role `BM` atau `DM`.
 
 Kontak disimpan di sheet `Contacts` yang dibuat otomatis oleh `contacts_()`, bukan di frontend atau Git:
 
@@ -380,9 +382,10 @@ Pembagian bersifat stabil. Saat impor, setiap kontak langsung diberi `assignedTo
 Frontend `database.html` otomatis ter-deploy oleh Vercel setelah push ke GitHub. Backend harus diperbarui manual di Apps Script:
 
 1. Salin `CONTACT_HEADERS`, `CONTACT_STATUSES`, `contacts_`, `activeBdos_`, `normalizePhone_`, `legacyContacts_`, `pickLeastLoaded_`, `migrateLegacyContacts_`, `importContacts`, `normalizeContactStatus_`, `contactRecords_`, `contactByPhone_`, `canManageContact_`, `ensureContactsMigrated_`, `databaseData`, `setContactStatus`, dan `addContactToPipeline` dari `AppsScript-TPFX-Complete.gs`.
-2. Tambahkan `importContacts: importContacts`, `setContactStatus: setContactStatus`, dan `addContactToPipeline: addContactToPipeline` ke `api_()`.
-3. Jangan menimpa `DATABASE_DATA` asli dengan placeholder dari repo. Jika men-deploy file lengkap, salin dulu array asli ke file tersebut.
-4. Deploy versi baru Web App, lalu uji impor, perubahan status, dan tombol pipeline dengan akun BM/DM serta BDO.
+2. Salin juga blok kapasitas: `SESSION_KEEP`, `touchSession_`, `createSession_`, `pruneSessions_`, `storageError_`, `driveError_`, `isQuotaError_`, `recoverStorage_`, `SHEET_CELL_LIMIT`, `PROPERTY_STORAGE_LIMIT`, `storageReport`, `compactDataSheet_`, `trimSheets_`, `storageCleanup`, dan `writeStateRows_` (versi `saveState` terbaru memanggilnya).
+3. Tambahkan `importContacts: importContacts`, `setContactStatus: setContactStatus`, `addContactToPipeline: addContactToPipeline`, `storageReport: storageReport`, dan `storageCleanup: storageCleanup` ke `api_()`.
+4. Jangan menimpa `DATABASE_DATA` asli dengan placeholder dari repo. Jika men-deploy file lengkap, salin dulu array asli ke file tersebut.
+5. Deploy versi baru Web App, lalu uji impor, perubahan status, tombol pipeline, serta tombol **Cek kapasitas** dan **Rapikan database** dengan akun BM/DM.
 
 Frontend mendukung XLSX/XLS (SheetJS dimuat hanya saat dibutuhkan), CSV, dan TXT. Kolom Nama, Pekerjaan, Telepon, No, dan Kelompok dideteksi otomatis (termasuk file tanpa baris judul), nomor dinormalisasi dan dicek duplikatnya, lalu pratinjau serta hasil pembagian per BDO ditampilkan. Akun BDO tidak melihat kartu impor.
 
@@ -390,9 +393,31 @@ Pesan WhatsApp memakai template yang dapat diubah BDO. Placeholder `{bdo}` digan
 
 Status kini disimpan di sheet `Contacts` dan menjadi acuan semua perangkat. Browser tetap menyimpan salinan lokal sebagai fallback bila backend belum diperbarui. Daftar nomor hanya diterima oleh browser setelah sesi berhasil divalidasi; jangan membuat endpoint publik untuk database ini.
 
+### Kapasitas penyimpanan dan perawatan otomatis
+
+Gejala "tidak bisa upload" atau "gagal menyimpan" biasanya berasal dari tiga kuota Google: sel spreadsheet (total 10.000.000 sel per file), Script Properties (~500 KB untuk semua token sesi), atau penyimpanan Google Drive (folder `TPFX Bukti Aktivitas`). Sejak versi `2026-10-29-storage-maintenance` backend menangani ketiganya:
+
+- **Sesi tidak lagi memblokir upload.** `touchSession_` tidak melempar error saat properti penuh; `pruneSessions_` membuang token kedaluwarsa dan menyisakan 8 sesi terbaru per akun.
+- **Pulih otomatis.** Jika `saveState` atau `importContacts` ditolak karena kuota, backend menjalankan `recoverStorage_` (buang sesi lama, lipat salinan `Data`, kembalikan baris/kolom kosong) lalu mengulang penulisan sekali. Jika data baru sudah tertulis dan hanya penghapusan baris lama yang gagal, backend tidak menulis ulang agar tidak menambah salinan.
+- **Pesan error jelas.** `storageError_` menjelaskan kuota spreadsheet/properti, `driveError_` menjelaskan kuota Drive dan menyarankan menghapus file bukti lama. Perapian tidak dapat mengosongkan Drive yang benar-benar penuh.
+- **Panel manager.** Kartu **Kapasitas & perawatan database** (hanya BM/DM) memanggil `storageReport` untuk menampilkan persentase pemakaian sel, properti/sesi, Drive, jumlah baris `Data`, dan file bukti. Tombol **Rapikan database** memanggil `storageCleanup`.
+
+`storageReport(TOKEN)` mengembalikan `spreadsheet`, `sheets` (baris/kolom terpakai dan teralokasi per sheet), `allocatedCells`, `cellLimit`, `cellPercent`, `properties` (`bytes`, `limitBytes`, `percent`, `sessions`, `expiredSessions`), `data.rows`, `drive` (`used`, `limit`, `folderFiles`, `folderBytes`, atau `available: false` bila Drive tidak dapat dibaca), dan `warnings`. Pemindaian file bukti dibatasi 5.000 file pertama.
+
+`storageCleanup(TOKEN)` memakai `LockService` dan mengembalikan `{ ok, sessions, data, trimmed }`:
+
+| Bagian | Perilaku |
+| --- | --- |
+| `sessions.removed` | token kedaluwarsa dan sesi lama di atas 8 per akun |
+| `data.removed` / `data.users` | baris `Data` dari salinan penyimpanan yang lebih lama; hanya salinan yang paling baru dan valid yang dipertahankan |
+| `data.skipped` | akun yang seluruh barisnya tidak membentuk JSON valid; barisnya **tidak** dihapus |
+| `trimmed` | sheet yang baris/kolom kosong teralokasinya dikembalikan (menyisakan 100 baris dan 5 kolom cadangan) |
+
+Perapian tidak menghapus kontak, akun, status, atau state terbaru. Jika laporan tetap menunjukkan sel atau Drive di atas 90% setelah perapian, manager harus menghapus data/file lama atau menambah kapasitas Google.
+
 ### Bagikan lead yang diinput BDO/Sales
 
-Lead pada menu **Leads** disimpan per akun di sheet `Data`, dengan baris berformat `[username, timestamp, potongan_json_state]`. Tambahkan endpoint berikut agar semua akun aktif ber-role `BDO` atau `SALES` dapat melihat dan menghubungi lead seluruh anggota tim. Endpoint hanya membaca data dan tetap memerlukan sesi login.
+Lead pada menu **Leads** disimpan per akun di sheet `Data`, dengan baris berformat `[username, seq, potongan_json_state]` (satu state bisa terpecah menjadi beberapa baris berurutan). Tambahkan endpoint berikut agar semua akun aktif ber-role `BDO` atau `SALES` dapat melihat dan menghubungi lead seluruh anggota tim. Endpoint hanya membaca data dan tetap memerlukan sesi login.
 
 ```javascript
 function teamLeads(t) {
