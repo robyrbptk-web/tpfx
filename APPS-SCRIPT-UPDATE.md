@@ -1489,7 +1489,7 @@ function chatNotificationSummary(t) {
 - `api/push.js` adalah relay Vercel yang menandatangani VAPID dengan paket `web-push` dan mengirim ke endpoint langganan. Jalur ini gratis pada paket Vercel Hobby.
 - Apps Script tidak dapat menandatangani ES256, jadi ia hanya menyimpan langganan di sheet `PushSubs` dan memanggil relay memakai header `x-push-secret`.
 
-Setelah pesan terkirim, `sendChat`, `sendGroupChat`, dan `sendGlobalChat` memanggil relay secara diam-diam (`pushQuiet_`): kegagalan relay tidak menggagalkan pengiriman chat. Notifikasi personal berjudul nama pengirim dan membuka `#chat=personal:<pengirim>`; notifikasi grup membuka `#chat=group:<id>`; chat global membuka `#chat=global`. Penerima tidak menerima notifikasi untuk pesannya sendiri. Satu endpoint hanya disimpan sekali, maksimal 10 perangkat per akun, dan endpoint yang sudah mati (HTTP 404/410) dihapus otomatis.
+Setelah pesan terkirim, `sendChat`, `sendGroupChat`, dan `sendGlobalChat` memanggil relay secara diam-diam (`pushQuiet_`): kegagalan relay tidak menggagalkan pengiriman chat. Notifikasi personal berjudul nama pengirim dan membuka `#chat=personal:<pengirim>`; notifikasi grup membuka `#chat=group:<id>`; chat global membuka `#chat=global`. Postingan yang dibuat BM/DM juga dikirim ke seluruh akun aktif sebagai notifikasi pengumuman dan membuka `#feed`. Penerima tidak menerima notifikasi untuk pesannya sendiri. Satu endpoint hanya disimpan sekali, maksimal 10 perangkat per akun, dan endpoint yang sudah mati (HTTP 404/410) dihapus otomatis.
 
 #### Menyiapkan relay push (sekali saja)
 
@@ -1505,9 +1505,9 @@ Setelah pesan terkirim, `sendChat`, `sendGroupChat`, dan `sendGlobalChat` memang
 6. Di editor Apps Script, jalankan sekali `setPushConfig('SECRET_DARI_LANGKAH_3', 'https://domain-anda.vercel.app')`. Secret dan origin disimpan di Script Properties; jangan menaruh secret di frontend atau repository.
 7. Deploy ulang Web App, buka aplikasi di HP, tekan **Aktifkan di HP** pada halaman Chat, lalu **Tes notifikasi**. Di iPhone, tambahkan dulu aplikasi ke Layar Utama dan buka dari ikonnya (iOS 16.4+).
 
-Endpoint push yang ditambahkan ke `api_()`: `pushConfig`, `subscribePush`, `unsubscribePush`, dan `testPush`. Fungsi relay yang perlu disalin ke Apps Script: `pushSubs_`, `setPushConfig`, `pushConfig`, `subscribePush`, `unsubscribePush`, `removePushEndpoints_`, `chatSenderName_`, `pushQuiet_`, `pushToUsers_`, dan `testPush`, beserta pemanggilan pada `sendChat`/`sendGroupChat`/`sendGlobalChat`.
+Endpoint push yang ditambahkan ke `api_()`: `pushConfig`, `subscribePush`, `unsubscribePush`, dan `testPush`. Fungsi relay yang perlu disalin ke Apps Script: `pushSubs_`, `setPushConfig`, `pushConfig`, `subscribePush`, `unsubscribePush`, `removePushEndpoints_`, `chatSenderName_`, `pushQuiet_`, `pushToUsers_`, dan `testPush`, beserta pemanggilan pada `sendChat`/`sendGroupChat`/`sendGlobalChat` dan `createPost` untuk pengumuman BM/DM.
 
-Push menjaga notifikasi tetap masuk saat aplikasi ditutup atau HP terkunci, selama situs diizinkan mengirim notifikasi oleh sistem. Kendala yang tidak bisa diatasi kode: daya tahan baterai (Doze/App Standby) dapat menunda notifikasi beberapa menit, dan Safari iOS hanya mengizinkan Web Push untuk PWA yang sudah dipasang ke Layar Utama.
+Push menjaga notifikasi tetap masuk saat aplikasi ditutup atau HP terkunci, selama situs diizinkan mengirim notifikasi oleh sistem. Suara, nada, dan getaran mengikuti pengaturan notifikasi HP (mode senyap/DND ikut memengaruhinya); aplikasi memakai urgency tinggi dan getaran `[90,40,90]`, tetapi browser tidak mengizinkan file suara khusus untuk Web Push. Kendala yang tidak bisa diatasi kode: daya tahan baterai (Doze/App Standby) dapat menunda notifikasi beberapa menit, dan Safari iOS hanya mengizinkan Web Push untuk PWA yang sudah dipasang ke Layar Utama.
 
 ## 7. Diagnostik jika login atau chat mendapat respons kosong
 
