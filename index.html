@@ -1984,6 +1984,8 @@ background:#e8f7ee;color:#137a3c
 
 .chat-loc-badge.weak{background:#fdecea;color:#b42318}
 
+.chat-loc-badge.manual{background:#e8f0fe;color:#1d4ed8}
+
 .chat-loc-actions{display:flex;gap:8px;flex-wrap:wrap}
 
 .chat-loc-actions .btn{flex:1 1 130px}
@@ -1995,6 +1997,51 @@ background:#e8f7ee;color:#137a3c
 .chat-loc-modal-actions .btn svg{width:15px;height:15px;flex:none}
 
 .chat-loc-hint{font-size:11px;opacity:.62;line-height:1.45}
+
+.chat-loc-hint.warn{
+padding:9px 10px;border-radius:10px;
+background:#fff4e0;border:1px solid #f3d19b;color:#7a4a00;
+opacity:1;font-size:11.5px;line-height:1.5
+}
+
+.chat-loc-hint.warn b{font-weight:800}
+
+.chat-loc-refine{display:inline-flex;align-items:center;gap:6px;font-size:11px;opacity:.7}
+
+.chat-loc-refine .chat-loc-spinner{width:12px;height:12px;border-width:2px}
+
+.chat-loc-picker{
+height:88vh;height:88dvh;max-height:none;
+display:flex;flex-direction:column;gap:10px;padding-top:14px
+}
+
+.chat-loc-picker-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+
+.chat-loc-picker-head b{font-size:16px}
+
+.chat-loc-picker-head small{display:block;margin-top:2px;font-size:11.5px;opacity:.65;line-height:1.4}
+
+.chat-loc-picker-map{
+flex:1;min-height:240px;
+border-radius:14px;overflow:hidden;
+border:1px solid var(--line);background:#e6edf5
+}
+
+.chat-loc-picker-map .leaflet-container{height:100%;width:100%;font:inherit;background:#e6edf5}
+
+.chat-loc-picker-foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+.chat-loc-picker-point{flex:1 1 100%;font-size:11px;opacity:.68;font-variant-numeric:tabular-nums}
+
+.chat-loc-picker-foot .btn{flex:1 1 130px;display:inline-flex;align-items:center;justify-content:center;gap:7px}
+
+.chat-loc-picker-foot .btn svg{width:15px;height:15px;flex:none}
+
+.chat-loc-pick-pin{background:none;border:0}
+
+.chat-loc-pick-pin span{display:block;width:34px;height:34px;color:#e11d48;filter:drop-shadow(0 6px 10px rgba(15,23,42,.35))}
+
+.chat-loc-pick-pin svg{width:34px;height:34px;fill:currentColor;stroke:#fff;stroke-width:1.1}
 
 .chat-loc-modal{display:flex;flex-direction:column;gap:10px;padding-top:14px}
 
@@ -2792,6 +2839,9 @@ CHAT_LOC_ERROR='',
 CHAT_LOC_ADDRESS='',
 CHAT_LOC_GEOCODE=0,
 CHAT_LOC_GEOCODE_DONE=false,
+CHAT_LOC_MANUAL=false,
+CHAT_LOC_REFINING=false,
+CHAT_LOC_PICKER=null,
 SW_REG=null,
 PUSH_ENABLED=false,
 PUSH_PUBLIC_KEY='',
@@ -5259,14 +5309,25 @@ CHAT_LOC_ERROR='';
 CHAT_LOC_ADDRESS='';
 CHAT_LOC_GEOCODE_DONE=false;
 CHAT_LOC_GEOCODE++;
+CHAT_LOC_MANUAL=false;
+CHAT_LOC_REFINING=true;
 chatLocRenderSheet();
+const GOOD=20;
+const started=Date.now();
 let samples=0;
 let finished=false;
-const started=Date.now();
+let revealed=false;
+let lastGeo=0;
+const geocode=()=>{
+if(Date.now()-lastGeo<2500)return;
+lastGeo=Date.now();
+chatGeocodeBest();
+};
 const finish=()=>{
 if(finished)return;
 finished=true;
 chatLocStop();
+CHAT_LOC_REFINING=false;
 if(!CHAT_LOC_BEST){
 CHAT_LOC_STATE='error';
 CHAT_LOC_ERROR='Lokasi tidak dapat diambil. Pastikan izin lokasi aktif dan GPS menyala.';
@@ -5275,7 +5336,16 @@ return;
 }
 CHAT_LOC_STATE='ready';
 chatLocRenderSheet();
-chatGeocodeBest();
+geocode();
+};
+const reveal=()=>{
+if(finished||!CHAT_LOC_BEST||CHAT_LOC_WATCH===null)return;
+revealed=true;
+if(CHAT_LOC_STATE!='ready'){
+CHAT_LOC_STATE='ready';
+chatLocRenderSheet();
+geocode();
+}
 };
 const onPos=position=>{
 if(finished||!CHAT_ACTIVE)return;
@@ -5286,17 +5356,28 @@ if(age>20000)return;
 const item={lat:Number(point.latitude),lng:Number(point.longitude),accuracy:Math.round(Number(point.accuracy)||999)};
 if(!Number.isFinite(item.lat)||!Number.isFinite(item.lng))return;
 samples++;
-if(!CHAT_LOC_BEST||item.accuracy<CHAT_LOC_BEST.accuracy){
-CHAT_LOC_BEST=item;
-if(CHAT_LOC_STATE=='searching')chatLocRenderSheet();
+const better=!CHAT_LOC_BEST||item.accuracy<CHAT_LOC_BEST.accuracy;
+if(better)CHAT_LOC_BEST=item;
+if(!CHAT_LOC_BEST)return;
+if(CHAT_LOC_BEST.accuracy<=GOOD){finish();return;}
+if(revealed){
+if(better){
+chatLocRenderSheet();
+geocode();
 }
-if(item.accuracy<=10||samples>=3||Date.now()-started>=7000)finish();
+return;
+}
+if(CHAT_LOC_STATE=='searching'){
+chatLocRenderSheet();
+if(samples>=2||Date.now()-started>=4000)reveal();
+}
 };
 const onErr=error=>{
 if(finished)return;
 if(!CHAT_LOC_BEST){
 finished=true;
 chatLocStop();
+CHAT_LOC_REFINING=false;
 CHAT_LOC_STATE='error';
 CHAT_LOC_ERROR=error&&Number(error.code)==1
 ?'Izin lokasi ditolak. Aktifkan izin lokasi untuk situs ini.'
@@ -5310,12 +5391,16 @@ try{
 CHAT_LOC_WATCH=navigator.geolocation.watchPosition(onPos,onErr,{enableHighAccuracy:true,maximumAge:0,timeout:15000});
 }catch(e){
 finished=true;
+CHAT_LOC_REFINING=false;
 CHAT_LOC_STATE='error';
 CHAT_LOC_ERROR='Fitur lokasi tidak tersedia di perangkat ini.';
 chatLocRenderSheet();
 return;
 }
-CHAT_LOC_TIMER=setTimeout(finish,9000);
+setTimeout(()=>{
+if(!finished&&CHAT_LOC_WATCH!==null)reveal();
+},6000);
+CHAT_LOC_TIMER=setTimeout(finish,30000);
 }
 
 
@@ -5325,6 +5410,7 @@ try{navigator.geolocation.clearWatch(CHAT_LOC_WATCH);}catch(e){}
 CHAT_LOC_WATCH=null;
 }
 if(CHAT_LOC_TIMER){clearTimeout(CHAT_LOC_TIMER);CHAT_LOC_TIMER=null;}
+CHAT_LOC_REFINING=false;
 }
 
 
@@ -5352,9 +5438,9 @@ const body=$('#chatLocSheetBody');
 if(!body)return;
 const best=CHAT_LOC_BEST;
 if(CHAT_LOC_STATE=='searching'){
-body.innerHTML=`<div class="chat-loc-status"><span class="chat-loc-spinner"></span><div>Mengambil titik GPS terbaik…<small>${best?'Akurasi sementara ±'+Math.round(best.accuracy)+' m':'Menunggu sinyal satelit'}</small></div></div>
+body.innerHTML=`<div class="chat-loc-status"><span class="chat-loc-spinner"></span><div>Mengambil beberapa bacaan GPS…<small>${best?'Akurasi sementara ±'+Math.round(best.accuracy)+' m':'Menunggu sinyal GPS'}</small></div></div>
 ${best?`<div class="chat-loc-preview">${chatLocationMapHtml(best,320,176)}</div>`:''}
-<div class="chat-loc-hint">Tetap di tempat terbuka beberapa detik. GPS presisi tinggi dan izin lokasi harus aktif.</div>
+<div class="chat-loc-hint">Tetap di tempat terbuka hingga 30 detik. Ponsel butuh beberapa bacaan GPS agar titiknya presisi; jangan berpindah tempat dulu.</div>
 <div class="chat-loc-actions"><button type="button" class="btn sec" onclick="chatCloseLocSheet()">Batal</button></div>`;
 return;
 }
@@ -5364,21 +5450,124 @@ body.innerHTML=`<div class="chat-loc-status error">${chatIcon('pin')}<div>Lokasi
 return;
 }
 const acc=Math.round(Number(best.accuracy)||0);
-const tone=chatLocTone(acc);
-const label=acc<=30?'Akurasi bagus':acc<=100?'Cukup akurat':'Akurasi rendah';
+const manual=!!CHAT_LOC_MANUAL;
+const tone=manual?' manual':chatLocTone(acc);
+const label=manual?'Titik disesuaikan':acc<=30?'Akurasi bagus':acc<=100?'Cukup akurat':'Akurasi rendah';
+const badge=manual?label:label+' · ±'+acc+' m';
+const refining=CHAT_LOC_REFINING&&!manual&&acc>20;
 const point=Number(best.lat).toFixed(5)+', '+Number(best.lng).toFixed(5);
 const address=CHAT_LOC_ADDRESS
 ?`<div class="chat-loc-row">${chatIcon('pin')}<div><small>Alamat sekitar</small>${esc(CHAT_LOC_ADDRESS)}</div></div>`
 :CHAT_LOC_GEOCODE_DONE
 ?`<div class="chat-loc-row">${chatIcon('pin')}<div><small>Alamat sekitar</small>Alamat tidak tersedia, titik tetap bisa dikirim.</div></div>`
 :`<div class="chat-loc-row">${chatIcon('pin')}<div><small>Alamat sekitar</small>Mencari alamat…</div></div>`;
+const hints=[];
+if(manual){
+hints.push('<div class="chat-loc-hint">Titik ini dipilih manual di peta. Tekan Perbarui untuk kembali memakai GPS.</div>');
+}else if(acc>500){
+hints.push('<div class="chat-loc-hint warn"><b>Lokasi masih perkiraan (±'+acc+' m).</b> Aktifkan <b>Lokasi tepat (Precise)</b> di setelan situs (ikon gembok di address bar → Izin → Lokasi) dan GPS akurasi tinggi, muat ulang halaman, lalu tekan <b>Perbarui</b>. Atau tekan <b>Atur titik</b> untuk mengoreksi manual.</div>');
+}else if(acc>100){
+hints.push('<div class="chat-loc-hint">Akurasi masih rendah. Pindah ke area terbuka atau tekan Perbarui; bila tetap meleset, gunakan Atur titik.</div>');
+}
+if(refining)hints.push('<div class="chat-loc-refine"><span class="chat-loc-spinner"></span>Masih mencari sinyal GPS yang lebih baik…</div>');
 body.innerHTML=`<div class="chat-loc-preview">${chatLocationMapHtml(best,320,176)}</div>
-<span class="chat-loc-badge${tone}">${chatIcon('pin')} ${label} · ±${acc} m</span>
+<span class="chat-loc-badge${tone}">${chatIcon('pin')} ${badge}</span>
 <div class="chat-loc-rows">${address}
 <div class="chat-loc-row">${chatIcon('search')}<div><small>Koordinat</small>${esc(point)}</div></div>
 </div>
-${acc>100?'<div class="chat-loc-hint">Akurasi masih rendah. Tekan Perbarui atau pindah ke area terbuka agar titik lebih tepat.</div>':''}
-<div class="chat-loc-actions"><button type="button" class="btn" onclick="chatSendLocation()">${chatIcon('send')} Kirim lokasi</button><button type="button" class="btn sec" onclick="chatLocateStart()">Perbarui</button></div>`;
+${hints.join('')}
+<div class="chat-loc-actions"><button type="button" class="btn" onclick="chatSendLocation()">${chatIcon('send')} Kirim lokasi</button><button type="button" class="btn sec" onclick="chatLocateStart()">Perbarui</button><button type="button" class="btn sec" onclick="chatLocPickerOpen()">${chatIcon('pin')} Atur titik</button></div>`;
+}
+
+
+function chatLocLoadLeaflet(done){
+if(window.L){done();return;}
+if(document.getElementById('chatLocLeaflet')){
+setTimeout(()=>chatLocLoadLeaflet(done),150);
+return;
+}
+const css=document.createElement('link');
+css.rel='stylesheet';
+css.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+document.head.appendChild(css);
+const script=document.createElement('script');
+script.id='chatLocLeaflet';
+script.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+script.async=true;
+script.onload=()=>done();
+script.onerror=()=>{
+script.remove();
+toast('Peta tidak dapat dimuat. Periksa koneksi internet.');
+chatLocPickerCancel();
+};
+document.head.appendChild(script);
+}
+
+
+function chatLocPickerReset(){
+try{if(CHAT_LOC_PICKER)CHAT_LOC_PICKER.remove();}catch(e){}
+CHAT_LOC_PICKER=null;
+window.__chatLocMarker=null;
+}
+
+
+function chatLocPickerOpen(){
+const best=CHAT_LOC_BEST;
+if(!best){toast('Lokasi belum ditemukan.');return;}
+chatLocStop();
+const start={lat:Number(best.lat),lng:Number(best.lng)};
+const startZoom=Number(best.accuracy)>100?16:17;
+$('#layer').innerHTML=`<div class="ov" onclick="if(event.target==this)chatLocPickerCancel()"><div class="sheet chat-loc-picker" role="dialog" aria-modal="true">
+<div class="chat-loc-picker-head"><div><b>Atur titik lokasi</b><small>Geser pin atau ketuk peta sampai tepat di lokasi Anda.</small></div><button type="button" class="chat-loc-close" onclick="chatLocPickerCancel()" aria-label="Tutup">${chatIcon('close')}</button></div>
+<div class="chat-loc-picker-map" id="chatLocPickerMap"></div>
+<div class="chat-loc-picker-foot"><span class="chat-loc-picker-point" id="chatLocPickPoint">${start.lat.toFixed(6)}, ${start.lng.toFixed(6)}</span><button type="button" class="btn" onclick="chatLocPickerConfirm()">${chatIcon('pin')} Pakai titik ini</button><button type="button" class="btn sec" onclick="chatLocPickerCancel()">Batal</button></div>
+</div></div>`;
+const init=()=>{
+const element=document.getElementById('chatLocPickerMap');
+if(!element||!window.L)return;
+const map=L.map(element,{zoomControl:true,attributionControl:true,minZoom:3,maxZoom:19}).setView([start.lat,start.lng],startZoom);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'}).addTo(map);
+const icon=L.divIcon({className:'chat-loc-pick-pin',html:'<span>'+chatIcon('pin')+'</span>',iconSize:[34,34],iconAnchor:[17,33]});
+const marker=L.marker([start.lat,start.lng],{draggable:true,icon:icon}).addTo(map);
+const point=document.getElementById('chatLocPickPoint');
+const sync=()=>{
+if(!point)return;
+const current=marker.getLatLng();
+point.textContent=current.lat.toFixed(6)+', '+current.lng.toFixed(6);
+};
+sync();
+marker.on('drag',sync);
+marker.on('dragend',sync);
+map.on('click',event=>{marker.setLatLng(event.latlng);sync();});
+CHAT_LOC_PICKER=map;
+window.__chatLocMarker=marker;
+setTimeout(()=>{try{map.invalidateSize();}catch(e){}},150);
+};
+if(window.L)init();
+else chatLocLoadLeaflet(init);
+}
+
+
+function chatLocPickerConfirm(){
+const marker=window.__chatLocMarker;
+if(!marker){toast('Peta belum siap. Coba lagi sebentar.');return;}
+const current=marker.getLatLng();
+chatLocPickerReset();
+CHAT_LOC_BEST={lat:Number(current.lat),lng:Number(current.lng),accuracy:0};
+CHAT_LOC_MANUAL=true;
+CHAT_LOC_ADDRESS='';
+CHAT_LOC_GEOCODE_DONE=false;
+CHAT_LOC_GEOCODE++;
+chatOpenLocSheet();
+chatLocRenderSheet();
+chatGeocodeBest();
+}
+
+
+function chatLocPickerCancel(){
+chatLocPickerReset();
+chatOpenLocSheet();
+chatLocRenderSheet();
 }
 
 
@@ -5388,7 +5577,8 @@ if(!best){toast('Lokasi belum ditemukan.');return;}
 const lat=Number(best.lat).toFixed(6);
 const lng=Number(best.lng).toFixed(6);
 const acc=Math.round(Number(best.accuracy)||0);
-let text='📍 Lokasi saya'+(acc>0?' (akurasi ±'+acc+' m)':'')+'\nhttps://www.google.com/maps?q='+lat+','+lng;
+const accLabel=CHAT_LOC_MANUAL?'':acc>0?' (akurasi ±'+acc+' m)':'';
+let text='📍 Lokasi saya'+accLabel+'\nhttps://www.google.com/maps?q='+lat+','+lng;
 if(CHAT_LOC_ADDRESS)text+='\n'+CHAT_LOC_ADDRESS;
 const input=$('#chatText');
 chatCloseLocSheet();
@@ -5408,6 +5598,8 @@ chatDismissEmoji();
 CHAT_LOC_BEST=null;
 CHAT_LOC_ADDRESS='';
 CHAT_LOC_ERROR='';
+CHAT_LOC_MANUAL=false;
+CHAT_LOC_PICKER=null;
 chatOpenLocSheet();
 chatLocateStart();
 }
@@ -5424,6 +5616,7 @@ chatLocRenderSheet();
 
 function chatCloseLocSheet(){
 chatLocStop();
+chatLocPickerReset();
 CHAT_LOC_GEOCODE++;
 if($('#chatLocSheetBody'))$('#layer').innerHTML='';
 }
