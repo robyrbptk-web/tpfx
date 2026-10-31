@@ -3575,7 +3575,7 @@ async function showLocalNotification(title,options,link){
 try{
 const reg=SW_REG||('serviceWorker' in navigator?await navigator.serviceWorker.getRegistration():null);
 if(reg&&reg.showNotification){
-await reg.showNotification(title,Object.assign({icon:'./pwa-icon-192.png'},options,{data:{url:link||'./index.html'}}));
+await reg.showNotification(title,Object.assign({icon:'./pwa-icon-192.png',vibrate:[90,40,90],lang:'id',dir:'auto',silent:false},options,{data:{url:link||'./index.html'}}));
 return;
 }
 if('Notification' in window&&Notification.permission=='granted'){
