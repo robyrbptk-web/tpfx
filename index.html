@@ -910,6 +910,50 @@ font-weight:800;
 font-variant-numeric:tabular-nums
 }
 
+.deposit-ticker-news{
+color:#e0f2fe;
+text-decoration:none;
+transition:color .2s
+}
+
+.deposit-ticker-news:hover,
+.deposit-ticker-news:focus-visible{
+color:#fff
+}
+
+.deposit-ticker-news:focus-visible{
+outline:2px solid #7dd3fc;
+outline-offset:3px;
+border-radius:8px
+}
+
+.deposit-ticker-tag{
+flex:none;
+margin-right:8px;
+padding:1px 7px;
+border-radius:999px;
+background:linear-gradient(90deg,#f59e0b,#fbbf24);
+color:#3b2603;
+font-size:9px;
+font-weight:900;
+letter-spacing:.08em
+}
+
+.deposit-ticker-news-title{
+max-width:min(70vw,560px);
+overflow:hidden;
+text-overflow:ellipsis;
+white-space:nowrap;
+display:inline-block;
+vertical-align:bottom
+}
+
+.deposit-ticker-source{
+color:#fcd34d;
+font-weight:700;
+opacity:.85
+}
+
 .deposit-ticker-empty{color:#cbd5e1;font-weight:600}
 
 @keyframes depositTicker{
@@ -2077,6 +2121,10 @@ PUSH_SUBSCRIBED=false,
 PUSH_BUSY=false,
 PUSH_CHECKED=false,
 PUSH_AUTO_ARMED=false,
+GOLD_NEWS=[],
+GOLD_NEWS_AT=0,
+GOLD_NEWS_LOADING=false,
+GOLD_NEWS_FAIL_AT=0,
 LOGIN_PENDING=false;
 
 function seed(){
@@ -4980,7 +5028,68 @@ refreshChatHistory();
 3000
 );
 
+const GOLD_NEWS_TTL=10*60*1000;
+const GOLD_NEWS_FAIL_MS=5*60*1000;
+
+function normalizeNewsItem(item){
+const url=String(item&&item.url||'');
+if(!/^https?:\/\//i.test(url))return null;
+const title=String(item.title||'').replace(/\s+/g,' ').trim().slice(0,180);
+if(!title)return null;
+const source=String(item.source||'Gold News').replace(/\s+/g,' ').trim().slice(0,60)||'Gold News';
+return{title,url,source,ts:Number(item.ts)||0};
+}
+
+function restoreGoldNews(){
+try{
+const raw=JSON.parse(localStorage.getItem('tpfx_gold_news')||'null');
+if(!raw||!Array.isArray(raw.items))return;
+GOLD_NEWS=raw.items.map(normalizeNewsItem).filter(Boolean).slice(0,8);
+GOLD_NEWS_AT=Number(raw.at)||0;
+}catch(e){}
+}
+
+async function loadGoldNews(force){
+if(!TOK||GOLD_NEWS_LOADING)return;
+const now=Date.now();
+if(!force&&GOLD_NEWS_AT&&now-GOLD_NEWS_AT<GOLD_NEWS_TTL)return;
+if(!force&&GOLD_NEWS_FAIL_AT&&now-GOLD_NEWS_FAIL_AT<GOLD_NEWS_FAIL_MS)return;
+GOLD_NEWS_LOADING=true;
+let timer=null;
+try{
+const controller=typeof AbortController!='undefined'?new AbortController():null;
+if(controller)timer=setTimeout(()=>controller.abort(),8000);
+const response=await fetch('/api/news',{
+headers:{Accept:'application/json'},
+cache:'no-store',
+signal:controller?controller.signal:undefined
+});
+if(!response.ok)throw new Error('HTTP '+response.status);
+const data=await response.json();
+const list=data&&data.ok&&Array.isArray(data.items)?data.items.map(normalizeNewsItem).filter(Boolean).slice(0,8):[];
+if(!list.length)throw new Error('Berita kosong');
+GOLD_NEWS=list;
+GOLD_NEWS_AT=Date.now();
+GOLD_NEWS_FAIL_AT=0;
+try{
+localStorage.setItem('tpfx_gold_news',JSON.stringify({at:GOLD_NEWS_AT,items:GOLD_NEWS}));
+}catch(e){}
+refreshDepositTicker();
+}catch(e){
+GOLD_NEWS_FAIL_AT=Date.now();
+}finally{
+if(timer)clearTimeout(timer);
+GOLD_NEWS_LOADING=false;
+}
+}
+
+function refreshDepositTicker(){
+const el=document.getElementById('depositTicker');
+if(el)el.outerHTML=depositTicker();
+}
+
 function depositTicker(){
+loadGoldNews();
 const items=[];
 const add=(lead,by)=>{
 if(!lead||String(lead.status)!='deal')return;
@@ -5001,17 +5110,36 @@ leads.forEach(lead=>add(lead,member.nama||member.user));
 (S.leads||[]).forEach(lead=>add(lead,S.name||USER));
 }
 items.sort((a,b)=>b.ts-a.ts);
-const rows=items.slice(0,8).map(item=>
+const deposits=items.slice(0,5).map(item=>
 `<span class="deposit-ticker-item"><b>${esc(item.by||'BDO')}</b><span class="deposit-ticker-sep">·</span><span class="deposit-ticker-amount">${item.amount?'Rp'+esc(item.amount):'Closing baru'}</span></span>`
 );
-if(!rows.length)rows.push('<span class="deposit-ticker-item deposit-ticker-empty">Belum ada deposit tercatat — jemput closing berikutnya!</span>');
-const group=`<span class="deposit-ticker-group">${rows.join('')}</span>`;
-const doubled=group+group;
-const duration=Math.max(26,Math.min(70,12+rows.length*6));
-return`<div class="deposit-ticker" role="status" aria-live="polite">
-<span class="deposit-ticker-label">CLOSING</span>
+const newsRow=(item,duplicate)=>
+duplicate
+?`<a class="deposit-ticker-item deposit-ticker-news" href="${esc(item.url)}" target="_blank" rel="noopener noreferrer" title="${esc(item.title)}" tabindex="-1"><span class="deposit-ticker-tag">XAUUSD</span><span class="deposit-ticker-news-title">${esc(item.title)}</span>${item.source?`<span class="deposit-ticker-sep">·</span><span class="deposit-ticker-source">${esc(item.source)}</span>`:''}</a>`
+:item.url
+?`<a class="deposit-ticker-item deposit-ticker-news" href="${esc(item.url)}" target="_blank" rel="noopener noreferrer" title="${esc(item.title)}"><span class="deposit-ticker-tag">XAUUSD</span><span class="deposit-ticker-news-title">${esc(item.title)}</span>${item.source?`<span class="deposit-ticker-sep">·</span><span class="deposit-ticker-source">${esc(item.source)}</span>`:''}</a>`
+:`<span class="deposit-ticker-item deposit-ticker-news"><span class="deposit-ticker-tag">XAUUSD</span><span class="deposit-ticker-news-title">${esc(item.title)}</span>${item.source?`<span class="deposit-ticker-sep">·</span><span class="deposit-ticker-source">${esc(item.source)}</span>`:''}</span>`;
+const build=(duplicate)=>deposits.concat(GOLD_NEWS.slice(0,6).map(item=>newsRow(item,duplicate)));
+const first=build(false);
+const second=build(true);
+if(!first.length){
+const empty='<span class="deposit-ticker-item deposit-ticker-empty">Belum ada deposit atau berita emas — jemput closing berikutnya!</span>';
+first.push(empty);
+second.push(empty);
+}
+let chars=0;
+items.slice(0,5).forEach(item=>{
+chars+=String(item.by||'BDO').length+String(item.amount||'Closing baru').length+10;
+});
+GOLD_NEWS.slice(0,6).forEach(item=>{
+chars+=String(item.title||'').length+String(item.source||'').length+14;
+});
+const doubled=`<span class="deposit-ticker-group">${first.join('')}</span><span class="deposit-ticker-group" aria-hidden="true">${second.join('')}</span>`;
+const duration=Math.max(30,Math.min(110,10+first.length*4+chars*0.06));
+return`<div class="deposit-ticker" id="depositTicker" role="region" aria-label="Closing terbaru dan berita emas XAUUSD" title="Closing terbaru & berita emas XAUUSD">
+<span class="deposit-ticker-label">UPDATE</span>
 <div class="deposit-ticker-window">
-<div class="deposit-ticker-track" style="animation-duration:${duration}s">
+<div class="deposit-ticker-track" style="animation-duration:${duration.toFixed(1)}s">
 ${doubled}
 </div>
 </div>
@@ -9218,6 +9346,7 @@ registerServiceWorker();
 window.addEventListener('hashchange',()=>openChatFromUrl(location.href));
 }
 
+restoreGoldNews();
 boot();
 
 </script>

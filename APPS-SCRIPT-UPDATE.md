@@ -1566,6 +1566,21 @@ Di frontend:
 
 Setelah menyalin backend baru: jalankan `setup()` sekali (menambah header `Messages`), lalu deploy versi baru dengan ID deployment yang sama. Frontend lama tetap dapat membaca pesan teks; fitur lampiran baru aktif setelah kedua sisi diperbarui.
 
-## 11. Running text deposit (CLOSING)
+## 11. Running text deposit dan berita emas XAUUSD (UPDATE)
 
-Halaman Home (BDO/Sales) dan dashboard BM/DM menampilkan running text **CLOSING** bergaya panel biru gelap. Isinya maksimal 8 lead berstatus `deal` terbaru, tetapi yang ditampilkan hanya **nama BDO yang closing dan nominal deposit** — nama nasabah dan produk tidak ditampilkan. Untuk BM/DM, lead diambil dari seluruh anggota tim dan nama BDO memakai profil anggota tersebut. Nominal diambil dari catatan lead bila ada pola `Rp` (contoh `Rp15.000.000`); bila nominal tidak tercatat, item menampilkan `Closing baru`. Bila belum ada deposit, teks ajakan tampil agar bagian ini tidak kosong. Animasi memakai CSS (`translateX(-50%)` dengan daftar yang diduplikasi), berhenti saat kursor diarahkan, dan otomatis nonaktif pada pengaturan `prefers-reduced-motion`.
+Halaman Home (BDO/Sales) dan dashboard BM/DM menampilkan running text **UPDATE** bergaya panel biru gelap. Running text ini menggabungkan dua jenis informasi:
+
+1. **Closing** — maksimal 5 lead berstatus `deal` terbaru. Yang ditampilkan hanya **nama BDO yang closing dan nominal deposit**; nama nasabah dan produk tidak ditampilkan. Untuk BM/DM, lead diambil dari seluruh anggota tim dan nama BDO memakai profil anggota tersebut. Nominal diambil dari catatan lead bila ada pola `Rp` (contoh `Rp15.000.000`); bila nominal tidak tercatat, item menampilkan `Closing baru`.
+2. **Berita emas XAUUSD** — maksimal 6 berita terbaru dengan label kuning `XAUUSD`, judul, dan nama media. Setiap berita dapat diklik untuk membuka artikel di tab baru. Judul panjang dipotong dengan elipsis pada layar; judul lengkap tetap tersedia lewat tooltip dan tautan artikel.
+
+Bila keduanya kosong, teks ajakan tampil agar bagian ini tidak kosong. Animasi memakai CSS (`translateX(-50%)` dengan daftar yang diduplikasi), berhenti saat kursor diarahkan, salinan kedua ditandai `aria-hidden` dan tidak dapat difokuskan, dan animasi otomatis nonaktif pada pengaturan `prefers-reduced-motion`.
+
+### Sumber berita tanpa API key
+
+`api/news.js` adalah Vercel Function yang mengambil RSS Google News (`XAUUSD`/`gold price` dan `harga emas`), lalu memakai RSS Bing News sebagai cadangan bila hasil kurang dari 3 item. Tidak ada API key maupun biaya; kedua sumber RSS berformat publik. Endpoint mengambil berita dari kedua feed secara bergiliran agar berita analisis XAUUSD tidak tenggelam oleh berita harga emas Antam yang lebih sering terbit, membuang duplikat, membatasi usia 21 hari, dan mengembalikan maksimal 8 item:
+
+```json
+{ "ok": true, "items": [{ "title": "...", "url": "https://...", "source": "FXEmpire", "ts": 1790000000000 }], "updated": 1790000000000 }
+```
+
+Cache di memori function berlaku 5 menit dan respons diberi `Cache-Control: public, max-age=120, s-maxage=300, stale-while-revalidate=900`. Bila semua sumber gagal, endpoint tetap merespons HTTP 200 dengan `{ "ok": false, "items": [] }` agar halaman tidak error; frontend menyimpan berita terakhir di `localStorage` (`tpfx_gold_news`), memuat ulang tiap 10 menit, dan tetap menampilkan closing bila berita tidak tersedia. Tidak perlu mengubah Apps Script untuk fitur berita; cukup deploy Vercel seperti biasa.
