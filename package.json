@@ -1,0 +1,12 @@
+{
+  "name": "tpfx-sales-workspace",
+  "private": true,
+  "version": "1.0.0",
+  "description": "TPFX Sales Workspace - static PWA dengan relay Web Push di Vercel.",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "web-push": "^3.6.7"
+  }
+}

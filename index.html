@@ -1194,6 +1194,12 @@ margin:-4px 0 12px
 color:var(--mut)
 }
 
+.chat-notification-actions{
+display:inline-flex;
+flex-wrap:wrap;
+gap:6px
+}
+
 .chat-preview{
 height:355px;
 overflow:auto;
@@ -1334,6 +1340,125 @@ box-shadow:0 14px 36px rgba(24,35,70,.09)
 
 @media(prefers-reduced-motion:reduce){
 .social-post,.card{animation:none;transition:none}
+}
+
+/* ============================================================
+   MOTION LAYER
+   ============================================================ */
+
+@keyframes tpfx-view-in{
+from{opacity:0;transform:translateY(10px) scale(.996)}
+to{opacity:1;transform:none}
+}
+
+@keyframes tpfx-pop{
+0%{transform:scale(.6);opacity:0}
+60%{transform:scale(1.08)}
+100%{transform:scale(1);opacity:1}
+}
+
+@keyframes tpfx-badge-pulse{
+0%{transform:scale(.5)}
+55%{transform:scale(1.22)}
+100%{transform:scale(1)}
+}
+
+@keyframes tpfx-ring{
+0%{box-shadow:0 6px 18px rgba(39,67,214,.4),0 0 0 0 rgba(29,155,240,.35)}
+70%{box-shadow:0 6px 18px rgba(39,67,214,.4),0 0 0 14px rgba(29,155,240,0)}
+100%{box-shadow:0 6px 18px rgba(39,67,214,.4),0 0 0 0 rgba(29,155,240,0)}
+}
+
+@keyframes tpfx-shine{
+from{transform:translateX(-130%)}
+to{transform:translateX(230%)}
+}
+
+@keyframes tpfx-sheet-in{
+from{transform:translateY(46px) scale(.985);opacity:0}
+to{transform:none;opacity:1}
+}
+
+@keyframes tpfx-spin{
+to{transform:rotate(360deg)}
+}
+
+@media(prefers-reduced-motion:no-preference){
+html{scroll-behavior:smooth}
+
+button{
+transition:transform .16s cubic-bezier(.22,1,.36,1),box-shadow .2s ease,background-color .2s ease,color .2s ease,opacity .2s ease
+}
+
+button:active:not(:disabled){transform:scale(.965)}
+
+input,select,textarea{
+transition:border-color .2s ease,box-shadow .2s ease,background-color .2s ease
+}
+
+input:focus,select:focus,textarea:focus{
+border-color:color-mix(in srgb,var(--pri) 55%,var(--line));
+box-shadow:0 0 0 4px rgba(29,155,240,.12)
+}
+
+#app.view-in{animation:tpfx-view-in .32s cubic-bezier(.22,1,.36,1) both}
+
+.btn{position:relative;overflow:hidden}
+.btn::after{
+content:"";
+position:absolute;
+inset:0;
+background:linear-gradient(110deg,transparent 25%,rgba(255,255,255,.32) 45%,transparent 65%);
+transform:translateX(-130%);
+pointer-events:none
+}
+.btn:hover::after{animation:tpfx-shine .85s ease}
+
+.btn.sec::after{background:linear-gradient(110deg,transparent 25%,rgba(29,155,240,.12) 45%,transparent 65%)}
+
+.nav button svg{transition:transform .22s cubic-bezier(.22,1,.36,1)}
+.nav button.on svg{transform:translateY(-2px) scale(1.06)}
+.nav button.on::before{
+content:"";
+position:absolute;
+top:0;
+left:50%;
+width:26px;
+height:3px;
+margin-left:-13px;
+border-radius:0 0 6px 6px;
+background:var(--pri);
+animation:tpfx-pop .34s cubic-bezier(.22,1,.36,1) both
+}
+
+.nav button .nav-badge,.chat-unread-badge{animation:tpfx-badge-pulse .4s cubic-bezier(.22,1,.36,1) both}
+
+.fab{animation:tpfx-ring 2.8s ease-out infinite}
+.fab:active{transform:scale(.92)}
+.fab:hover{box-shadow:0 10px 26px rgba(39,67,214,.5)}
+
+.ov{animation:tpfx-view-in .16s ease both}
+.sheet{animation:tpfx-sheet-in .3s cubic-bezier(.22,1,.36,1) both}
+
+.toast{
+opacity:0;
+transform:translate(-50%,16px) scale(.94);
+transition:opacity .22s ease,transform .32s cubic-bezier(.22,1,.36,1)
+}
+.toast.show{opacity:1;transform:translate(-50%,0) scale(1)}
+
+.social-post,.card{transition:transform .22s cubic-bezier(.22,1,.36,1),box-shadow .24s ease,border-color .24s ease}
+.social-post:active{transform:scale(.994)}
+
+.chat-contact,.opt{transition:transform .18s ease,background-color .2s ease,border-color .2s ease}
+.chat-contact:active,.opt:active{transform:scale(.985)}
+
+.lead,.col .lead{transition:transform .2s cubic-bezier(.22,1,.36,1),box-shadow .2s ease}
+}
+
+@media(prefers-reduced-motion:reduce){
+#app.view-in,.ov,.sheet,.fab,.nav button.on::before,.nav button .nav-badge,.chat-unread-badge,.btn::after{animation:none!important}
+.toast{transition:none}
 }
 </style>
 </head>
@@ -1539,6 +1664,12 @@ CHAT_SYNC_ERROR_AT=0,
 CHAT_SENDING=false,
 CHAT_NOTIFICATIONS_LOADING=false,
 CHAT_NOTIFICATION_ERROR_AT=0,
+SW_REG=null,
+PUSH_ENABLED=false,
+PUSH_PUBLIC_KEY='',
+PUSH_SUBSCRIBED=false,
+PUSH_BUSY=false,
+PUSH_CHECKED=false,
 LOGIN_PENDING=false;
 
 function seed(){
@@ -1900,8 +2031,12 @@ ROLE=='BM'
 const manager=ROLE=='DM'||ROLE=='BM';
 if(manager)TEAM=[];
 render();
+animateView();
 $('#app').setAttribute('aria-busy','false');
 document.body.classList.remove('booting');
+
+initPush();
+setTimeout(()=>openChatFromUrl(location.href),450);
 
 if(manager){
 const bootToken=TOK;
@@ -2255,6 +2390,8 @@ CHAT_HISTORY_REQUEST++;
 CHAT_SENDING=false;
 ROLE='';
 LOGIN_PENDING=false;
+PUSH_CHECKED=false;
+PUSH_SUBSCRIBED=false;
 $('#appHeader').hidden=true;
 
 const layer=$('#layer');
@@ -2294,8 +2431,15 @@ e.textContent=t;
 
 document.body.append(e);
 
+requestAnimationFrame(
+()=>e.classList.add('show')
+);
+
 setTimeout(
-()=>e.remove(),
+()=>{
+e.classList.remove('show');
+setTimeout(()=>e.remove(),340);
+},
 1800
 );
 
@@ -3239,15 +3383,233 @@ return chatUnread(type,item)?'<span class="chat-unread-badge" aria-label="Pesan 
 }
 
 
+// ============================================================
+// NOTIFIKASI HP (WEB PUSH)
+// ============================================================
+
+function urlBase64ToUint8Array(base64String){
+const padding='='.repeat((4-base64String.length%4)%4);
+const base64=(base64String+padding).replace(/-/g,'+').replace(/_/g,'/');
+const raw=atob(base64);
+const output=new Uint8Array(raw.length);
+for(let i=0;i<raw.length;i++)output[i]=raw.charCodeAt(i);
+return output;
+}
+
+
+function isStandaloneApp(){
+return (window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;
+}
+
+
+function isIOSDevice(){
+return /iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+}
+
+
+async function registerServiceWorker(){
+if(!('serviceWorker' in navigator))return null;
+try{
+SW_REG=await navigator.serviceWorker.register('./sw.js',{scope:'./'});
+return SW_REG;
+}catch(e){
+console.warn('Service worker gagal didaftarkan:',e);
+return null;
+}
+}
+
+
+async function loadPushPublicKey(){
+if(PUSH_PUBLIC_KEY)return PUSH_PUBLIC_KEY;
+try{
+const res=await fetch(new URL('./api/push',location.href),{cache:'no-store'});
+if(!res.ok)return '';
+const data=await res.json();
+if(data&&data.enabled&&typeof data.publicKey==='string'&&data.publicKey){
+PUSH_PUBLIC_KEY=data.publicKey;
+}
+}catch(e){}
+return PUSH_PUBLIC_KEY;
+}
+
+
+async function initPush(){
+if(PUSH_CHECKED||!TOK)return;
+try{
+const cfg=await rpc('pushConfig',TOK);
+PUSH_ENABLED=!!(cfg&&cfg.enabled);
+}catch(e){
+PUSH_ENABLED=false;
+}
+PUSH_CHECKED=true;
+if(!PUSH_ENABLED){
+refreshNotificationControl();
+return;
+}
+if(!SW_REG)await registerServiceWorker();
+await loadPushPublicKey();
+if(!PUSH_PUBLIC_KEY||!SW_REG){
+PUSH_ENABLED=false;
+refreshNotificationControl();
+return;
+}
+try{
+const sub=await SW_REG.pushManager.getSubscription();
+PUSH_SUBSCRIBED=!!sub;
+if(sub)sendPushSubscription(sub).catch(()=>{});
+}catch(e){
+PUSH_SUBSCRIBED=false;
+}
+refreshNotificationControl();
+}
+
+
+async function sendPushSubscription(sub){
+const payload=sub&&typeof sub.toJSON==='function'?sub.toJSON():sub;
+return rpc('subscribePush',TOK,JSON.stringify(payload));
+}
+
+
+async function enablePushNotifications(){
+if(PUSH_BUSY)return;
+if(!PUSH_ENABLED){
+toast('Notifikasi HP belum aktif di server. Hubungi manager.');
+return;
+}
+if(isIOSDevice()&&!isStandaloneApp()){
+toast('Di iPhone, tambahkan aplikasi ke Layar Utama, buka dari ikonnya, lalu aktifkan notifikasi.');
+return;
+}
+if(!('Notification' in window)){
+toast('Browser ini tidak mendukung notifikasi.');
+return;
+}
+PUSH_BUSY=true;
+try{
+if(!SW_REG)await registerServiceWorker();
+if(!SW_REG)throw new Error('Service worker belum siap. Muat ulang aplikasi lalu coba lagi.');
+const permission=await Notification.requestPermission();
+if(permission!='granted'){
+toast(permission=='denied'?'Izin notifikasi diblokir. Ubah izin situs di pengaturan browser.':'Izin notifikasi belum diberikan.');
+refreshNotificationControl();
+return;
+}
+const key=await loadPushPublicKey();
+if(!key)throw new Error('Kunci push server belum tersedia.');
+let sub=await SW_REG.pushManager.getSubscription();
+if(!sub){
+sub=await SW_REG.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8Array(key)});
+}
+const result=await sendPushSubscription(sub);
+if(result&&result.err)throw new Error(typeof result.err==='string'?result.err:'Langganan push ditolak server.');
+PUSH_SUBSCRIBED=true;
+toast('Notifikasi HP aktif. Pesan baru masuk walau aplikasi ditutup.');
+}catch(e){
+const msg=String((e&&e.message)||e);
+if(msg.indexOf('tidak mengembalikan hasil')>=0)PUSH_ENABLED=false;
+console.error('Aktivasi notifikasi HP gagal:',e);
+toast('Notifikasi HP gagal diaktifkan: '+msg);
+}finally{
+PUSH_BUSY=false;
+refreshNotificationControl();
+}
+}
+
+
+async function disablePushNotifications(){
+if(PUSH_BUSY)return;
+PUSH_BUSY=true;
+try{
+const sub=SW_REG?await SW_REG.pushManager.getSubscription():null;
+if(sub){
+try{await rpc('unsubscribePush',TOK,sub.endpoint);}catch(e){}
+await sub.unsubscribe();
+}
+PUSH_SUBSCRIBED=false;
+toast('Notifikasi HP dimatikan di perangkat ini.');
+}catch(e){
+toast('Gagal mematikan notifikasi: '+String((e&&e.message)||e));
+}finally{
+PUSH_BUSY=false;
+refreshNotificationControl();
+}
+}
+
+
+async function testPushNotification(){
+if(PUSH_BUSY)return;
+PUSH_BUSY=true;
+try{
+const r=await rpc('testPush',TOK);
+if(r&&r.err)throw new Error(typeof r.err==='string'?r.err:'Uji notifikasi gagal.');
+const sent=Number(r&&r.sent)||0;
+toast(sent>0?'Notifikasi uji dikirim. Periksa layar HP Anda.':'Belum ada langganan push. Aktifkan notifikasi HP dulu.');
+}catch(e){
+toast('Uji notifikasi gagal: '+String((e&&e.message)||e));
+}finally{
+PUSH_BUSY=false;
+}
+}
+
+
 function chatNotificationStatus(){
-if(!('Notification' in window))return 'Notifikasi browser tidak didukung di browser ini.';
-if(Notification.permission=='granted')return 'Notifikasi browser aktif.';
+if(!('Notification' in window))return 'Notifikasi tidak didukung di browser ini.';
 if(Notification.permission=='denied')return 'Izin notifikasi diblokir di pengaturan browser.';
+if(PUSH_ENABLED&&PUSH_SUBSCRIBED)return isStandaloneApp()?'Notifikasi HP aktif — pesan masuk walau aplikasi ditutup.':'Notifikasi aktif di perangkat ini.';
+if(PUSH_ENABLED&&Notification.permission=='granted')return 'Izin diberikan. Aktifkan notifikasi HP agar pesan masuk saat aplikasi ditutup.';
+if(PUSH_ENABLED)return 'Aktifkan agar pesan baru masuk ke HP Anda.';
+if(Notification.permission=='granted')return 'Notifikasi aktif selama aplikasi terbuka.';
 return 'Aktifkan agar diberi tahu saat pesan baru masuk.';
 }
 
 
+function notificationActionsHtml(){
+if(!PUSH_CHECKED)return '';
+if('Notification' in window&&Notification.permission=='denied')return '';
+if(PUSH_ENABLED){
+if(PUSH_SUBSCRIBED){
+return '<button class="btn sec" onclick="testPushNotification()">🔔 Tes notifikasi</button><button class="btn sec" onclick="disablePushNotifications()">Matikan</button>';
+}
+return '<button class="btn" onclick="enablePushNotifications()">🔔 Aktifkan di HP</button>';
+}
+if('Notification' in window&&Notification.permission!='granted'){
+return '<button class="btn sec" onclick="enableChatNotifications()">🔔 Aktifkan notifikasi</button>';
+}
+return '';
+}
+
+
+function refreshNotificationControl(){
+const status=$('#chatNotificationStatus');
+if(status)status.textContent=chatNotificationStatus();
+const actions=$('#chatNotificationActions');
+if(actions)actions.innerHTML=notificationActionsHtml();
+}
+
+
+async function showLocalNotification(title,options,link){
+try{
+const reg=SW_REG||('serviceWorker' in navigator?await navigator.serviceWorker.getRegistration():null);
+if(reg&&reg.showNotification){
+await reg.showNotification(title,Object.assign({icon:'./pwa-icon-192.png'},options,{data:{url:link||'./index.html'}}));
+return;
+}
+if('Notification' in window&&Notification.permission=='granted'){
+const notification=new Notification(title,options);
+notification.onclick=()=>{
+window.focus();
+if(link)openChatFromUrl(link);
+notification.close();
+};
+}
+}catch(e){
+console.warn('Notifikasi lokal gagal:',e);
+}
+}
+
+
 async function enableChatNotifications(){
+if(PUSH_ENABLED)return enablePushNotifications();
 if(!('Notification' in window)){
 toast('Browser ini tidak mendukung notifikasi.');
 return;
@@ -3256,21 +3618,36 @@ try{
 const permission=await Notification.requestPermission();
 if(permission=='granted'){
 toast('Notifikasi chat berhasil diaktifkan.');
+await registerServiceWorker();
 }else if(permission=='denied'){
 toast('Izin notifikasi ditolak. Ubah izin situs di pengaturan browser.');
 }else{
 toast('Izin notifikasi belum diberikan.');
 }
-const status=$('#chatNotificationStatus');
-if(status)status.textContent=chatNotificationStatus();
-if(permission=='granted'){
-const button=$('#chatNotificationButton');
-if(button)button.remove();
-}
+refreshNotificationControl();
 updateChatNavBadge();
 }catch(e){
 console.error('Permintaan izin notifikasi gagal:',e);
 toast('Notifikasi gagal diaktifkan: '+String((e&&e.message)||e));
+}
+}
+
+
+function openChatFromUrl(raw){
+try{
+const url=new URL(raw||'',location.href);
+const match=(url.hash||'').match(/chat=(personal|group|global)(?:[:=](.*))?$/);
+if(!match||!TOK)return false;
+const type=match[1];
+const id=decodeURIComponent(match[2]||'');
+if(type=='group'&&id)openGroupChat(id);
+else if(type=='global')openGlobalChat();
+else if(type=='personal'&&id)openTeamChat(id);
+else return false;
+try{history.replaceState(null,'',location.pathname+location.search);}catch(e){}
+return true;
+}catch(e){
+return false;
 }
 }
 
@@ -3311,23 +3688,25 @@ incoming.push({type,item,id,key,lastTs});
 });
 writeChatSeen(seen);
 if('Notification' in window&&Notification.permission=='granted'){
-incoming.forEach(message=>{
+// Saat push aktif dan halaman tidak terlihat, server push yang menampilkan
+// notifikasi; jangan tampilkan duplikat dari polling lokal.
+const pushHandles=PUSH_ENABLED&&PUSH_SUBSCRIBED&&document.visibilityState!='visible';
+for(const message of incoming){
+if(!pushHandles){
 const title=message.type=='group'?message.item.name:message.item.nama;
-const notification=new Notification(title||'Pesan baru', {
+const link=message.type=='group'
+?'./index.html#chat=group:'+encodeURIComponent(message.id)
+:message.type=='global'
+?'./index.html#chat=global'
+:'./index.html#chat=personal:'+encodeURIComponent(message.id);
+await showLocalNotification(title||'Pesan baru',{
 body:String(message.item.lastText||'Anda menerima pesan baru'),
-icon:'./pwa-icon-192.png',
 tag:'tpfx-chat-'+message.key,
 renotify:false
-});
-notification.onclick=()=>{
-window.focus();
-if(message.type=='group')openGroupChat(message.id);
-else if(message.type=='global')openGlobalChat();
-else openTeamChat(message.id);
-notification.close();
-};
+},link);
+}
 notified[message.key]=Math.max(Number(notified[message.key])||0,message.lastTs);
-});
+}
 writeChatNotified(notified);
 }
 updateChatUnreadIndicators();
@@ -3561,7 +3940,7 @@ return`
 </div>
 <div class="chat-notification-control">
 <small id="chatNotificationStatus">${esc(notificationStatus)}</small>
-${'Notification' in window&&Notification.permission!='granted'?'<button id="chatNotificationButton" class="btn sec" onclick="enableChatNotifications()">🔔 Aktifkan notifikasi</button>':''}
+<span id="chatNotificationActions" class="chat-notification-actions">${notificationActionsHtml()}</span>
 </div>
 
 <div class="chat-layout ${active?'has-peer':''}">
@@ -7750,6 +8129,15 @@ ${n[1]}
 // RENDER
 // ============================================================
 
+function animateView(){
+const app=$('#app');
+if(!app)return;
+app.classList.remove('view-in');
+void app.offsetWidth;
+app.classList.add('view-in');
+}
+
+
 function go(t,f){
 
 tab=t;
@@ -7759,6 +8147,8 @@ flt=f;
 }
 
 render();
+
+animateView();
 
 if(t=='feed'){
 loadSocialFeed();
@@ -7843,6 +8233,15 @@ ${n[1]}
 
 $('#fab').onclick=
 menu;
+
+if('serviceWorker' in navigator){
+navigator.serviceWorker.addEventListener('message',event=>{
+const data=event.data||{};
+if(data.type==='open-chat'&&data.url)openChatFromUrl(data.url);
+});
+registerServiceWorker();
+window.addEventListener('hashchange',()=>openChatFromUrl(location.href));
+}
 
 boot();
 

@@ -1481,11 +1481,33 @@ function chatNotificationSummary(t) {
 }
 ```
 
-### Notifikasi pesan baru
+### Notifikasi pesan baru dan notifikasi HP (Web Push)
 
-`index.html` menggunakan Notification API bawaan browser, tanpa Firebase, Supabase, atau layanan push eksternal. Di halaman Chat, pengguna harus menekan **Aktifkan notifikasi** dan menyetujui izin browser. Workspace memeriksa ringkasan chat personal/grup/global setiap 5 detik selama halamannya masih terbuka, termasuk saat tab di background; browser dapat memperlambat atau menangguhkan polling tab background. Notifikasi dan badge hanya dibuat untuk pesan masuk dari anggota lain, bukan pesan sendiri. Gunakan implementasi `chatNotificationSummary(t)` pada bagian **Hapus grup chat dan chat global** di atas; fungsi tersebut juga mengembalikan ringkasan global.
+`index.html` tetap memeriksa `chatNotificationSummary` selama halaman terbuka, tetapi notifikasi HP memakai Web Push standar tanpa Firebase/Supabase:
 
-Notifikasi browser dapat muncul saat tab workspace berada di background, tetapi tidak dapat dijamin setelah tab/browser ditutup atau sistem menghentikan halaman. Itu memerlukan Web Push dengan service worker dan server pengirim push. Gunakan hosting HTTPS.
+- `sw.js` menerima event `push` dan menampilkan notifikasi lewat `registration.showNotification` (bukan `new Notification`, yang gagal di Chrome Android).
+- `api/push.js` adalah relay Vercel yang menandatangani VAPID dengan paket `web-push` dan mengirim ke endpoint langganan. Jalur ini gratis pada paket Vercel Hobby.
+- Apps Script tidak dapat menandatangani ES256, jadi ia hanya menyimpan langganan di sheet `PushSubs` dan memanggil relay memakai header `x-push-secret`.
+
+Setelah pesan terkirim, `sendChat`, `sendGroupChat`, dan `sendGlobalChat` memanggil relay secara diam-diam (`pushQuiet_`): kegagalan relay tidak menggagalkan pengiriman chat. Notifikasi personal berjudul nama pengirim dan membuka `#chat=personal:<pengirim>`; notifikasi grup membuka `#chat=group:<id>`; chat global membuka `#chat=global`. Penerima tidak menerima notifikasi untuk pesannya sendiri. Satu endpoint hanya disimpan sekali, maksimal 10 perangkat per akun, dan endpoint yang sudah mati (HTTP 404/410) dihapus otomatis.
+
+#### Menyiapkan relay push (sekali saja)
+
+1. Pasang dependensi lokal di folder frontend: `npm install` (menghasilkan `node_modules/`, jangan di-commit).
+2. Buat kunci VAPID: `npx web-push generate-vapid-keys --json`.
+3. Buat secret relay acak: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`.
+4. Di Vercel → Project → Settings → Environment Variables, tambahkan untuk Production dan Preview:
+   - `VAPID_PUBLIC_KEY` — public key dari langkah 2
+   - `VAPID_PRIVATE_KEY` — private key dari langkah 2
+   - `PUSH_RELAY_SECRET` — secret dari langkah 3
+   - `VAPID_SUBJECT` (opsional) — `mailto:admin@domain-anda`
+5. Redeploy, lalu buka `https://domain-anda.vercel.app/api/push`. Respons yang benar: `{ "enabled": true, "publicKey": "..." }`.
+6. Di editor Apps Script, jalankan sekali `setPushConfig('SECRET_DARI_LANGKAH_3', 'https://domain-anda.vercel.app')`. Secret dan origin disimpan di Script Properties; jangan menaruh secret di frontend atau repository.
+7. Deploy ulang Web App, buka aplikasi di HP, tekan **Aktifkan di HP** pada halaman Chat, lalu **Tes notifikasi**. Di iPhone, tambahkan dulu aplikasi ke Layar Utama dan buka dari ikonnya (iOS 16.4+).
+
+Endpoint push yang ditambahkan ke `api_()`: `pushConfig`, `subscribePush`, `unsubscribePush`, dan `testPush`. Fungsi relay yang perlu disalin ke Apps Script: `pushSubs_`, `setPushConfig`, `pushConfig`, `subscribePush`, `unsubscribePush`, `removePushEndpoints_`, `chatSenderName_`, `pushQuiet_`, `pushToUsers_`, dan `testPush`, beserta pemanggilan pada `sendChat`/`sendGroupChat`/`sendGlobalChat`.
+
+Push menjaga notifikasi tetap masuk saat aplikasi ditutup atau HP terkunci, selama situs diizinkan mengirim notifikasi oleh sistem. Kendala yang tidak bisa diatasi kode: daya tahan baterai (Doze/App Standby) dapat menunda notifikasi beberapa menit, dan Safari iOS hanya mengizinkan Web Push untuk PWA yang sudah dipasang ke Layar Utama.
 
 ## 7. Diagnostik jika login atau chat mendapat respons kosong
 
@@ -1493,8 +1515,8 @@ Frontend mengharapkan setiap request Apps Script mengembalikan JSON dengan prope
 
 1. Fungsi `loadState(t)` harus selalu mengembalikan `{ err: 'AUTH' }` untuk token tidak valid, atau object `{ state, name, user, role }` untuk sesi aktif. Jangan menghapus `return` pada hasil sesi.
 2. Fungsi `doPost(e)` harus membungkus hasil fungsi API sebagai `{ result: f.apply(null, req.args || []) }`.
-3. Pastikan fungsi lama dan baru terdaftar pada `api_()`: `loadState`, `socialFeed`, `recentPosts`, `createPost`, `deletePost`, `togglePostLike`, `togglePostPin`, `postComments`, `addPostComment`, `updateProfilePhoto`, `chatContacts`, `chatNotificationSummary`, `chatHistory`, `chatSync`, `sendChat`, `chatGroups`, `createChatGroup`, `deleteChatGroup`, `groupHistory`, `sendGroupChat`, `globalChatHistory`, dan `sendGlobalChat`.
-4. Jalankan `setup()` agar sheet `Posts`, `PostLikes`, `PostPins`, `PostComments`, `Messages`, `ChatGroups`, dan `ChatSummary` tersedia, kolom foto tersedia di `Posts` dan `Users`, serta ringkasan chat lama diindeks sekali. Menyimpan kode saja tidak memperbarui deployment Web App.
+3. Pastikan fungsi lama dan baru terdaftar pada `api_()`: `loadState`, `socialFeed`, `recentPosts`, `createPost`, `deletePost`, `togglePostLike`, `togglePostPin`, `postComments`, `addPostComment`, `updateProfilePhoto`, `chatContacts`, `chatNotificationSummary`, `chatHistory`, `chatSync`, `sendChat`, `chatGroups`, `createChatGroup`, `deleteChatGroup`, `groupHistory`, `sendGroupChat`, `globalChatHistory`, `sendGlobalChat`, `pushConfig`, `subscribePush`, `unsubscribePush`, dan `testPush`.
+4. Jalankan `setup()` agar sheet `Posts`, `PostLikes`, `PostPins`, `PostComments`, `Messages`, `ChatGroups`, `ChatSummary`, dan `PushSubs` tersedia, kolom foto tersedia di `Posts` dan `Users`, serta ringkasan chat lama diindeks sekali. Menyimpan kode saja tidak memperbarui deployment Web App.
 5. Keluar dari aplikasi, login kembali, lalu buka Feed/Chat. Token yang lama dapat tidak berlaku setelah akun dihapus atau sesi berakhir.
 
 ## 8. Feed dan chat terasa lambat

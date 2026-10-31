@@ -311,6 +311,7 @@ function setup() {
   }
 
   chatSummary_();
+  pushSubs_();
   if (properties.getProperty('CHAT_SUMMARY_VERSION') != '1') {
     rebuildChatSummary_();
     properties.setProperty('CHAT_SUMMARY_VERSION', '1');
@@ -442,7 +443,11 @@ function api_() {
     groupHistory: groupHistory,
     sendGroupChat: sendGroupChat,
     globalChatHistory: globalChatHistory,
-    sendGlobalChat: sendGlobalChat
+    sendGlobalChat: sendGlobalChat,
+    pushConfig: pushConfig,
+    subscribePush: subscribePush,
+    unsubscribePush: unsubscribePush,
+    testPush: testPush
   };
 }
 
@@ -2832,6 +2837,14 @@ function sendChat(t, peer, text) {
 
   }
 
+  const senderName = chatSenderName_(username);
+  pushQuiet_(() => pushToUsers_([peer], {
+    title: senderName,
+    body: text,
+    url: './index.html#chat=personal:' + encodeURIComponent(username),
+    tag: 'tpfx-dm-' + String(username).toLowerCase()
+  }));
+
   return { ok: 1 };
 }
 
@@ -3003,6 +3016,17 @@ function sendGroupChat(t, groupId, text) {
 
   }
 
+  const senderName = chatSenderName_(username);
+  const groupName = String(group[1] || 'Grup');
+  const recipients = groupMembers_(group)
+    .filter(name => name != String(username).toLowerCase());
+  pushQuiet_(() => pushToUsers_(recipients, {
+    title: senderName + ' · ' + groupName,
+    body: text,
+    url: './index.html#chat=group:' + encodeURIComponent(groupId),
+    tag: 'tpfx-group-' + groupId
+  }));
+
   return { ok: 1 };
 }
 
@@ -3072,6 +3096,19 @@ function sendGlobalChat(t, unusedTarget, text) {
   } finally {
     lock.releaseLock();
   }
+
+  const senderName = chatSenderName_(username);
+  const recipients = users_().getDataRange().getValues().slice(1)
+    .filter(r => String(r[3]).toUpperCase() == 'Y')
+    .map(r => String(r[0] || ''))
+    .filter(name => name && name.toLowerCase() != String(username).toLowerCase());
+  pushQuiet_(() => pushToUsers_(recipients, {
+    title: senderName + ' · Grup Global',
+    body: text,
+    url: './index.html#chat=global',
+    tag: 'tpfx-global'
+  }));
+
   return { ok: 1 };
 }
 
@@ -3172,6 +3209,268 @@ function chatNotificationSummary(t) {
       .sort((a, b) => b.lastTs - a.lastTs || a.name.localeCompare(b.name)),
     global: global
   };
+}
+
+
+// ============================================================
+// NOTIFIKASI HP (WEB PUSH)
+// ============================================================
+// Pengiriman push dilakukan oleh relay Vercel (/api/push) karena Apps Script
+// tidak dapat menandatangani VAPID/ES256. Apps Script hanya menyimpan
+// langganan dan meneruskan permintaan dengan secret.
+//
+// Sekali saja, jalankan dari editor Apps Script:
+//   setPushConfig('SECRET_DARI_VERCEL', 'https://domain-anda.vercel.app')
+
+const PUSH_SECRET_PROP = 'PUSH_RELAY_SECRET';
+const PUSH_ORIGIN_PROP = 'PUSH_APP_ORIGIN';
+const PUSH_CONTACT_PROP = 'PUSH_CONTACT';
+const PUSH_MAX_SUBS_PER_USER = 10;
+
+function pushSubs_() {
+  return sheetEnsure_('PushSubs', [
+    'endpoint', 'p256dh', 'auth', 'username', 'origin', 'ua', 'ts'
+  ]);
+}
+
+function setPushConfig(secret, appOrigin, contact) {
+  secret = String(secret || '').trim();
+  appOrigin = String(appOrigin || '').trim().replace(/\/+$/, '');
+  if (secret.length < 16) {
+    throw new Error('Secret minimal 16 karakter.');
+  }
+  if (!/^https:\/\/[a-z0-9.-]+$/i.test(appOrigin)) {
+    throw new Error('Origin harus https://domain tanpa path.');
+  }
+  const props = PropertiesService.getScriptProperties();
+  props.setProperty(PUSH_SECRET_PROP, secret);
+  props.setProperty(PUSH_ORIGIN_PROP, appOrigin);
+  props.setProperty(
+    PUSH_CONTACT_PROP,
+    String(contact || '').trim() ||
+      ('mailto:admin@' + appOrigin.replace(/^https:\/\//i, ''))
+  );
+  return { ok: 1, origin: appOrigin };
+}
+
+function pushConfig(t) {
+  const username = user_(t);
+  if (!username) return { err: 'AUTH' };
+  const props = PropertiesService.getScriptProperties();
+  return {
+    enabled: !!(props.getProperty(PUSH_SECRET_PROP) && props.getProperty(PUSH_ORIGIN_PROP)),
+    origin: String(props.getProperty(PUSH_ORIGIN_PROP) || '')
+  };
+}
+
+function subscribePush(t, json) {
+  const username = user_(t);
+  if (!username) return { err: 'AUTH' };
+
+  let sub;
+  try {
+    sub = JSON.parse(String(json || ''));
+  } catch (e) {
+    return { err: 'Langganan push tidak valid' };
+  }
+
+  const endpoint = String(sub && sub.endpoint || '');
+  if (!/^https:\/\/\S+$/.test(endpoint) || endpoint.length > 500) {
+    return { err: 'Endpoint push tidak valid' };
+  }
+
+  const keys = (sub && sub.keys) || {};
+  const p256dh = String(keys.p256dh || '');
+  const auth = String(keys.auth || '');
+  if (!p256dh || !auth || p256dh.length > 200 || auth.length > 100) {
+    return { err: 'Kunci langganan push tidak lengkap' };
+  }
+
+  const props = PropertiesService.getScriptProperties();
+  const origin = String(props.getProperty(PUSH_ORIGIN_PROP) || '');
+  if (!origin) return { err: 'Push belum dikonfigurasi manager' };
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+
+  try {
+    const sheet = pushSubs_();
+    const rows = sheet.getDataRange().getValues();
+    const userKey = String(username).toLowerCase();
+
+    // Satu endpoint hanya boleh muncul sekali; baris lama dengan endpoint yang
+    // sama (milik akun ini maupun akun lain di perangkat yang sama) diganti.
+    const staleRows = [];
+    const mine = [];
+    for (let i = rows.length - 1; i >= 1; i--) {
+      if (String(rows[i][0]) == endpoint) {
+        staleRows.push(i + 1);
+      } else if (String(rows[i][3] || '').toLowerCase() == userKey) {
+        mine.push({ row: i + 1, ts: Number(rows[i][6]) || 0 });
+      }
+    }
+    staleRows.sort((a, b) => b - a).forEach(row => sheet.deleteRow(row));
+
+    // Sisakan ruang untuk langganan baru, buang yang paling lama lebih dulu.
+    // Baris dihapus dari nomor terbesar agar nomor baris lain tidak bergeser.
+    mine.sort((a, b) => (a.ts - b.ts) || (a.row - b.row));
+    const excess = mine.length - (PUSH_MAX_SUBS_PER_USER - 1);
+    if (excess > 0) {
+      mine.slice(0, excess)
+        .sort((a, b) => b.row - a.row)
+        .forEach(item => sheet.deleteRow(item.row));
+    }
+
+    sheet.appendRow([
+      endpoint,
+      p256dh,
+      auth,
+      username,
+      origin,
+      String(sub.userAgent || sub.ua || '').slice(0, 200),
+      Date.now()
+    ]);
+
+    return { ok: 1 };
+  } catch (e) {
+    throw storageError_(e);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function unsubscribePush(t, endpoint) {
+  const username = user_(t);
+  if (!username) return { err: 'AUTH' };
+  endpoint = String(endpoint || '');
+  if (!endpoint) return { err: 'Endpoint push tidak valid' };
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const sheet = pushSubs_();
+    const rows = sheet.getDataRange().getValues();
+    for (let i = rows.length - 1; i >= 1; i--) {
+      if (String(rows[i][0]) != endpoint) continue;
+      if (String(rows[i][3]).toLowerCase() != String(username).toLowerCase()) continue;
+      sheet.deleteRow(i + 1);
+    }
+  } finally {
+    lock.releaseLock();
+  }
+  return { ok: 1 };
+}
+
+function removePushEndpoints_(endpoints) {
+  if (!endpoints || !endpoints.length) return 0;
+  const wanted = {};
+  endpoints.forEach(value => {
+    const key = String(value || '');
+    if (key) wanted[key] = true;
+  });
+  const sheet = pushSubs_();
+  const rows = sheet.getDataRange().getValues();
+  let removed = 0;
+  for (let i = rows.length - 1; i >= 1; i--) {
+    if (!wanted[String(rows[i][0])]) continue;
+    sheet.deleteRow(i + 1);
+    removed++;
+  }
+  return removed;
+}
+
+function chatSenderName_(username) {
+  const account = findUser_(username);
+  return String((account && account[2]) || username || 'Anggota TPFX');
+}
+
+function pushQuiet_(fn) {
+  try {
+    fn();
+  } catch (e) {
+    console.error('Notifikasi push gagal:', e);
+  }
+}
+
+function pushToUsers_(usernames, note) {
+  const props = PropertiesService.getScriptProperties();
+  const secret = String(props.getProperty(PUSH_SECRET_PROP) || '');
+  const origin = String(props.getProperty(PUSH_ORIGIN_PROP) || '');
+  if (!secret || !origin || !usernames || !usernames.length) {
+    return { sent: 0, failed: 0, subscriptions: 0 };
+  }
+
+  const wanted = {};
+  usernames.forEach(name => {
+    const key = String(name || '').toLowerCase();
+    if (key) wanted[key] = true;
+  });
+
+  const subs = [];
+  const seen = {};
+  pushSubs_().getDataRange().getValues().slice(1).forEach(row => {
+    const owner = String(row[3] || '').toLowerCase();
+    if (!wanted[owner]) return;
+    const endpoint = String(row[0] || '');
+    const p256dh = String(row[1] || '');
+    const auth = String(row[2] || '');
+    if (!endpoint || !p256dh || !auth || seen[endpoint]) return;
+    seen[endpoint] = true;
+    subs.push({ endpoint: endpoint, keys: { p256dh: p256dh, auth: auth } });
+  });
+
+  if (!subs.length) return { sent: 0, failed: 0, subscriptions: 0 };
+
+  const payload = {
+    notification: {
+      title: String(note.title || 'TPFX Workspace').slice(0, 90),
+      body: String(note.body || '').slice(0, 180),
+      url: String(note.url || './index.html').slice(0, 300),
+      tag: String(note.tag || 'tpfx').slice(0, 60)
+    },
+    subs: subs.slice(0, 100)
+  };
+
+  let response;
+  try {
+    response = UrlFetchApp.fetch(origin + '/api/push', {
+      method: 'post',
+      contentType: 'application/json',
+      headers: { 'x-push-secret': secret },
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    });
+  } catch (e) {
+    console.error('Relay push tidak dapat dihubungi:', e);
+    return { sent: 0, failed: subs.length, subscriptions: subs.length };
+  }
+
+  let data = {};
+  try {
+    data = JSON.parse(response.getContentText());
+  } catch (e) {}
+
+  if (Array.isArray(data.gone) && data.gone.length) {
+    try { removePushEndpoints_(data.gone); } catch (e) {}
+  }
+
+  return {
+    sent: Number(data.sent) || 0,
+    failed: Number(data.failed) || 0,
+    subscriptions: subs.length
+  };
+}
+
+function testPush(t) {
+  const username = user_(t);
+  if (!username) return { err: 'AUTH' };
+  const result = pushToUsers_([username], {
+    title: 'TPFX Workspace',
+    body: 'Notifikasi HP aktif. Pesan baru akan muncul di sini.',
+    url: './index.html#chat=global',
+    tag: 'tpfx-test'
+  });
+  return { ok: 1, sent: result.sent, failed: result.failed, subscriptions: result.subscriptions };
 }
 
 
