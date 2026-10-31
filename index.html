@@ -67,8 +67,7 @@ max-width:none;
 padding:0
 }
 
-body.booting .nav,
-body.booting .fab{
+body.booting .nav{
 display:none
 }
 
@@ -667,18 +666,20 @@ font-size:10px;
 font-weight:800
 }
 
-.fab{
-position:fixed;
-right:18px;
-bottom:calc(78px + env(safe-area-inset-bottom,0px));
-width:56px;
-height:56px;
-border-radius:50%;
+.app-quick-add{
+flex:none;
+width:36px;
+height:36px;
+display:grid;
+place-items:center;
+border:0;
+border-radius:12px;
 background:var(--pri);
 color:#fff;
-font-size:30px;
-box-shadow:0 6px 18px rgba(39,67,214,.4);
-z-index:6
+font-size:23px;
+font-weight:700;
+line-height:1;
+box-shadow:0 8px 18px -10px rgba(39,67,214,.95)
 }
 
 .ov{
@@ -1306,6 +1307,7 @@ gap:7px
 .app-user-name{max-width:75px}
 .app-user .badge{padding:2px 6px;font-size:9px}
 .app-user-avatar{width:30px;height:30px}
+.app-quick-add{width:32px;height:32px;font-size:20px;border-radius:10px}
 .nav{padding:5px 4px calc(5px + env(safe-area-inset-bottom,0px))}
 .nav div{gap:1px}
 .nav button{flex:1 1 0;min-width:0;padding:6px 1px;font-size:8.5px}
@@ -1433,9 +1435,7 @@ animation:tpfx-pop .34s cubic-bezier(.22,1,.36,1) both
 
 .nav button .nav-badge,.chat-unread-badge{animation:tpfx-badge-pulse .4s cubic-bezier(.22,1,.36,1) both}
 
-.fab{animation:tpfx-ring 2.8s ease-out infinite}
-.fab:active{transform:scale(.92)}
-.fab:hover{box-shadow:0 10px 26px rgba(39,67,214,.5)}
+.app-quick-add:hover{box-shadow:0 10px 26px rgba(39,67,214,.5)}
 
 .ov{animation:tpfx-view-in .16s ease both}
 .sheet{animation:tpfx-sheet-in .3s cubic-bezier(.22,1,.36,1) both}
@@ -1457,7 +1457,7 @@ transition:opacity .22s ease,transform .32s cubic-bezier(.22,1,.36,1)
 }
 
 @media(prefers-reduced-motion:reduce){
-#app.view-in,.ov,.sheet,.fab,.nav button.on::before,.nav button .nav-badge,.chat-unread-badge,.btn::after{animation:none!important}
+#app.view-in,.ov,.sheet,.nav button.on::before,.nav button .nav-badge,.chat-unread-badge,.btn::after{animation:none!important}
 .toast{transition:none}
 }
 </style>
@@ -1491,8 +1491,6 @@ transition:opacity .22s ease,transform .32s cubic-bezier(.22,1,.36,1)
 <div class="nav">
 <div id="nav"></div>
 </div>
-
-<button class="fab" id="fab" aria-label="Tambah">+</button>
 
 <div id="layer"></div>
 
@@ -1617,6 +1615,7 @@ header.innerHTML=`
 <span class="app-user-name">${esc(S.name)}</span>
 <span class="badge s-contacted">${esc(ROLE||'BDO')}</span>
 <span class="app-user-avatar">${PROFILE_PHOTO&&/^https:\/\//i.test(PROFILE_PHOTO)?`<img src="${esc(imageUrlForDisplay(PROFILE_PHOTO))}" alt="Foto profil" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><span class="avatar-photo-fallback" hidden>${initials(S.name)}</span>`:esc(initials(S.name))}</span>
+${['BM','DM'].includes(String(ROLE).toUpperCase())?'':'<button class="app-quick-add" onclick="menu()" aria-label="Aksi cepat">+</button>'}
 </div>
 `;
 
@@ -2019,15 +2018,6 @@ document
 .style.display='';
 
 
-$('#fab').style.display=
-(
-ROLE=='DM' ||
-ROLE=='BM'
-)
-?'none'
-:'';
-
-
 const manager=ROLE=='DM'||ROLE=='BM';
 if(manager)TEAM=[];
 render();
@@ -2089,9 +2079,6 @@ document
 .style.display='none';
 
 $('#appHeader').hidden=true;
-
-$('#fab')
-.style.display='none';
 
 $('#app').classList.add('login-screen');
 
@@ -2167,9 +2154,6 @@ document
 .style.display='none';
 
 $('#appHeader').hidden=true;
-
-$('#fab')
-.style.display='none';
 
 $('#app').classList.add('login-screen');
 
@@ -8230,9 +8214,6 @@ ${n[1]}
 // ============================================================
 // START
 // ============================================================
-
-$('#fab').onclick=
-menu;
 
 if('serviceWorker' in navigator){
 navigator.serviceWorker.addEventListener('message',event=>{
