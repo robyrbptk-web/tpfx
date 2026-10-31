@@ -1669,6 +1669,7 @@ PUSH_PUBLIC_KEY='',
 PUSH_SUBSCRIBED=false,
 PUSH_BUSY=false,
 PUSH_CHECKED=false,
+PUSH_AUTO_ARMED=false,
 LOGIN_PENDING=false;
 
 function seed(){
@@ -2376,6 +2377,7 @@ ROLE='';
 LOGIN_PENDING=false;
 PUSH_CHECKED=false;
 PUSH_SUBSCRIBED=false;
+PUSH_AUTO_ARMED=false;
 $('#appHeader').hidden=true;
 
 const layer=$('#layer');
@@ -3417,6 +3419,44 @@ return PUSH_PUBLIC_KEY;
 }
 
 
+async function subscribePushManager(){
+const key=await loadPushPublicKey();
+if(!key||!SW_REG)throw new Error('Notifikasi HP belum siap.');
+let sub=await SW_REG.pushManager.getSubscription();
+if(!sub){
+sub=await SW_REG.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8Array(key)});
+}
+const result=await sendPushSubscription(sub);
+if(result&&result.err)throw new Error(typeof result.err==='string'?result.err:'Langganan push ditolak server.');
+return sub;
+}
+
+
+function pushPromptKey(){
+return 'tpfx_push_prompted_'+(USER||'guest');
+}
+
+
+function armPushAutoPrompt(){
+if(PUSH_AUTO_ARMED||!TOK||!PUSH_ENABLED||PUSH_SUBSCRIBED)return;
+if(!('Notification' in window)||Notification.permission!='default')return;
+if(isIOSDevice()&&!isStandaloneApp())return;
+try{
+if(localStorage.getItem(pushPromptKey())=='1')return;
+}catch(e){}
+PUSH_AUTO_ARMED=true;
+const handler=()=>{
+document.removeEventListener('pointerdown',handler,true);
+document.removeEventListener('keydown',handler,true);
+if(!TOK||PUSH_BUSY)return;
+try{localStorage.setItem(pushPromptKey(),'1');}catch(e){}
+enablePushNotifications(true);
+};
+document.addEventListener('pointerdown',handler,true);
+document.addEventListener('keydown',handler,true);
+}
+
+
 async function initPush(){
 if(PUSH_CHECKED||!TOK)return;
 try{
@@ -3431,19 +3471,26 @@ refreshNotificationControl();
 return;
 }
 if(!SW_REG)await registerServiceWorker();
-await loadPushPublicKey();
-if(!PUSH_PUBLIC_KEY||!SW_REG){
+const pushKey=await loadPushPublicKey();
+if(!SW_REG||!pushKey){
 PUSH_ENABLED=false;
 refreshNotificationControl();
 return;
 }
 try{
 const sub=await SW_REG.pushManager.getSubscription();
-PUSH_SUBSCRIBED=!!sub;
-if(sub)sendPushSubscription(sub).catch(()=>{});
+if(sub){
+PUSH_SUBSCRIBED=true;
+sendPushSubscription(sub).catch(()=>{});
+}else if(Notification.permission=='granted'){
+await subscribePushManager();
+PUSH_SUBSCRIBED=true;
+}
 }catch(e){
 PUSH_SUBSCRIBED=false;
+console.warn('Langganan notifikasi HP belum siap:',e);
 }
+if(!PUSH_SUBSCRIBED)armPushAutoPrompt();
 refreshNotificationControl();
 }
 
@@ -3454,45 +3501,41 @@ return rpc('subscribePush',TOK,JSON.stringify(payload));
 }
 
 
-async function enablePushNotifications(){
+async function enablePushNotifications(auto){
 if(PUSH_BUSY)return;
 if(!PUSH_ENABLED){
-toast('Notifikasi HP belum aktif di server. Hubungi manager.');
-return;
-}
-if(isIOSDevice()&&!isStandaloneApp()){
-toast('Di iPhone, tambahkan aplikasi ke Layar Utama, buka dari ikonnya, lalu aktifkan notifikasi.');
+if(!auto)toast('Notifikasi HP belum aktif di server. Hubungi manager.');
 return;
 }
 if(!('Notification' in window)){
-toast('Browser ini tidak mendukung notifikasi.');
+if(!auto)toast('Browser ini tidak mendukung notifikasi.');
+return;
+}
+if(Notification.permission=='denied'){
+if(!auto)toast('Izin notifikasi diblokir. Ubah izin situs di pengaturan browser.');
+return;
+}
+if(isIOSDevice()&&!isStandaloneApp()){
+if(!auto)toast('Di iPhone, tambahkan aplikasi ke Layar Utama, buka dari ikonnya, lalu aktifkan notifikasi.');
 return;
 }
 PUSH_BUSY=true;
 try{
-if(!SW_REG)await registerServiceWorker();
-if(!SW_REG)throw new Error('Service worker belum siap. Muat ulang aplikasi lalu coba lagi.');
-const permission=await Notification.requestPermission();
+const permission=Notification.permission=='granted'?'granted':await Notification.requestPermission();
 if(permission!='granted'){
-toast(permission=='denied'?'Izin notifikasi diblokir. Ubah izin situs di pengaturan browser.':'Izin notifikasi belum diberikan.');
-refreshNotificationControl();
+if(!auto)toast(permission=='denied'?'Izin notifikasi diblokir. Ubah izin situs di pengaturan browser.':'Izin notifikasi belum diberikan.');
 return;
 }
-const key=await loadPushPublicKey();
-if(!key)throw new Error('Kunci push server belum tersedia.');
-let sub=await SW_REG.pushManager.getSubscription();
-if(!sub){
-sub=await SW_REG.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8Array(key)});
-}
-const result=await sendPushSubscription(sub);
-if(result&&result.err)throw new Error(typeof result.err==='string'?result.err:'Langganan push ditolak server.');
+if(!SW_REG)await registerServiceWorker();
+if(!SW_REG)throw new Error('Service worker belum siap. Muat ulang aplikasi lalu coba lagi.');
+await subscribePushManager();
 PUSH_SUBSCRIBED=true;
 toast('Notifikasi HP aktif. Pesan baru masuk walau aplikasi ditutup.');
 }catch(e){
 const msg=String((e&&e.message)||e);
 if(msg.indexOf('tidak mengembalikan hasil')>=0)PUSH_ENABLED=false;
 console.error('Aktivasi notifikasi HP gagal:',e);
-toast('Notifikasi HP gagal diaktifkan: '+msg);
+if(!auto)toast('Notifikasi HP gagal diaktifkan: '+msg);
 }finally{
 PUSH_BUSY=false;
 refreshNotificationControl();
@@ -3520,28 +3563,12 @@ refreshNotificationControl();
 }
 
 
-async function testPushNotification(){
-if(PUSH_BUSY)return;
-PUSH_BUSY=true;
-try{
-const r=await rpc('testPush',TOK);
-if(r&&r.err)throw new Error(typeof r.err==='string'?r.err:'Uji notifikasi gagal.');
-const sent=Number(r&&r.sent)||0;
-toast(sent>0?'Notifikasi uji dikirim. Periksa layar HP Anda.':'Belum ada langganan push. Aktifkan notifikasi HP dulu.');
-}catch(e){
-toast('Uji notifikasi gagal: '+String((e&&e.message)||e));
-}finally{
-PUSH_BUSY=false;
-}
-}
-
-
 function chatNotificationStatus(){
 if(!('Notification' in window))return 'Notifikasi tidak didukung di browser ini.';
 if(Notification.permission=='denied')return 'Izin notifikasi diblokir di pengaturan browser.';
 if(PUSH_ENABLED&&PUSH_SUBSCRIBED)return isStandaloneApp()?'Notifikasi HP aktif — pesan masuk walau aplikasi ditutup.':'Notifikasi aktif di perangkat ini.';
-if(PUSH_ENABLED&&Notification.permission=='granted')return 'Izin diberikan. Aktifkan notifikasi HP agar pesan masuk saat aplikasi ditutup.';
-if(PUSH_ENABLED)return 'Aktifkan agar pesan baru masuk ke HP Anda.';
+if(PUSH_ENABLED&&Notification.permission=='granted')return 'Menyiapkan notifikasi HP — pesan masuk walau aplikasi ditutup.';
+if(PUSH_ENABLED)return 'Sentuh layar sekali untuk mengizinkan notifikasi HP.';
 if(Notification.permission=='granted')return 'Notifikasi aktif selama aplikasi terbuka.';
 return 'Aktifkan agar diberi tahu saat pesan baru masuk.';
 }
@@ -3552,7 +3579,7 @@ if(!PUSH_CHECKED)return '';
 if('Notification' in window&&Notification.permission=='denied')return '';
 if(PUSH_ENABLED){
 if(PUSH_SUBSCRIBED){
-return '<button class="btn sec" onclick="testPushNotification()">🔔 Tes notifikasi</button><button class="btn sec" onclick="disablePushNotifications()">Matikan</button>';
+return '<button class="btn sec" onclick="disablePushNotifications()">Matikan notifikasi HP</button>';
 }
 return '<button class="btn" onclick="enablePushNotifications()">🔔 Aktifkan di HP</button>';
 }
