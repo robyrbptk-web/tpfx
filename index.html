@@ -863,6 +863,69 @@ animation:depositBlink 1.6s ease-in-out infinite
 
 @keyframes depositBlink{50%{opacity:.2}}
 
+.deposit-ticker-head{
+display:flex;
+align-items:center;
+gap:10px;
+flex:none;
+min-width:0
+}
+
+.deposit-ticker-market{
+display:inline-flex;
+align-items:center;
+gap:6px;
+padding:3px 9px 3px 8px;
+border:1px solid rgba(94,234,212,.22);
+border-radius:999px;
+background:rgba(15,118,110,.24);
+white-space:nowrap
+}
+
+.deposit-ticker-symbol{
+font-size:9px;
+font-weight:900;
+letter-spacing:.09em;
+color:#7dd3fc
+}
+
+.deposit-ticker-price{
+color:#ecfeff;
+font-size:12.5px;
+font-weight:900;
+font-variant-numeric:tabular-nums;
+letter-spacing:-.01em
+}
+
+.deposit-ticker-live{
+display:inline-flex;
+align-items:center;
+gap:4px;
+color:#6ee7b7;
+font-size:8px;
+font-weight:900;
+letter-spacing:.1em
+}
+
+.deposit-ticker-live i{
+width:5px;
+height:5px;
+border-radius:50%;
+background:#34d399;
+box-shadow:0 0 0 3px rgba(52,211,153,.16);
+animation:depositBlink 1.6s ease-in-out infinite
+}
+
+.deposit-ticker-caption{
+overflow:hidden;
+color:#7dd3fc;
+font-size:10px;
+font-weight:700;
+letter-spacing:.04em;
+white-space:nowrap;
+text-overflow:ellipsis
+}
+
 .deposit-ticker-window{
 flex:1;
 min-width:0;
@@ -959,6 +1022,58 @@ opacity:.85
 @keyframes depositTicker{
 from{transform:translateX(0)}
 to{transform:translateX(-50%)}
+}
+
+@media (max-width:640px){
+.deposit-ticker{
+flex-direction:column;
+align-items:stretch;
+gap:6px;
+margin-top:12px;
+padding:8px 11px 9px;
+border-radius:14px
+}
+
+.deposit-ticker-head{
+width:100%;
+justify-content:space-between;
+padding-bottom:6px;
+border-bottom:1px solid rgba(125,211,252,.16)
+}
+
+.deposit-ticker-label{
+font-size:9px;
+padding:4px 9px
+}
+
+.deposit-ticker-market{
+margin-left:auto;
+padding:2px 8px 2px 7px
+}
+
+.deposit-ticker-window{
+-webkit-mask-image:linear-gradient(90deg,transparent,#000 10px,#000 calc(100% - 10px),transparent);
+mask-image:linear-gradient(90deg,transparent,#000 10px,#000 calc(100% - 10px),transparent)
+}
+
+.deposit-ticker-item{
+font-size:11px;
+padding-right:24px
+}
+
+.deposit-ticker-tag{
+margin-right:6px;
+padding:1px 6px;
+font-size:8px
+}
+
+.deposit-ticker-news-title{
+max-width:none;
+overflow:visible;
+text-overflow:clip
+}
+
+.deposit-ticker-source{display:none}
 }
 
 @media (prefers-reduced-motion:reduce){
@@ -1564,47 +1679,422 @@ font-weight:700;
 text-decoration:none
 }
 
+.chat-image-fallback svg{width:17px;height:17px;flex:none}
+
 .chat-image-fallback[hidden]{display:none}
 
-.chat-audio-wrap{display:flex;flex-direction:column;gap:4px;margin-top:6px}
-
-.chat-audio{
-width:min(260px,100%);
-height:38px
+.chat-vn{
+display:flex;
+align-items:center;
+gap:8px;
+margin-top:6px;
+min-width:210px;
+max-width:100%;
+padding:7px 9px;
+border-radius:12px;
+background:rgba(0,0,0,.06)
 }
 
-.chat-audio-open{
-font-size:11px;
-color:inherit;
+.chat-bubble.mine .chat-vn{background:rgba(255,255,255,.18)}
+
+.chat-vn-btn{
+flex:none;
+width:34px;
+height:34px;
+border:0;
+border-radius:50%;
+display:inline-flex;
+align-items:center;
+justify-content:center;
+padding:0;
+background:var(--social);
+color:#fff;
+cursor:pointer
+}
+
+.chat-vn-btn svg{width:16px;height:16px}
+
+.chat-vn-btn .vn-pause{display:none}
+
+.chat-vn.playing .vn-play{display:none}
+
+.chat-vn.playing .vn-pause{display:block}
+
+.chat-vn-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+
+.chat-vn-track{
+position:relative;
+height:5px;
+border-radius:3px;
+background:currentColor;
+opacity:.22;
+cursor:pointer;
+touch-action:none
+}
+
+.chat-vn-track i{
+position:absolute;
+left:0;
+top:0;
+bottom:0;
+width:0;
+border-radius:3px;
+background:currentColor;
+opacity:1
+}
+
+.chat-vn-info{
+display:flex;
+justify-content:space-between;
+gap:8px;
+font-size:10px;
+font-weight:700;
 opacity:.75
+}
+
+.chat-vn-dl{
+flex:none;
+display:inline-flex;
+padding:4px;
+color:inherit;
+opacity:.62;
+border-radius:6px
+}
+
+.chat-vn-dl:hover{opacity:1}
+
+.chat-vn-dl svg{width:15px;height:15px}
+
+.chat-vn-error{
+font-size:10.5px;
+font-weight:700;
+opacity:.9
 }
 
 .chat-file{
 display:flex;
 align-items:center;
-gap:8px;
+gap:9px;
 margin-top:6px;
 padding:8px 10px;
-border-radius:10px;
-background:rgba(0,0,0,.08);
+border-radius:12px;
+background:rgba(0,0,0,.06);
 color:inherit;
-text-decoration:none
+text-decoration:none;
+min-width:0
 }
 
-.chat-file span{
+.chat-file-icon{
+flex:none;
+width:32px;
+height:32px;
+border-radius:9px;
+display:inline-flex;
+align-items:center;
+justify-content:center;
+background:rgba(0,0,0,.07)
+}
+
+.chat-file-icon svg{width:17px;height:17px}
+
+.chat-file-copy{
 flex:1;
 min-width:0;
-overflow:hidden;
-text-overflow:ellipsis;
-white-space:nowrap;
-font-weight:700
+display:flex;
+flex-direction:column;
+gap:1px
 }
 
-.chat-file small{opacity:.7;font-size:10px}
+.chat-file-copy b{
+font-size:12.5px;
+font-weight:800;
+overflow:hidden;
+text-overflow:ellipsis;
+white-space:nowrap
+}
+
+.chat-file-copy small{font-size:10px;opacity:.68}
+
+.chat-file-go{flex:none;display:inline-flex;opacity:.6}
+
+.chat-file-go svg{width:16px;height:16px}
 
 .chat-bubble.mine .chat-file{background:rgba(255,255,255,.18)}
 
+.chat-bubble.mine .chat-file-icon{background:rgba(255,255,255,.2)}
+
 .chat-bubble .chat-text{white-space:pre-wrap}
+
+.chat-bubble.sticker{
+background:none;
+padding:0 2px;
+max-width:min(240px,84%);
+overflow:visible
+}
+
+.chat-bubble.sticker .chat-bubble-author,
+.chat-bubble.sticker time{
+color:var(--mut)
+}
+
+.chat-bubble.mine.sticker{color:var(--ink)}
+
+.chat-sticker{
+display:inline-block;
+font-size:46px;
+line-height:1.15;
+transform-origin:50% 80%;
+filter:drop-shadow(0 5px 7px rgba(0,0,0,.14));
+animation:chatStickerPop .3s ease-out,chatStickerFloat 2.6s ease-in-out .3s infinite
+}
+
+@keyframes chatStickerPop{
+0%{transform:scale(.4);opacity:0}
+70%{transform:scale(1.08)}
+100%{transform:scale(1);opacity:1}
+}
+
+@keyframes chatStickerFloat{
+0%,100%{transform:translateY(0) rotate(-2deg)}
+50%{transform:translateY(-4px) rotate(2deg)}
+}
+
+.chat-location{
+display:flex;
+align-items:center;
+gap:10px;
+margin-top:6px;
+padding:9px 10px;
+border-radius:12px;
+background:rgba(0,0,0,.06);
+color:inherit;
+text-decoration:none;
+min-width:200px
+}
+
+.chat-bubble.mine .chat-location{background:rgba(255,255,255,.18)}
+
+.chat-location-icon{
+flex:none;
+width:34px;
+height:34px;
+border-radius:10px;
+display:inline-flex;
+align-items:center;
+justify-content:center;
+background:rgba(29,155,240,.16);
+color:var(--social)
+}
+
+.chat-bubble.mine .chat-location-icon{background:rgba(255,255,255,.22);color:#fff}
+
+.chat-location-icon svg{width:18px;height:18px}
+
+.chat-location-copy{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+
+.chat-location-copy b{font-size:12.5px;font-weight:800}
+
+.chat-location-copy small{font-size:10.5px;opacity:.7}
+
+.chat-location-go{flex:none;display:inline-flex;opacity:.65}
+
+.chat-location-go svg{width:15px;height:15px}
+
+.chat-search-bar{
+display:flex;
+flex:none;
+align-items:center;
+gap:8px;
+padding:8px 12px;
+border-bottom:1px solid var(--line);
+background:var(--card)
+}
+
+.chat-search-toggle{
+margin-left:auto;
+width:36px;
+height:36px
+}
+
+.chat-search-bar[hidden]{display:none}
+
+.chat-search-bar>svg{width:16px;height:16px;color:var(--mut);flex:none}
+
+.chat-search-bar input{
+flex:1;
+min-width:0;
+margin:0;
+padding:8px 10px;
+border:1px solid var(--line);
+border-radius:10px;
+background:var(--bg);
+font-size:13px
+}
+
+.chat-search-clear{
+flex:none;
+width:30px;
+height:30px;
+border:0;
+border-radius:50%;
+display:inline-flex;
+align-items:center;
+justify-content:center;
+background:var(--bg);
+color:var(--mut);
+cursor:pointer
+}
+
+.chat-search-clear svg{width:14px;height:14px}
+
+.chat-search-status{
+flex:none;
+font-size:11px;
+color:var(--mut);
+padding:0 12px 6px;
+background:var(--card)
+}
+
+.chat-search-status:empty{display:none}
+
+.chat-search-group{
+display:flex;
+flex-direction:column;
+gap:6px;
+margin-top:12px;
+padding-top:10px;
+border-top:1px dashed var(--line)
+}
+
+.chat-search-group>span{
+font-size:10px;
+font-weight:800;
+letter-spacing:.05em;
+text-transform:uppercase;
+color:var(--mut)
+}
+
+.chat-search-hit{
+display:flex;
+flex-direction:column;
+gap:2px;
+width:100%;
+padding:8px 10px;
+border:1px solid var(--line);
+border-radius:10px;
+background:var(--card);
+color:var(--ink);
+font:inherit;
+text-align:left;
+cursor:pointer
+}
+
+.chat-search-hit:hover{border-color:var(--social)}
+
+.chat-search-hit b{font-size:11.5px;color:var(--social)}
+
+.chat-search-hit span{
+font-size:12.5px;
+overflow:hidden;
+text-overflow:ellipsis;
+white-space:nowrap
+}
+
+.chat-search-hit time{font-size:10px;color:var(--mut)}
+
+.chat-bubble mark{
+border-radius:3px;
+padding:0 1px;
+background:#fde68a;
+color:inherit
+}
+
+.chat-bubble.mine mark{background:rgba(255,255,255,.38);color:#fff}
+
+.chat-bubble.chat-hit{animation:chatHitPulse 1.5s ease-out}
+
+@keyframes chatHitPulse{
+0%,55%{box-shadow:0 0 0 3px rgba(29,155,240,.5)}
+100%{box-shadow:0 0 0 0 rgba(29,155,240,0)}
+}
+
+.chat-emoji-panel{
+padding:8px;
+border:1px solid var(--line);
+border-radius:14px;
+background:var(--card)
+}
+
+.chat-emoji-panel[hidden]{display:none}
+
+.chat-emoji-tabs{display:flex;gap:6px;margin-bottom:6px}
+
+.chat-emoji-tabs button{
+min-height:0;
+padding:5px 11px;
+border:0;
+border-radius:8px;
+background:var(--bg);
+color:var(--mut);
+font:inherit;
+font-size:11.5px;
+font-weight:800;
+cursor:pointer
+}
+
+.chat-emoji-tabs button.active{background:var(--social-soft);color:var(--social)}
+
+.chat-emoji-grid{
+display:grid;
+grid-template-columns:repeat(auto-fill,minmax(38px,1fr));
+gap:2px;
+max-height:172px;
+overflow:auto
+}
+
+.chat-emoji-grid button{
+min-height:0;
+padding:5px 0;
+border:0;
+border-radius:8px;
+background:none;
+font-size:24px;
+line-height:1;
+cursor:pointer
+}
+
+.chat-emoji-grid button:hover{background:var(--social-soft)}
+
+.chat-emoji-grid.stickers button{font-size:32px}
+
+.chat-send-btn{
+width:42px;
+height:42px;
+padding:0!important;
+display:inline-flex;
+align-items:center;
+justify-content:center;
+border-radius:50%
+}
+
+.chat-send-btn svg{width:18px;height:18px}
+
+.chat-icon-btn svg{width:19px;height:19px}
+
+.chat-icon-btn.active{background:var(--social-soft);border-color:var(--social);color:var(--social)}
+
+@media(max-width:640px){
+.chat-compose{padding:8px;gap:6px}
+.chat-compose-row{gap:5px}
+.chat-icon-btn{width:34px;height:34px}
+.chat-icon-btn svg{width:17px;height:17px}
+.chat-send-btn{width:38px;height:38px}
+.chat-send-btn svg{width:16px;height:16px}
+.chat-compose textarea{min-height:40px;padding:9px 10px;font-size:13px}
+.chat-emoji-grid{max-height:146px}
+.chat-vn{min-width:180px;padding:6px 8px}
+.chat-sticker{font-size:40px}
+}
 
 .chat-create-group{
 padding:12px 14px;
@@ -2114,6 +2604,15 @@ CHAT_RECORD_STREAM=null,
 CHAT_RECORD_CANCEL=false,
 CHAT_NOTIFICATIONS_LOADING=false,
 CHAT_NOTIFICATION_ERROR_AT=0,
+CHAT_SEARCH_OPEN=false,
+CHAT_SEARCH_QUERY='',
+CHAT_SEARCH_REMOTE=[],
+CHAT_SEARCH_TIMER=null,
+CHAT_SEARCH_LOADING=false,
+CHAT_SEARCH_ERROR='',
+CHAT_EMOJI_MODE='emoji',
+CHAT_EMOJI_OPEN=false,
+CHAT_LOCATION_BUSY=false,
 SW_REG=null,
 PUSH_ENABLED=false,
 PUSH_PUBLIC_KEY='',
@@ -2125,6 +2624,9 @@ GOLD_NEWS=[],
 GOLD_NEWS_AT=0,
 GOLD_NEWS_LOADING=false,
 GOLD_NEWS_FAIL_AT=0,
+GOLD_NEWS_TIMER=null,
+GOLD_PRICE=0,
+GOLD_PRICE_UPDATED=0,
 LOGIN_PENDING=false;
 
 function seed(){
@@ -4237,6 +4739,12 @@ CHAT_MESSAGES=[];
 CHAT_SYNC_CURSOR=0;
 CHAT_OLDEST_ROW=0;
 CHAT_HAS_MORE=false;
+CHAT_SEARCH_QUERY='';
+CHAT_SEARCH_REMOTE=[];
+CHAT_SEARCH_LOADING=false;
+CHAT_SEARCH_OPEN=false;
+CHAT_EMOJI_OPEN=false;
+clearTimeout(CHAT_SEARCH_TIMER);
 if(ROLE=='DM'||ROLE=='BM')dmTab='chat';else tab='chat';
 const requestId=++CHAT_HISTORY_REQUEST;
 CHAT_HISTORY_LOADING=true;
@@ -4318,7 +4826,6 @@ function mergeChatRows(rows,type,target){
 const serverRows=rows.filter(item=>
 !String(item.id||'').startsWith('local-message-')
 );
-const keep=[];
 const now=Date.now();
 
 CHAT_LOCAL_ECHOES=CHAT_LOCAL_ECHOES.filter(local=>
@@ -4347,7 +4854,16 @@ return;
 serverRows.push(local);
 });
 
-return serverRows.sort((a,b)=>
+const unique=[];
+const seen=new Set();
+serverRows.forEach(item=>{
+const key=String(item&&item.id||'');
+if(key&&seen.has(key))return;
+if(key)seen.add(key);
+unique.push(item);
+});
+
+return unique.sort((a,b)=>
 (Number(a.ts)||0)-(Number(b.ts)||0) ||
 (Number(a.row)||0)-(Number(b.row)||0)
 );
@@ -4372,35 +4888,328 @@ return /^(?:application\/pdf|text\/plain|text\/csv|application\/msword|applicati
 }
 
 
+const CHAT_ICONS={
+play:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.14v13.72c0 .8.87 1.3 1.56.9l11.14-6.86a1.05 1.05 0 0 0 0-1.8L9.56 4.24A1.05 1.05 0 0 0 8 5.14z"/></svg>',
+pause:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="4.5" width="4.2" height="15" rx="1.2"/><rect x="13.8" y="4.5" width="4.2" height="15" rx="1.2"/></svg>',
+download:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="m7.5 10.5 4.5 4.5 4.5-4.5"/><path d="M5 20h14"/></svg>',
+file:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg>',
+image:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="m4.5 17 4.4-4.2 3.1 2.8 3.3-3.4 4.2 4.6"/></svg>',
+paperclip:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 11.5 12 20a5.2 5.2 0 0 1-7.4-7.4l8.6-8.6a3.5 3.5 0 0 1 5 5l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l7.9-7.9"/></svg>',
+mic:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21"/><path d="M9 21h6"/></svg>',
+stop:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>',
+camera:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8.5h3l1.5-2.5h7L17 8.5h3a1.5 1.5 0 0 1 1.5 1.5v8A1.5 1.5 0 0 1 20 19.5H4A1.5 1.5 0 0 1 2.5 18v-8A1.5 1.5 0 0 1 4 8.5z"/><circle cx="12" cy="13" r="3.4"/></svg>',
+pin:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s7-6.1 7-11a7 7 0 1 0-14 0c0 4.9 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/></svg>',
+smile:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 14.2a4.4 4.4 0 0 0 7 0"/><circle cx="9.3" cy="9.7" r="1" fill="currentColor" stroke="none"/><circle cx="14.7" cy="9.7" r="1" fill="currentColor" stroke="none"/></svg>',
+search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>',
+close:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12"/><path d="m18 6-12 12"/></svg>',
+send:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 3.5 3.8 10.2c-.9.36-.87 1.65.04 1.97l6.5 2.3 2.3 6.5c.32.91 1.61.94 1.97.04L21.3 4.3c.3-.78-.5-1.58-1.28-1.28z"/><path d="m10.4 14.5 4.7-4.7"/></svg>',
+arrow:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>',
+folder:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 7.5A1.5 1.5 0 0 1 5 6h4l2 2.5h8A1.5 1.5 0 0 1 20.5 10v7A1.5 1.5 0 0 1 19 18.5H5A1.5 1.5 0 0 1 3.5 17z"/></svg>'
+};
+
+function chatIcon(name,extraClass){
+const svg=CHAT_ICONS[name]||'';
+if(!extraClass)return svg;
+return svg.replace('<svg','<svg class="'+extraClass+'"');
+}
+
+
+function chatMediaUrl(attachment,options){
+const id=String(attachment&&attachment.id||'');
+if(!id)return String(attachment&&attachment.url||'');
+const params=new URLSearchParams({
+id:id,
+mime:String(attachment.mime||''),
+name:String(attachment.name||'lampiran')
+});
+if(options&&options.download)params.set('dl','1');
+return '/api/media?'+params.toString();
+}
+
+
+function chatImageError(img){
+const fallback=img.getAttribute('data-fallback');
+if(fallback&&img.getAttribute('src')!=fallback){
+img.setAttribute('src',fallback);
+img.removeAttribute('data-fallback');
+return;
+}
+img.style.display='none';
+const holder=img.closest('.chat-media-link')||img;
+const note=holder.nextElementSibling;
+if(note&&note.classList.contains('chat-image-fallback'))note.hidden=false;
+}
+
+
+let CHAT_EMOJI_RE=null;
+try{CHAT_EMOJI_RE=/^(?:\p{Extended_Pictographic}|\p{Emoji_Modifier}|\u200d|\ufe0f|\s){1,18}$/u;}catch(e){}
+
+function chatIsSticker(text){
+const value=String(text||'').trim();
+if(!value||!CHAT_EMOJI_RE||value.length>48)return false;
+return CHAT_EMOJI_RE.test(value);
+}
+
+
+function chatLocationUrl(text){
+const value=String(text||'').trim();
+if(value.slice(0,2)!='📍')return '';
+const match=/https:\/\/www\.google\.com\/maps\?q=-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?/i.exec(value);
+return match?match[0]:'';
+}
+
+
+function chatLocationHtml(url){
+const coords=(/[?&]q=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/.exec(url)||[]).slice(1);
+const label=coords.length==2
+?Number(coords[0]).toFixed(5)+', '+Number(coords[1]).toFixed(5)
+:'Lokasi dibagikan';
+return `<a class="chat-location" href="${esc(url)}" target="_blank" rel="noopener noreferrer">
+<span class="chat-location-icon">${chatIcon('pin')}</span>
+<span class="chat-location-copy"><b>Lokasi saya</b><small>${esc(label)}</small></span>
+<span class="chat-location-go">${chatIcon('arrow')}</span>
+</a>`;
+}
+
+
+function chatHighlight(text,query){
+const value=String(text||'');
+if(!query)return esc(value);
+const lower=value.toLowerCase();
+const needle=String(query).toLowerCase();
+let out='';
+let index=0;
+while(index<value.length){
+const hit=lower.indexOf(needle,index);
+if(hit<0){
+out+=esc(value.slice(index));
+break;
+}
+out+=esc(value.slice(index,hit))+'<mark>'+esc(value.slice(hit,hit+needle.length))+'</mark>';
+index=hit+needle.length;
+}
+return out;
+}
+
+
+function chatVoiceHtml(attachment){
+const src=chatMediaUrl(attachment)||String(attachment.url||'');
+const fallback=String(attachment.url||'');
+const download=chatMediaUrl(attachment,{download:true})||src;
+return `<div class="chat-vn">
+<button type="button" class="chat-vn-btn" onclick="chatVnToggle(this)" aria-label="Putar pesan suara">${chatIcon('play','vn-play')}${chatIcon('pause','vn-pause')}</button>
+<div class="chat-vn-body">
+<div class="chat-vn-track" onclick="chatVnSeek(this,event)" aria-label="Posisi putar"><i></i></div>
+<div class="chat-vn-info"><span class="chat-vn-time">0:00</span><span class="chat-vn-dur">Pesan suara</span></div>
+</div>
+<a class="chat-vn-dl" href="${esc(download)}" download="${esc(attachment.name||'pesan-suara')}" title="Unduh pesan suara" aria-label="Unduh pesan suara">${chatIcon('download')}</a>
+<audio preload="metadata" src="${esc(src)}" data-fallback="${esc(fallback)}" onloadedmetadata="chatVnMeta(this)" ontimeupdate="chatVnUpdate(this)" onended="chatVnEnded(this)" onerror="chatVnError(this)"></audio>
+</div>`;
+}
+
+
+function chatFileHtml(attachment){
+const name=String(attachment.name||'Lampiran');
+const large=Number(attachment.size)>4*1024*1024;
+const href=large
+?String(attachment.openUrl||attachment.url||'#')
+:(chatMediaUrl(attachment,{download:true})||String(attachment.openUrl||attachment.url||'#'));
+return `<a class="chat-file" href="${esc(href)}" download="${esc(name)}" target="_blank" rel="noopener">
+<span class="chat-file-icon">${chatIcon('file')}</span>
+<span class="chat-file-copy"><b>${esc(name)}</b><small>${chatFileSize(attachment.size)||'Lampiran'}${large?' · buka Drive':''}</small></span>
+<span class="chat-file-go">${chatIcon('download')}</span>
+</a>`;
+}
+
+
 function chatMessageHtml(message){
 const mine=String(message.from||'').toLowerCase()==String(USER||'').toLowerCase();
 const attachment=message.attachment||null;
+const query=CHAT_SEARCH_QUERY;
 let media='';
 if(attachment){
 const kind=String(attachment.kind||'file');
+const proxied=chatMediaUrl(attachment);
 if(kind=='image'){
-const image=`<img class="chat-image" src="${esc(attachment.url||'')}" alt="" loading="lazy" onerror="this.style.display='none';var f=this.nextElementSibling;if(f)f.hidden=false"><span class="chat-image-fallback" hidden>📷 Foto — buka di Drive</span>`;
+const primary=proxied||String(attachment.url||'');
+const fallback=proxied&&attachment.url&&attachment.url!=proxied?String(attachment.url):'';
+const image=`<img class="chat-image" src="${esc(primary)}" alt="${esc(attachment.name||'Foto')}" loading="lazy" data-fallback="${esc(fallback)}" onerror="chatImageError(this)">`;
+const note=`<a class="chat-image-fallback" href="${esc(proxied||attachment.url||'#')}" target="_blank" rel="noopener" hidden>${chatIcon('image')} Foto — buka lampiran</a>`;
 media=attachment.openUrl&&!message.pending
-?`<a class="chat-media-link" href="${esc(attachment.openUrl)}" target="_blank" rel="noopener">${image}</a>`
-:image;
+?`<a class="chat-media-link" href="${esc(proxied||attachment.openUrl)}" target="_blank" rel="noopener">${image}</a>${note}`
+:`${image}${note}`;
 }else if(kind=='audio'){
-media=`<div class="chat-audio-wrap"><audio class="chat-audio" controls preload="metadata" src="${esc(attachment.url||'')}"></audio>${attachment.openUrl?`<a class="chat-audio-open" href="${esc(attachment.openUrl)}" target="_blank" rel="noopener">Buka</a>`:''}</div>`;
+media=chatVoiceHtml(attachment);
 }else{
-media=`<a class="chat-file" href="${esc(attachment.openUrl||attachment.url||'#')}" target="_blank" rel="noopener">📎<span>${esc(attachment.name||'Lampiran')}</span><small>${chatFileSize(attachment.size)}</small></a>`;
+media=chatFileHtml(attachment);
 }
 }
-return `<div class="chat-bubble ${mine?'mine':''}">
-<div class="chat-bubble-author">${socialAvatar(message.nama,message.photoUrl,'social-avatar small')}<b>${esc(message.nama||message.from||'Anggota TPFX')}</b>${message.role?`<span class="role-mark role-${['BM','DM'].includes(String(message.role).toUpperCase())?String(message.role).toLowerCase():'other'}">${esc(message.role)}</span>`:''}</div>
-${message.text?`<div class="chat-text">${esc(message.text)}</div>`:''}
+const location=!attachment?chatLocationUrl(message.text):'';
+const sticker=!attachment&&!location&&chatIsSticker(message.text);
+let body='';
+if(location){
+body=chatLocationHtml(location);
+}else if(message.text){
+body=sticker
+?`<div class="chat-text chat-sticker-wrap"><span class="chat-sticker">${esc(message.text)}</span></div>`
+:`<div class="chat-text">${chatHighlight(message.text,query)}</div>`;
+}
+const row=Number(message.row)||0;
+return `<div class="chat-bubble ${mine?'mine':''}${sticker?' sticker':''}"${row?` data-msg-row="${row}"`:''}>
+<div class="chat-bubble-author">${socialAvatar(message.nama,message.photoUrl,'social-avatar small')}<b>${chatHighlight(message.nama||message.from||'Anggota TPFX',query)}</b>${message.role?`<span class="role-mark role-${['BM','DM'].includes(String(message.role).toUpperCase())?String(message.role).toLowerCase():'other'}">${esc(message.role)}</span>`:''}</div>
+${body}
 ${media}
 ${message.pending?'<time>Mengirim...</time>':`<time>${socialTime(message.ts)}</time>`}
 </div>`;
 }
 
 
+function chatVnFormat(seconds){
+const total=Math.max(0,Math.floor(Number(seconds)||0));
+return Math.floor(total/60)+':'+String(total%60).padStart(2,'0');
+}
+
+
+function chatVnPauseOthers(current){
+document.querySelectorAll('.chat-vn audio').forEach(audio=>{
+if(audio==current)return;
+if(!audio.paused)audio.pause();
+});
+}
+
+
+function chatVnToggle(button){
+const wrap=button.closest('.chat-vn');
+if(!wrap)return;
+const audio=wrap.querySelector('audio');
+if(!audio)return;
+if(audio.paused){
+chatVnPauseOthers(audio);
+const play=audio.play();
+if(play&&play.catch)play.catch(()=>chatVnError(audio));
+}else{
+audio.pause();
+}
+}
+
+
+function chatVnState(audio,playing){
+const wrap=audio.closest('.chat-vn');
+if(!wrap)return;
+wrap.classList.toggle('playing',playing);
+wrap.dataset.playing=playing?'1':'0';
+}
+
+
+function chatVnMeta(audio){
+const wrap=audio.closest('.chat-vn');
+if(!wrap)return;
+const duration=wrap.querySelector('.chat-vn-dur');
+const playing=wrap.querySelector('.chat-vn-btn');
+if(duration&&Number.isFinite(audio.duration))duration.textContent=chatVnFormat(audio.duration);
+if(playing)playing.setAttribute('aria-label','Putar pesan suara · '+chatVnFormat(audio.duration));
+audio.dataset.ready='1';
+}
+
+
+function chatVnUpdate(audio){
+const wrap=audio.closest('.chat-vn');
+if(!wrap)return;
+const bar=wrap.querySelector('.chat-vn-track i');
+const time=wrap.querySelector('.chat-vn-time');
+const duration=Number.isFinite(audio.duration)&&audio.duration>0?audio.duration:0;
+if(bar)bar.style.width=(duration?Math.min(100,audio.currentTime/duration*100):0)+'%';
+if(time)time.textContent=chatVnFormat(audio.currentTime);
+chatVnState(audio,!audio.paused);
+}
+
+
+function chatVnEnded(audio){
+const wrap=audio.closest('.chat-vn');
+if(!wrap)return;
+chatVnState(audio,false);
+const bar=wrap.querySelector('.chat-vn-track i');
+const time=wrap.querySelector('.chat-vn-time');
+if(bar)bar.style.width='100%';
+if(time)time.textContent=chatVnFormat(audio.duration||audio.currentTime);
+audio.currentTime=0;
+wrap.dataset.ended='1';
+}
+
+
+function chatVnSeek(track,event){
+const wrap=track.closest('.chat-vn');
+if(!wrap)return;
+const audio=wrap.querySelector('audio');
+if(!audio)return;
+const box=track.getBoundingClientRect();
+const ratio=Math.max(0,Math.min(1,(event.clientX-box.left)/Math.max(1,box.width)));
+const duration=Number.isFinite(audio.duration)&&audio.duration>0?audio.duration:0;
+if(!duration)return;
+audio.currentTime=duration*ratio;
+chatVnUpdate(audio);
+}
+
+
+function chatVnError(audio){
+const wrap=audio.closest('.chat-vn');
+if(!wrap)return;
+const retry=audio.getAttribute('data-fallback');
+if(retry&&audio.getAttribute('src')!=retry&&!audio.dataset.retried){
+audio.dataset.retried='1';
+audio.setAttribute('src',retry);
+audio.load();
+return;
+}
+chatVnState(audio,false);
+const info=wrap.querySelector('.chat-vn-info');
+if(info)info.innerHTML='<span class="chat-vn-error">Audio tidak dapat diputar</span><span class="chat-vn-dur">Unduh</span>';
+}
+
+
+function chatMatchesQuery(message,query){
+if(!query)return true;
+const needle=String(query).toLowerCase();
+const haystack=[
+message.text,
+message.nama,
+message.from,
+message.attachment&&message.attachment.name
+].filter(Boolean).join(' ').toLowerCase();
+return haystack.indexOf(needle)>=0;
+}
+
+
+function chatMessagePreview(message){
+if(message.text)return message.text;
+if(message.attachment){
+const kind=String(message.attachment.kind||'file');
+if(kind=='image')return '📷 Foto';
+if(kind=='audio')return '🎤 Pesan suara';
+return '📎 '+String(message.attachment.name||'Lampiran');
+}
+return '(pesan kosong)';
+}
+
+
 function chatMessagesHtml(){
 if(CHAT_HISTORY_LOADING&&!CHAT_MESSAGES.length){
 return '<div class="chat-loading"><span></span>Memuat pesan…</div>';
+}
+const query=CHAT_SEARCH_QUERY;
+if(query){
+const matches=CHAT_MESSAGES.filter(message=>chatMatchesQuery(message,query));
+const known=new Set(CHAT_MESSAGES.map(message=>String(message.id||'')));
+const remote=CHAT_SEARCH_REMOTE.filter(message=>!known.has(String(message.id||'')));
+let html=matches.map(chatMessageHtml).join('');
+if(remote.length){
+html+=`<div class="chat-search-group"><span>Dari riwayat lebih lama</span>${remote.map(message=>`<button type="button" class="chat-search-hit" onclick="chatOpenSearchResult(${Number(message.row)||0})"><b>${esc(message.nama||message.from)}</b><span>${chatHighlight(chatMessagePreview(message),query)}</span><time>${socialTime(message.ts)}</time></button>`).join('')}</div>`;
+}
+if(!html){
+if(CHAT_SEARCH_LOADING)return '<div class="chat-loading"><span></span>Mencari riwayat…</div>';
+return '<div class="empty">Tidak ada pesan yang cocok.</div>';
+}
+return html;
 }
 return (CHAT_HAS_MORE?'<button class="btn sec chat-load-older" type="button" onclick="loadOlderChat()">Muat pesan sebelumnya</button>':'')+CHAT_MESSAGES.map(chatMessageHtml).join('');
 }
@@ -4409,7 +5218,19 @@ return (CHAT_HAS_MORE?'<button class="btn sec chat-load-older" type="button" onc
 function renderChatMessages(){
 const box=$('#chatPreview');
 if(!box)return;
+const active=box.querySelector('.chat-vn audio');
+const vnState=active&&active.currentTime>0
+?{src:active.getAttribute('src'),time:active.currentTime,playing:!active.paused}
+:null;
 box.innerHTML=chatMessagesHtml()||'<div class="empty">Mulai percakapan dengan menyapa anggota.</div>';
+if(vnState){
+const next=Array.from(box.querySelectorAll('.chat-vn audio')).find(audio=>audio.getAttribute('src')==vnState.src);
+if(next){
+const restore=()=>{try{next.currentTime=vnState.time;}catch(e){}};
+if(next.readyState>=1)restore();else next.addEventListener('loadedmetadata',restore,{once:true});
+if(vnState.playing){const play=next.play();if(play&&play.catch)play.catch(()=>{});chatVnState(next,true);}
+}
+}
 }
 
 
@@ -4418,12 +5239,249 @@ const onChat=(ROLE=='DM'||ROLE=='BM')?dmTab=='chat':tab=='chat';
 if(!onChat)return;
 chatRenderAttachmentPreview();
 updateChatMicButton();
+chatRenderEmojiGrid();
+const emojiButton=$('#chatEmojiBtn');
+if(emojiButton)emojiButton.classList.toggle('active',CHAT_EMOJI_OPEN);
 }
 
 
 function chatPickFile(){
 const input=$('#chatFileInput');
 if(input)input.click();
+}
+
+
+function chatPickCamera(){
+const input=$('#chatCameraInput');
+if(input)input.click();
+}
+
+
+function chatShareLocation(){
+if(!CHAT_ACTIVE){toast('Buka percakapan dulu.');return;}
+if(CHAT_LOCATION_BUSY)return;
+if(!navigator.geolocation){toast('Perangkat ini belum mendukung fitur lokasi.');return;}
+CHAT_LOCATION_BUSY=true;
+toast('Mengambil lokasi Anda…');
+navigator.geolocation.getCurrentPosition(position=>{
+CHAT_LOCATION_BUSY=false;
+if(!CHAT_ACTIVE)return;
+const lat=Number(position.coords.latitude).toFixed(6);
+const lng=Number(position.coords.longitude).toFixed(6);
+const input=$('#chatText');
+if(!input)return;
+input.value='📍 Lokasi saya\nhttps://www.google.com/maps?q='+lat+','+lng;
+const form=input.form;
+if(form&&form.requestSubmit)form.requestSubmit();
+else sendTeamMessage({preventDefault(){}});
+},error=>{
+CHAT_LOCATION_BUSY=false;
+toast(error&&Number(error.code)==1
+?'Izin lokasi ditolak. Aktifkan izin lokasi untuk situs ini.'
+:'Lokasi tidak dapat diambil. Coba lagi.');
+},{enableHighAccuracy:true,timeout:12000,maximumAge:60000});
+}
+
+
+const CHAT_EMOJI_GROUPS={
+emoji:['😀','😄','😁','😊','🙂','😉','😎','🤩','🥳','😅','😂','🤣','😇','🥰','😍','😘','😜','🤪','🤔','🤨','😐','😴','😢','😭','😡','🤯','😱','🤝','👍','👎','👏','🙌','🙏','💪','👌','✌️','🤞','🫡','🫶','🤙','👀','🧠','❤️','🧡','💛','💚','💙','💜','🖤','🤍','💔','❣️','💕','💞','💯','🔥','⚡','✨','🌟','⭐','💥','🎉','🎊','🎁','🏆','⚽','🎯','🚀','🪙','💰','📈','📉','📊','✅','❌','⚠️','💎','🥇','🏦','💼','📱','☕','🍀','🌙','☀️','🌈'],
+stickers:['🔥','💯','🎯','🚀','🏆','💰','📈','🪙','💎','⚡','✨','🤝','👍','👏','🙌','💪','🫡','😎','🤩','🥳','😂','😭','🤯','😱','❤️','🧡','💛','💚','💙','💜','🔥🔥','💯💯','🎉🎉','👑','🦁','🐂','🐻','🌙','⭐','🌟','🍀','☕','🤑','🥇','🏦','📊','🤲','🙏','👀','🫶']
+};
+
+
+function chatRenderEmojiGrid(){
+const grid=$('#chatEmojiGrid');
+if(!grid)return;
+const mode=CHAT_EMOJI_MODE=='stickers'?'stickers':'emoji';
+grid.classList.toggle('stickers',mode=='stickers');
+grid.innerHTML=(CHAT_EMOJI_GROUPS[mode]||[]).map(value=>`<button type="button" onclick="chatEmojiPick('${value}')" aria-label="${esc(value)}">${value}</button>`).join('');
+document.querySelectorAll('.chat-emoji-tabs button').forEach(button=>button.classList.toggle('active',button.dataset.mode==mode));
+}
+
+
+function chatEmojiMode(mode){
+CHAT_EMOJI_MODE=mode=='stickers'?'stickers':'emoji';
+chatRenderEmojiGrid();
+}
+
+
+function chatDismissEmoji(){
+CHAT_EMOJI_OPEN=false;
+const panel=$('#chatEmojiPanel');
+if(panel)panel.hidden=true;
+const button=$('#chatEmojiBtn');
+if(button)button.classList.remove('active');
+}
+
+
+function toggleChatEmoji(){
+CHAT_EMOJI_OPEN=!CHAT_EMOJI_OPEN;
+const panel=$('#chatEmojiPanel');
+if(panel)panel.hidden=!CHAT_EMOJI_OPEN;
+const button=$('#chatEmojiBtn');
+if(button)button.classList.toggle('active',CHAT_EMOJI_OPEN);
+if(CHAT_EMOJI_OPEN)chatRenderEmojiGrid();
+}
+
+
+function chatEmojiPick(value){
+if(CHAT_EMOJI_MODE=='stickers'&&!CHAT_ATTACHMENT){
+chatSendSticker(value);
+return;
+}
+const input=$('#chatText');
+if(!input)return;
+const start=typeof input.selectionStart=='number'?input.selectionStart:input.value.length;
+const end=typeof input.selectionEnd=='number'?input.selectionEnd:start;
+input.value=input.value.slice(0,start)+value+input.value.slice(end);
+input.focus();
+try{input.setSelectionRange(start+value.length,start+value.length);}catch(e){}
+}
+
+
+function chatSendSticker(value){
+if(!CHAT_ACTIVE||CHAT_SENDING)return;
+const input=$('#chatText');
+if(!input)return;
+input.value=value;
+chatDismissEmoji();
+const form=input.form;
+if(form&&form.requestSubmit)form.requestSubmit();
+else sendTeamMessage({preventDefault(){}});
+}
+
+
+function chatToggleSearch(){
+CHAT_SEARCH_OPEN=!CHAT_SEARCH_OPEN;
+const bar=$('#chatSearchBar');
+if(bar)bar.hidden=!CHAT_SEARCH_OPEN;
+if(CHAT_SEARCH_OPEN){
+const input=$('#chatSearchInput');
+if(input)setTimeout(()=>input.focus(),30);
+}else{
+chatSearchClear();
+}
+}
+
+
+function chatSearchStatus(text){
+const el=$('#chatSearchStatus');
+if(!el)return;
+if(text){
+el.textContent=text;
+return;
+}
+if(!CHAT_SEARCH_OPEN&&!CHAT_SEARCH_QUERY){
+el.textContent='';
+return;
+}
+if(CHAT_SEARCH_QUERY.length<2){
+el.textContent='Ketik minimal 2 huruf untuk mencari.';
+return;
+}
+const known=new Set(CHAT_MESSAGES.map(message=>String(message.id||'')));
+const local=CHAT_MESSAGES.filter(message=>chatMatchesQuery(message,CHAT_SEARCH_QUERY)).length;
+const extra=CHAT_SEARCH_REMOTE.filter(message=>!known.has(String(message.id||''))).length;
+if(CHAT_SEARCH_LOADING&&!extra){
+el.textContent='Mencari riwayat…';
+return;
+}
+el.textContent=(local+extra)+' pesan cocok';
+}
+
+
+function chatSearchInput(value){
+CHAT_SEARCH_QUERY=String(value||'').trim();
+clearTimeout(CHAT_SEARCH_TIMER);
+CHAT_SEARCH_REMOTE=[];
+CHAT_SEARCH_ERROR='';
+if(CHAT_SEARCH_QUERY.length<2){
+CHAT_SEARCH_LOADING=false;
+chatSearchStatus();
+renderChatMessages();
+return;
+}
+renderChatMessages();
+CHAT_SEARCH_LOADING=true;
+chatSearchStatus('Mencari riwayat…');
+CHAT_SEARCH_TIMER=setTimeout(chatSearchRemote,450);
+}
+
+
+async function chatSearchRemote(){
+const query=CHAT_SEARCH_QUERY;
+if(query.length<2||!CHAT_ACTIVE)return;
+const type=CHAT_ACTIVE.type;
+const target=CHAT_ACTIVE.id;
+try{
+const r=await rpc('chatSearch',TOK,type,target,query);
+if(CHAT_SEARCH_QUERY!=query||!CHAT_ACTIVE||CHAT_ACTIVE.type!=type||CHAT_ACTIVE.id!=target)return;
+if(!r||typeof r!='object')throw new Error('Respons pencarian tidak valid.');
+if(r.err){
+if(r.err=='AUTH'){logout();return;}
+throw new Error(typeof r.err=='string'?r.err:'Pencarian gagal');
+}
+CHAT_SEARCH_REMOTE=Array.isArray(r.rows)?r.rows:[];
+CHAT_SEARCH_LOADING=false;
+chatSearchStatus();
+renderChatMessages();
+}catch(e){
+if(CHAT_SEARCH_QUERY!=query)return;
+CHAT_SEARCH_LOADING=false;
+CHAT_SEARCH_ERROR=String((e&&e.message)||e);
+chatSearchStatus('Pencarian riwayat lama gagal: '+CHAT_SEARCH_ERROR);
+}
+}
+
+
+function chatSearchClear(){
+clearTimeout(CHAT_SEARCH_TIMER);
+CHAT_SEARCH_QUERY='';
+CHAT_SEARCH_REMOTE=[];
+CHAT_SEARCH_ERROR='';
+CHAT_SEARCH_LOADING=false;
+const input=$('#chatSearchInput');
+if(input)input.value='';
+chatSearchStatus();
+renderChatMessages();
+}
+
+
+async function chatOpenSearchResult(row){
+row=Number(row)||0;
+if(!row||!CHAT_ACTIVE)return;
+const type=CHAT_ACTIVE.type;
+const target=CHAT_ACTIVE.id;
+const endpoint=type=='group'?'groupHistory':type=='global'?'globalChatHistory':'chatHistory';
+CHAT_SEARCH_LOADING=true;
+chatSearchStatus('Memuat konteks pesan…');
+try{
+const r=await rpc(endpoint,TOK,target,row+1);
+if(!CHAT_ACTIVE||CHAT_ACTIVE.type!=type||CHAT_ACTIVE.id!=target)return;
+if(!r||typeof r!='object')throw new Error('Respons riwayat tidak valid.');
+if(r.err)throw new Error(typeof r.err=='string'?r.err:'Konteks pesan gagal dimuat');
+if(!Array.isArray(r.rows))throw new Error('Respons riwayat tidak valid.');
+CHAT_MESSAGES=mergeChatRows(CHAT_MESSAGES.concat(r.rows),type,target);
+const oldest=Number(r.rows[0]&&r.rows[0].row)||0;
+if(oldest)CHAT_OLDEST_ROW=CHAT_OLDEST_ROW?Math.min(CHAT_OLDEST_ROW,oldest):oldest;
+if(typeof r.hasMore!='undefined')CHAT_HAS_MORE=!!r.hasMore;
+writeChatCache(type,target,CHAT_MESSAGES);
+CHAT_SEARCH_QUERY='';
+CHAT_SEARCH_REMOTE=[];
+CHAT_SEARCH_LOADING=false;
+const input=$('#chatSearchInput');
+if(input)input.value='';
+chatSearchStatus();
+renderChatMessages();
+const bubble=document.querySelector('#chatPreview [data-msg-row="'+row+'"]');
+if(bubble){
+bubble.classList.add('chat-hit');
+bubble.scrollIntoView({block:'center'});
+}
+}catch(e){
+CHAT_SEARCH_LOADING=false;
+chatSearchStatus('Gagal membuka pesan: '+String((e&&e.message)||e));
+}
 }
 
 
@@ -4549,7 +5607,7 @@ const button=$('#chatMicBtn');
 if(!button)return;
 button.classList.toggle('recording',CHAT_RECORDING);
 button.setAttribute('aria-label',CHAT_RECORDING?'Hentikan dan kirim rekaman':'Rekam pesan suara');
-button.textContent=CHAT_RECORDING?'⏹':'🎤';
+button.innerHTML=chatIcon(CHAT_RECORDING?'stop':'mic');
 }
 
 
@@ -4756,17 +5814,35 @@ ${active?`
 <button class="btn sec chat-back" style="display:none;padding:7px 10px" onclick="CHAT_ACTIVE=null;CHAT_MESSAGES=[];render()">←</button>
 ${activeGlobal?'<div class="social-avatar">🌐</div>':activeGroup?'<div class="social-avatar">👥</div>':socialAvatar(active.nama,active.photoUrl)}
 <div>${esc(activeGlobal?'Chat Global':activeGroup?activeGroup.name:active.nama)}<div class="mut">${activeGlobal?'Semua anggota aktif':activeGroup?'Grup · '+(activeGroup.memberCount||0)+' anggota':esc(active.role)}</div></div>
+<button type="button" class="btn sec chat-icon-btn chat-search-toggle${CHAT_SEARCH_OPEN?' active':''}" onclick="chatToggleSearch()" aria-label="Cari pesan di percakapan" title="Cari pesan">${chatIcon('search')}</button>
 </div>
+<div class="chat-search-bar" id="chatSearchBar" ${CHAT_SEARCH_OPEN?'':'hidden'}>
+${chatIcon('search')}
+<input id="chatSearchInput" type="search" value="${esc(CHAT_SEARCH_QUERY)}" placeholder="Cari pesan, nama, atau lampiran…" oninput="chatSearchInput(this.value)" autocomplete="off" aria-label="Cari pesan">
+<button type="button" class="chat-search-clear" onclick="chatSearchClear()" aria-label="Hapus pencarian">${chatIcon('close')}</button>
+</div>
+<div class="chat-search-status" id="chatSearchStatus"></div>
 <div class="chat-preview" id="chatPreview">${messages||'<div class="empty">Mulai percakapan dengan menyapa anggota.</div>'}</div>
 <form class="chat-compose" onsubmit="sendTeamMessage(event)">
 <div class="chat-attach-preview" id="chatAttachPreview" hidden></div>
+<div class="chat-emoji-panel" id="chatEmojiPanel" ${CHAT_EMOJI_OPEN?'':'hidden'}>
+<div class="chat-emoji-tabs">
+<button type="button" data-mode="emoji" class="${CHAT_EMOJI_MODE=='stickers'?'':'active'}" onclick="chatEmojiMode('emoji')">Emoji</button>
+<button type="button" data-mode="stickers" class="${CHAT_EMOJI_MODE=='stickers'?'active':''}" onclick="chatEmojiMode('stickers')">Stiker</button>
+</div>
+<div class="chat-emoji-grid${CHAT_EMOJI_MODE=='stickers'?' stickers':''}" id="chatEmojiGrid"></div>
+</div>
 <div class="chat-compose-row">
-<button type="button" class="btn sec chat-icon-btn" onclick="chatPickFile()" aria-label="Lampirkan foto atau file">📎</button>
-<button type="button" class="btn sec chat-icon-btn" id="chatMicBtn" onclick="toggleChatRecording()" aria-label="Rekam pesan suara">🎤</button>
+<button type="button" class="btn sec chat-icon-btn" onclick="chatPickFile()" aria-label="Lampirkan foto atau file" title="Foto atau file">${chatIcon('paperclip')}</button>
+<button type="button" class="btn sec chat-icon-btn" onclick="chatPickCamera()" aria-label="Ambil foto dari kamera" title="Kamera">${chatIcon('camera')}</button>
+<button type="button" class="btn sec chat-icon-btn" onclick="chatShareLocation()" aria-label="Bagikan lokasi" title="Bagikan lokasi">${chatIcon('pin')}</button>
+<button type="button" class="btn sec chat-icon-btn${CHAT_EMOJI_OPEN?' active':''}" id="chatEmojiBtn" onclick="toggleChatEmoji()" aria-label="Emoji dan stiker" title="Emoji & stiker">${chatIcon('smile')}</button>
+<button type="button" class="btn sec chat-icon-btn" id="chatMicBtn" onclick="toggleChatRecording()" aria-label="Rekam pesan suara" title="Pesan suara">${chatIcon('mic')}</button>
 <textarea id="chatText" maxlength="1000" placeholder="Tulis pesan..." aria-label="Tulis pesan"></textarea>
-<button class="btn" type="submit">Kirim</button>
+<button class="btn chat-send-btn" type="submit" aria-label="Kirim pesan" title="Kirim">${chatIcon('send')}</button>
 </div>
 <input type="file" id="chatFileInput" class="chat-file-input" onchange="chatHandleFile(this)" accept="image/jpeg,image/png,image/webp,image/gif,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip" tabindex="-1">
+<input type="file" id="chatCameraInput" class="chat-file-input" accept="image/*" capture="environment" onchange="chatHandleFile(this)" tabindex="-1">
 </form>`:'<div class="empty">Pilih Chat Global, percakapan, atau buat grup baru.</div>'}
 </section>
 </div>
@@ -5028,8 +6104,19 @@ refreshChatHistory();
 3000
 );
 
-const GOLD_NEWS_TTL=10*60*1000;
-const GOLD_NEWS_FAIL_MS=5*60*1000;
+GOLD_NEWS_TIMER=setInterval(
+()=>{
+if(TOK&&document.visibilityState!='hidden'&&(tab=='home'||((ROLE=='DM'||ROLE=='BM')&&dmTab=='dash')))loadGoldNews();
+},
+60000
+);
+
+const GOLD_NEWS_TTL=2*60*1000;
+const GOLD_NEWS_FAIL_MS=3*60*1000;
+
+function fmtGoldPrice(value){
+return '$'+Number(value||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
 
 function normalizeNewsItem(item){
 const url=String(item&&item.url||'');
@@ -5043,9 +6130,11 @@ return{title,url,source,ts:Number(item.ts)||0};
 function restoreGoldNews(){
 try{
 const raw=JSON.parse(localStorage.getItem('tpfx_gold_news')||'null');
-if(!raw||!Array.isArray(raw.items))return;
-GOLD_NEWS=raw.items.map(normalizeNewsItem).filter(Boolean).slice(0,8);
+if(!raw||typeof raw!='object')return;
+if(Array.isArray(raw.items))GOLD_NEWS=raw.items.map(normalizeNewsItem).filter(Boolean).slice(0,6);
 GOLD_NEWS_AT=Number(raw.at)||0;
+GOLD_PRICE=Number(raw.price)||0;
+GOLD_PRICE_UPDATED=Number(raw.priceUpdated)||0;
 }catch(e){}
 }
 
@@ -5066,15 +6155,26 @@ signal:controller?controller.signal:undefined
 });
 if(!response.ok)throw new Error('HTTP '+response.status);
 const data=await response.json();
-const list=data&&data.ok&&Array.isArray(data.items)?data.items.map(normalizeNewsItem).filter(Boolean).slice(0,8):[];
-if(!list.length)throw new Error('Berita kosong');
+const list=data&&Array.isArray(data.items)?data.items.map(normalizeNewsItem).filter(Boolean).slice(0,6):[];
+const price=Number(data&&data.price&&data.price.value)||0;
+if(!list.length&&!price)throw new Error('Berita dan harga kosong');
+let changed=false;
+if(list.length){
 GOLD_NEWS=list;
 GOLD_NEWS_AT=Date.now();
+changed=true;
+}
+if(price>0){
+GOLD_PRICE=price;
+GOLD_PRICE_UPDATED=Number(data.price&&data.price.updated)||Date.now();
+GOLD_NEWS_AT=Date.now();
+changed=true;
+}
 GOLD_NEWS_FAIL_AT=0;
 try{
-localStorage.setItem('tpfx_gold_news',JSON.stringify({at:GOLD_NEWS_AT,items:GOLD_NEWS}));
+localStorage.setItem('tpfx_gold_news',JSON.stringify({at:GOLD_NEWS_AT,items:GOLD_NEWS,price:GOLD_PRICE,priceUpdated:GOLD_PRICE_UPDATED}));
 }catch(e){}
-refreshDepositTicker();
+if(changed)refreshDepositTicker();
 }catch(e){
 GOLD_NEWS_FAIL_AT=Date.now();
 }finally{
@@ -5113,13 +6213,14 @@ items.sort((a,b)=>b.ts-a.ts);
 const deposits=items.slice(0,5).map(item=>
 `<span class="deposit-ticker-item"><b>${esc(item.by||'BDO')}</b><span class="deposit-ticker-sep">·</span><span class="deposit-ticker-amount">${item.amount?'Rp'+esc(item.amount):'Closing baru'}</span></span>`
 );
+const newsItems=GOLD_NEWS.slice(0,6);
 const newsRow=(item,duplicate)=>
 duplicate
 ?`<a class="deposit-ticker-item deposit-ticker-news" href="${esc(item.url)}" target="_blank" rel="noopener noreferrer" title="${esc(item.title)}" tabindex="-1"><span class="deposit-ticker-tag">XAUUSD</span><span class="deposit-ticker-news-title">${esc(item.title)}</span>${item.source?`<span class="deposit-ticker-sep">·</span><span class="deposit-ticker-source">${esc(item.source)}</span>`:''}</a>`
 :item.url
 ?`<a class="deposit-ticker-item deposit-ticker-news" href="${esc(item.url)}" target="_blank" rel="noopener noreferrer" title="${esc(item.title)}"><span class="deposit-ticker-tag">XAUUSD</span><span class="deposit-ticker-news-title">${esc(item.title)}</span>${item.source?`<span class="deposit-ticker-sep">·</span><span class="deposit-ticker-source">${esc(item.source)}</span>`:''}</a>`
 :`<span class="deposit-ticker-item deposit-ticker-news"><span class="deposit-ticker-tag">XAUUSD</span><span class="deposit-ticker-news-title">${esc(item.title)}</span>${item.source?`<span class="deposit-ticker-sep">·</span><span class="deposit-ticker-source">${esc(item.source)}</span>`:''}</span>`;
-const build=(duplicate)=>deposits.concat(GOLD_NEWS.slice(0,6).map(item=>newsRow(item,duplicate)));
+const build=(duplicate)=>deposits.concat(newsItems.map(item=>newsRow(item,duplicate)));
 const first=build(false);
 const second=build(true);
 if(!first.length){
@@ -5127,17 +6228,26 @@ const empty='<span class="deposit-ticker-item deposit-ticker-empty">Belum ada de
 first.push(empty);
 second.push(empty);
 }
+const mobile=typeof matchMedia=='function'&&matchMedia('(max-width:640px)').matches;
 let chars=0;
 items.slice(0,5).forEach(item=>{
 chars+=String(item.by||'BDO').length+String(item.amount||'Closing baru').length+10;
 });
-GOLD_NEWS.slice(0,6).forEach(item=>{
-chars+=String(item.title||'').length+String(item.source||'').length+14;
+newsItems.forEach(item=>{
+chars+=6+String(item.title||'').length+(mobile?0:String(item.source||'').length)+12;
 });
 const doubled=`<span class="deposit-ticker-group">${first.join('')}</span><span class="deposit-ticker-group" aria-hidden="true">${second.join('')}</span>`;
-const duration=Math.max(30,Math.min(110,10+first.length*4+chars*0.06));
-return`<div class="deposit-ticker" id="depositTicker" role="region" aria-label="Closing terbaru dan berita emas XAUUSD" title="Closing terbaru & berita emas XAUUSD">
+const estimated=chars*6.4+first.length*40;
+const duration=Math.max(24,Math.min(96,estimated/42));
+const updatedLabel=GOLD_PRICE_UPDATED?new Date(GOLD_PRICE_UPDATED).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}):'';
+const market=GOLD_PRICE>0
+?`<span class="deposit-ticker-market" title="Harga XAUUSD live${updatedLabel?' · '+updatedLabel:''}"><span class="deposit-ticker-symbol">XAUUSD</span><b class="deposit-ticker-price">${fmtGoldPrice(GOLD_PRICE)}</b><span class="deposit-ticker-live"><i></i>LIVE</span></span>`
+:'<span class="deposit-ticker-caption">Closing &amp; berita emas</span>';
+return`<div class="deposit-ticker" id="depositTicker" role="region" aria-label="Closing terbaru, harga dan berita emas XAUUSD" title="Closing terbaru, harga & berita emas XAUUSD">
+<div class="deposit-ticker-head">
 <span class="deposit-ticker-label">UPDATE</span>
+${market}
+</div>
 <div class="deposit-ticker-window">
 <div class="deposit-ticker-track" style="animation-duration:${duration.toFixed(1)}s">
 ${doubled}

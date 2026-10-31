@@ -1,23 +1,26 @@
 const FEEDS = [
   {
     name: 'google-en',
-    url: 'https://news.google.com/rss/search?q=XAUUSD%20OR%20%22gold%20price%22&hl=en-US&gl=US&ceid=US:en'
+    url: 'https://news.google.com/rss/search?q=XAUUSD&hl=en-US&gl=US&ceid=US:en'
   },
   {
     name: 'google-id',
-    url: 'https://news.google.com/rss/search?q=harga%20emas%20OR%20xauusd&hl=id&gl=ID&ceid=ID:id'
+    url: 'https://news.google.com/rss/search?q=XAUUSD&hl=id&gl=ID&ceid=ID:id'
   }
 ];
 
-const FALLBACK = 'https://www.bing.com/news/search?q=xauusd%20gold&format=rss';
+const FALLBACK = 'https://www.bing.com/news/search?q=XAUUSD&format=rss';
+const PRICE_URL = 'https://api.gold-api.com/price/XAU';
 
-const MAX_ITEMS = 8;
+const MAX_ITEMS = 6;
 const MAX_TITLE = 180;
 const CACHE_MS = 5 * 60 * 1000;
+const PRICE_CACHE_MS = 60 * 1000;
 const REQUEST_TIMEOUT = 7000;
 const MAX_AGE_MS = 21 * 24 * 60 * 60 * 1000;
 
 let cache = { at: 0, items: [] };
+let priceCache = { at: 0, value: 0, updated: 0 };
 
 function decodeXml(value) {
   return String(value == null ? '' : value)
@@ -82,7 +85,17 @@ function parseFeed(xml) {
     const block = chunk.split(/<\/item>/i)[0];
     let title = cleanText(tag(block, 'title'), MAX_TITLE);
     if (!title) return;
+    // Buang sinyal trading personal yang tidak informatif.
+    if (/\$?xauusd\s+(?:jual|beli)\s+di\b/i.test(title)) return;
     const source = cleanText(tag(block, 'source') || tag(block, 'News:Source'), 60);
+    let sourceLabel = source;
+    if (/^https?:\/\//i.test(sourceLabel)) {
+      try {
+        sourceLabel = new URL(sourceLabel).hostname.replace(/^www\./i, '');
+      } catch (e) {
+        sourceLabel = '';
+      }
+    }
     if (source) {
       const suffix = ' - ' + source;
       while (title.toLowerCase().endsWith(suffix.toLowerCase())) {
@@ -95,7 +108,7 @@ function parseFeed(xml) {
     items.push({
       title,
       url: link,
-      source: source || 'Gold News',
+      source: sourceLabel || 'Gold News',
       ts: Number.isFinite(ts) ? ts : 0
     });
   });
@@ -171,12 +184,32 @@ async function loadNews() {
       buckets.push(prepare(parseFeed(await fetchText(FALLBACK))));
     } catch (e) {}
   }
-  return balanced(buckets);
+  return balanced(buckets).slice(0, MAX_ITEMS);
+}
+
+async function loadPrice() {
+  if (priceCache.value && Date.now() - priceCache.at < PRICE_CACHE_MS) return priceCache;
+  try {
+    const response = await fetch(PRICE_URL, {
+      headers: { Accept: 'application/json' },
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT)
+    });
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    const data = await response.json();
+    const value = Number(data && data.price);
+    if (!Number.isFinite(value) || value <= 0) throw new Error('Harga tidak valid');
+    priceCache = {
+      at: Date.now(),
+      value,
+      updated: Date.parse(data.updatedAt) || Date.now()
+    };
+  } catch (e) {}
+  return priceCache;
 }
 
 module.exports = async (req, res) => {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.setHeader('Cache-Control', 'public, max-age=120, s-maxage=300, stale-while-revalidate=900');
+  res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=60, stale-while-revalidate=300');
 
   if (req.method === 'OPTIONS') {
     res.statusCode = 204;
@@ -189,29 +222,37 @@ module.exports = async (req, res) => {
   }
 
   const now = Date.now();
+  const tasks = [loadPrice()];
   if (!cache.items.length || now - cache.at > CACHE_MS) {
-    try {
-      const items = await loadNews();
-      if (!items.length) throw new Error('Tidak ada berita');
-      cache = { at: now, items };
-    } catch (e) {
-      if (!cache.items.length) {
-        res.statusCode = 200;
-        return res.end(JSON.stringify({
-          ok: false,
-          items: [],
-          updated: now,
-          err: 'Sumber berita emas sedang tidak tersedia'
-        }));
-      }
-    }
+    tasks.push((async () => {
+      try {
+        const items = await loadNews();
+        if (items.length) cache = { at: Date.now(), items };
+      } catch (e) {}
+    })());
+  }
+  const results = await Promise.all(tasks);
+  const price = results[0] || priceCache;
+
+  if (!cache.items.length && !price.value) {
+    res.statusCode = 200;
+    return res.end(JSON.stringify({
+      ok: false,
+      items: [],
+      price: null,
+      updated: now,
+      err: 'Sumber berita dan harga emas sedang tidak tersedia'
+    }));
   }
 
   res.statusCode = 200;
   res.end(JSON.stringify({
     ok: true,
     items: cache.items,
-    updated: cache.at,
-    stale: now - cache.at > CACHE_MS
+    price: price.value
+      ? { value: price.value, currency: 'USD', updated: price.updated, source: 'gold-api.com' }
+      : null,
+    updated: cache.at || now,
+    stale: !cache.at || now - cache.at > CACHE_MS
   }));
 };

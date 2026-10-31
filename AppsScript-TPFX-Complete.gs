@@ -669,6 +669,7 @@ function api_() {
     sendGroupChat: sendGroupChat,
     globalChatHistory: globalChatHistory,
     sendGlobalChat: sendGlobalChat,
+    chatSearch: chatSearch,
     pushConfig: pushConfig,
     subscribePush: subscribePush,
     unsubscribePush: unsubscribePush,
@@ -3233,8 +3234,78 @@ function chatHistory(t, peer, beforeRow) {
 }
 
 
-function sendChat(t, peer, text, attachment) {
+function chatSearch(t, type, target, query) {
 
+  const ctx = callerContext_(t);
+
+  if (!ctx) return { err: 'AUTH' };
+
+  const username = ctx.username;
+  const team = ctx.team;
+  const visible = teamUserKeys_(team);
+
+  type = String(type || '');
+  target = String(target || '').trim();
+
+  if (type == 'personal') {
+    const peer = target && findUser_(target);
+    if (!peer || target.toLowerCase() == username.toLowerCase() ||
+        !canChatWith_(ctx.account, peer)) {
+      return { err: 'Akun chat tidak ditemukan' };
+    }
+  } else if (type == 'group') {
+    const group = chatGroups_().getDataRange().getValues().slice(1)
+      .find(row => String(row[0]) == target);
+    if (!group || teamKey_(chatGroupTeam_(group)) != ctx.teamKey) {
+      return { err: 'Grup tidak ditemukan' };
+    }
+    if (groupMembers_(group).indexOf(String(username).toLowerCase()) < 0) {
+      return { err: 'Anda bukan anggota grup ini' };
+    }
+  } else if (type != 'global') {
+    return { err: 'Jenis chat tidak valid' };
+  }
+
+  query = String(query || '').trim().toLowerCase();
+  if (query.length < 2) return { err: 'Kata kunci minimal 2 karakter' };
+  if (query.length > 60) query = query.slice(0, 60);
+
+  const messages = messages_();
+  const cursor = messages.getLastRow();
+  const profiles = socialUsers_(ctx.root ? null : team);
+  const limit = 60;
+  const rows = [];
+  const blockSize = 1000;
+  const maxBlocks = 12;
+  let end = cursor;
+  let blocks = 0;
+
+  while (end >= 2 && rows.length < limit && blocks < maxBlocks) {
+    const start = Math.max(2, end - blockSize + 1);
+    const values = messages
+      .getRange(start, 1, end - start + 1, 10).getValues();
+    for (let i = values.length - 1; i >= 0; i--) {
+      const row = values[i];
+      if (!conversationMatches_(row, type, target, username, visible)) continue;
+      const text = String(row[3] || '').toLowerCase();
+      const fileName = String(row[7] || '').toLowerCase();
+      if (text.indexOf(query) < 0 && fileName.indexOf(query) < 0) continue;
+      rows.push(chatMessageObject_(row, start + i, profiles, type));
+      if (rows.length >= limit) break;
+    }
+    end = start - 1;
+    blocks++;
+  }
+
+  return {
+    rows: rows,
+    cursor: cursor,
+    limited: rows.length >= limit
+  };
+}
+
+
+function sendChat(t, peer, text, attachment) {
   const ctx = callerContext_(t);
 
   if (!ctx) return { err: 'AUTH' };

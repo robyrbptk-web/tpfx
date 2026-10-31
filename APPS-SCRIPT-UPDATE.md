@@ -1559,28 +1559,53 @@ Endpoint baru `uploadChatFile(t, dataUrl, name, mime)`:
 
 Di frontend:
 
-- Tombol 📎 membuka pemilih foto/file. Foto non-GIF dikecilkan ke maksimal 1400 px dan dikompres JPEG sebelum diunggah; jenis file divalidasi di browser dan di server.
-- Tombol 🎤 merekam pesan suara dengan `MediaRecorder` (WebM/Opus, OGG, atau MP4 sesuai dukungan browser), maksimal 120 detik, dengan tombol Kirim/Batal. Rekaman di bawah 0,7 detik dibuang.
+- Tombol lampiran memakai ikon SVG (bukan emoji) dan membuka pemilih foto/file. Foto non-GIF dikecilkan ke maksimal 1400 px dan dikompres JPEG sebelum diunggah; jenis file divalidasi di browser dan di server.
+- Tombol mikrofon merekam pesan suara dengan `MediaRecorder` (WebM/Opus, OGG, atau MP4 sesuai dukungan browser), maksimal 120 detik, dengan tombol Kirim/Batal. Rekaman di bawah 0,7 detik dibuang.
 - Lampiran ditampilkan sebagai pratinjau lokal, baru diunggah saat tombol Kirim ditekan. Bila unggahan/gagal kirim, teks dan lampiran dikembalikan ke composer agar tidak hilang.
-- Penerima melihat foto (tautan membuka Drive), pemutar audio dengan tautan **Buka**, atau kartu file beserta ukurannya. Bila thumbnail Drive gagal dimuat, muncul tautan **Foto — buka di Drive**.
+- Pesan suara diputar langsung di dalam gelembung chat dengan tombol putar/jeda, progress bar yang bisa diklik, durasi, dan tombol unduh. Pemutaran dapat diulang berkali-kali tanpa membuka Drive; saat pesan baru masuk, posisi putar dipertahankan.
+- Foto, file, dan audio memakai proxy Vercel `api/media.js` (`/api/media?id=<fileId>&mime=<mime>&name=<nama>`), sehingga tidak dialihkan ke halaman Drive. Proxy hanya meneruskan ID valid, membatasi 16 MB, mendukung HTTP Range/HEAD, memakai cache CDN satu tahun, dan mengirim `Content-Disposition: inline`. File di atas 4 MB tetap dibuka lewat Drive karena batas respons Vercel.
+- Kartu file menampilkan ikon dokumen, nama, ukuran, dan tombol unduh. Bila proxy gagal, foto otomatis mencoba thumbnail Drive lalu menampilkan tautan **Foto — buka lampiran**; audio mencoba unduhan Drive sebelum menampilkan status gagal.
 
-Setelah menyalin backend baru: jalankan `setup()` sekali (menambah header `Messages`), lalu deploy versi baru dengan ID deployment yang sama. Frontend lama tetap dapat membaca pesan teks; fitur lampiran baru aktif setelah kedua sisi diperbarui.
+Setelah menyalin backend baru: jalankan `setup()` sekali (menambah header `Messages`), lalu deploy versi baru dengan ID deployment yang sama. Proxy media ikut ter-deploy otomatis lewat Vercel dari folder `api/`.
 
-## 11. Running text deposit dan berita emas XAUUSD (UPDATE)
+## 11. Running text deposit, harga live, dan berita XAUUSD (UPDATE)
 
 Halaman Home (BDO/Sales) dan dashboard BM/DM menampilkan running text **UPDATE** bergaya panel biru gelap. Running text ini menggabungkan dua jenis informasi:
 
 1. **Closing** — maksimal 5 lead berstatus `deal` terbaru. Yang ditampilkan hanya **nama BDO yang closing dan nominal deposit**; nama nasabah dan produk tidak ditampilkan. Untuk BM/DM, lead diambil dari seluruh anggota tim dan nama BDO memakai profil anggota tersebut. Nominal diambil dari catatan lead bila ada pola `Rp` (contoh `Rp15.000.000`); bila nominal tidak tercatat, item menampilkan `Closing baru`.
-2. **Berita emas XAUUSD** — maksimal 6 berita terbaru dengan label kuning `XAUUSD`, judul, dan nama media. Setiap berita dapat diklik untuk membuka artikel di tab baru. Judul panjang dipotong dengan elipsis pada layar; judul lengkap tetap tersedia lewat tooltip dan tautan artikel.
+2. **Harga XAUUSD live** — badge `XAUUSD $3,876.40` dengan titik hijau `LIVE`, diperbarui tiap 60 detik selama halaman terlihat. Bila sumber harga gagal, badge diganti keterangan `Closing & berita emas` tanpa mengganggu teks berjalan.
+3. **Berita XAUUSD** — maksimal 6 berita trading emas terbaru dengan label kuning `XAUUSD`, judul, dan nama media. Setiap berita dapat diklik untuk membuka artikel di tab baru.
 
-Bila keduanya kosong, teks ajakan tampil agar bagian ini tidak kosong. Animasi memakai CSS (`translateX(-50%)` dengan daftar yang diduplikasi), berhenti saat kursor diarahkan, salinan kedua ditandai `aria-hidden` dan tidak dapat difokuskan, dan animasi otomatis nonaktif pada pengaturan `prefers-reduced-motion`.
+Tata letak mobile memakai dua baris: kepala panel (label `UPDATE` + badge harga) dan jendela marquee selebar penuh di bawahnya, dengan garis pemisah halus. Ini menghilangkan tabrakan antara label, harga, dan judul berita pada layar 320–390 px. Judul berita tidak dipotong di mobile; kecepatan animasi dihitung dari panjang konten (24–96 detik) agar nyaman dibaca. Animasi berhenti saat kursor diarahkan, salinan kedua ditandai `aria-hidden` dan tidak dapat difokuskan, dan animasi otomatis nonaktif pada pengaturan `prefers-reduced-motion`.
 
-### Sumber berita tanpa API key
+### Sumber berita dan harga tanpa API key
 
-`api/news.js` adalah Vercel Function yang mengambil RSS Google News (`XAUUSD`/`gold price` dan `harga emas`), lalu memakai RSS Bing News sebagai cadangan bila hasil kurang dari 3 item. Tidak ada API key maupun biaya; kedua sumber RSS berformat publik. Endpoint mengambil berita dari kedua feed secara bergiliran agar berita analisis XAUUSD tidak tenggelam oleh berita harga emas Antam yang lebih sering terbit, membuang duplikat, membatasi usia 21 hari, dan mengembalikan maksimal 8 item:
+`api/news.js` adalah Vercel Function yang mengambil RSS Google News khusus kata kunci `XAUUSD` (versi Inggris dan Indonesia), lalu memakai RSS Bing News `XAUUSD` sebagai cadangan bila hasil kurang dari 3 item. Tidak ada API key maupun biaya. Endpoint membuang berita di luar 21 hari, membuang sinyal trading personal dan duplikat, membatasi 6 item, serta mengambil harga emas live dari `api.gold-api.com/price/XAU`:
 
 ```json
-{ "ok": true, "items": [{ "title": "...", "url": "https://...", "source": "FXEmpire", "ts": 1790000000000 }], "updated": 1790000000000 }
+{
+  "ok": true,
+  "items": [{ "title": "...", "url": "https://...", "source": "FXEmpire", "ts": 1790000000000 }],
+  "price": { "value": 3876.4, "currency": "USD", "updated": 1790000000000, "source": "gold-api.com" },
+  "updated": 1790000000000,
+  "stale": false
+}
 ```
 
-Cache di memori function berlaku 5 menit dan respons diberi `Cache-Control: public, max-age=120, s-maxage=300, stale-while-revalidate=900`. Bila semua sumber gagal, endpoint tetap merespons HTTP 200 dengan `{ "ok": false, "items": [] }` agar halaman tidak error; frontend menyimpan berita terakhir di `localStorage` (`tpfx_gold_news`), memuat ulang tiap 10 menit, dan tetap menampilkan closing bila berita tidak tersedia. Tidak perlu mengubah Apps Script untuk fitur berita; cukup deploy Vercel seperti biasa.
+Cache berita di memori function berlaku 5 menit, cache harga 60 detik, dan respons diberi `Cache-Control: public, max-age=60, s-maxage=60, stale-while-revalidate=300`. Bila semua sumber gagal, endpoint tetap merespons HTTP 200 dengan `{ "ok": false, "items": [], "price": null }` agar halaman tidak error; frontend menyimpan berita/harga terakhir di `localStorage` (`tpfx_gold_news`), memuat ulang tiap 2 menit saat aktif, dan tetap menampilkan closing bila berita tidak tersedia. Tidak perlu mengubah Apps Script untuk fitur berita; cukup deploy Vercel seperti biasa.
+
+## 12. Pencarian chat, kamera, lokasi, dan stiker
+
+**Pencarian** — endpoint baru `chatSearch(t, type, target, query)`:
+- Validasi akses sama seperti `chatHistory`/`groupHistory`/`globalChatHistory` (personal harus rekan yang boleh dihubungi, grup harus diikuti, global memfilter tim).
+- Kata kunci minimal 2 karakter dan maksimal 60 karakter; pencarian tidak peka huruf besar/kecil pada teks pesan dan nama file lampiran.
+- Memindai `Messages` dari baris terbaru ke belakang maksimal 12 blok × 1000 baris dan mengembalikan maksimal 60 pesan, sehingga riwayat lama tetap bisa dicari tanpa memuat seluruh sheet.
+- Respons: `{ rows: [...], cursor, limited }`; setiap baris memakai bentuk yang sama dengan riwayat chat (termasuk `row`).
+
+Di frontend, tombol kaca pembesar di kepala percakapan membuka kolom pencarian. Pesan yang sudah dimuat disaring langsung dengan sorotan kata kunci, lalu hasil dari riwayat lebih lama ditampilkan di bagian **Dari riwayat lebih lama**. Mengetuk hasil memuat 50 pesan konteks di sekitar baris tersebut, menutup pencarian, dan menyorot gelembung yang dituju.
+
+**Kamera dan lokasi** — tombol kamera memakai `<input type="file" accept="image/*" capture="environment">` sehingga langsung membuka kamera belakang di HP (di desktop menjadi pemilih file). Tombol lokasi memakai `navigator.geolocation` dan mengirim teks `📍 Lokasi saya` + tautan `https://www.google.com/maps?q=<lat>,<lng>`. Pesan seperti ini dirender sebagai kartu lokasi dengan koordinat dan tautan ke Google Maps; tidak ada perubahan skema backend.
+
+**Emoji dan stiker** — panel emoji/stiker di atas composer berisi 86 emoji dan 50 stiker. Mode Emoji menyisipkan karakter ke teks; mode Stiker langsung mengirim pesan. Pesan yang isinya hanya emoji (tanpa teks/lampiran) dirender besar dengan animasi pop dan mengapung. GIF juga tetap didukung sebagai lampiran foto dan beranimasi di `<img>`; tidak ada API GIF berbayar/berkunci yang dipakai.
+
+Tidak ada perubahan schema untuk pencarian, kamera, lokasi, atau stiker, sehingga `setup()` tidak perlu dijalankan ulang; cukup deploy frontend (Vercel) dan backend (versi baru pada deployment ID yang sama).
