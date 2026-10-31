@@ -2481,6 +2481,21 @@ function createPost(t, text, imageUrl) {
   } finally {
     lock.releaseLock();
   }
+
+  // Postingan BM/DM adalah pengumuman: kirim push ke seluruh akun aktif.
+  if (['BM', 'DM'].includes(String(account[4] || '').toUpperCase())) {
+    const recipients = users_().getDataRange().getValues().slice(1)
+      .filter(r => String(r[3]).toUpperCase() == 'Y')
+      .map(r => String(r[0] || ''))
+      .filter(name => name && name.toLowerCase() != String(username).toLowerCase());
+    pushQuiet_(() => pushToUsers_(recipients, {
+      title: String(account[2] || 'Manajemen') + ' · Pengumuman',
+      body: text || 'Postingan baru dengan foto',
+      url: './index.html#feed',
+      tag: 'tpfx-feed-' + String(account[0]).toLowerCase()
+    }));
+  }
+
   return { ok: 1 };
 }
 

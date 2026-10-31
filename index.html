@@ -3620,6 +3620,14 @@ toast('Notifikasi gagal diaktifkan: '+String((e&&e.message)||e));
 function openChatFromUrl(raw){
 try{
 const url=new URL(raw||'',location.href);
+if((url.hash||'')=='#feed'){
+if(ROLE=='BM'||ROLE=='DM'){dmU='all';dmTab='feed';}
+else{tab='feed';}
+render();
+loadSocialFeed();
+try{history.replaceState(null,'',location.pathname+location.search);}catch(e){}
+return true;
+}
 const match=(url.hash||'').match(/chat=(personal|group|global)(?:[:=](.*))?$/);
 if(!match||!TOK)return false;
 const type=match[1];
