@@ -1503,7 +1503,7 @@ Setelah pesan terkirim, `sendChat`, `sendGroupChat`, dan `sendGlobalChat` memang
    - `VAPID_SUBJECT` (opsional) — `mailto:admin@domain-anda`
 5. Redeploy, lalu buka `https://domain-anda.vercel.app/api/push`. Respons yang benar: `{ "enabled": true, "publicKey": "..." }`.
 6. Di editor Apps Script, jalankan sekali `setPushConfig('SECRET_DARI_LANGKAH_3', 'https://domain-anda.vercel.app')`. Secret dan origin disimpan di Script Properties; jangan menaruh secret di frontend atau repository.
-7. Deploy ulang Web App. Setelah pengguna login, aplikasi otomatis mendaftarkan perangkat: bila izin notifikasi sudah diberikan, langganan push dibuat tanpa tombol apa pun; bila izin belum diputuskan, permintaan izin muncul pada sentuhan pertama di layar. Halaman Chat hanya menampilkan status dan tombol **Matikan notifikasi HP**. Di iPhone, tambahkan dulu aplikasi ke Layar Utama dan buka dari ikonnya (iOS 16.4+).
+7. Deploy ulang Web App. Setelah pengguna login, aplikasi otomatis mendaftarkan perangkat: bila izin notifikasi sudah diberikan, langganan push dibuat tanpa tombol apa pun; bila izin belum diputuskan, permintaan izin muncul saat login dan pada sentuhan pertama di layar. Notifikasi bersifat wajib untuk tim: tidak ada tombol mematikan. Halaman Chat hanya menampilkan status, dan bila izin diblokir menampilkan tombol bantuan untuk membuka pengaturan izin situs. Di iPhone, tambahkan dulu aplikasi ke Layar Utama dan buka dari ikonnya (iOS 16.4+).
 
 Endpoint push yang ditambahkan ke `api_()`: `pushConfig`, `subscribePush`, `unsubscribePush`, dan `testPush` (diagnostik opsional; frontend tidak lagi memakainya). Fungsi relay yang perlu disalin ke Apps Script: `pushSubs_`, `setPushConfig`, `pushConfig`, `subscribePush`, `unsubscribePush`, `removePushEndpoints_`, `chatSenderName_`, `pushQuiet_`, `pushToUsers_`, dan `testPush`, beserta pemanggilan pada `sendChat`/`sendGroupChat`/`sendGlobalChat` dan `createPost` untuk pengumuman BM/DM.
 
@@ -1530,3 +1530,16 @@ Polling Apps Script bukan push real-time: interval aktual juga dipengaruhi waktu
 Endpoint sesi dapat diuji tanpa kredensial dengan memanggil `loadState` menggunakan token kosong: respons yang diharapkan adalah `{ "result": { "err": "AUTH" } }`, bukan respons tanpa `result`.
 
 **Catatan riwayat Git:** data lama pernah ada di commit `388de7a`. Menghapusnya dari versi terbaru tidak menghapus data dari riwayat commit. Jika repository dapat diakses publik, data di commit lama masih dapat dilihat melalui history; penghapusan dari history memerlukan perubahan riwayat Git dan koordinasi sebelum force-push.
+
+## 9. Multi-tim (BM/DM sendiri) dan ekspor data
+
+Setiap akun memiliki kolom `team` di sheet `Users` (kolom ke-7). Akun lama yang kolomnya kosong otomatis dianggap tim `TPFX`, jadi perilaku tim yang sudah ada tidak berubah.
+
+- **Owner aplikasi** ditentukan Script Property `TEAM_ROOT_USERS` (default `kevin,roby`). Owner dapat membuat akun untuk tim baru, melihat daftar akun semua tim, dan hanya owner yang boleh membuka perawatan database.
+- **BM/DM tim** hanya melihat dashboard, akun, lead, feed, chat, dan database timnya sendiri. Akun yang mereka buat selalu masuk tim yang sama; kolom Tim di form akun dikunci.
+- **Isolasi data**: dashboard, daftar akun, lead tim, feed/postingan, aktivitas, chat personal/grup/global, kontak database, impor kontak, status kontak, dan pipeline difilter berdasarkan tim pemanggil. Nama tim ditampilkan di header dan nama file ekspor.
+- **Chat lintas tim ditolak** untuk personal, grup, dan global. Grup baru hanya boleh berisi anggota satu tim. Grup lama tanpa kolom tim mengikuti tim pemiliknya.
+- **Kontak** menyimpan tim di kolom ke-12 sheet `Contacts`. Nomor yang sama boleh diimpor oleh tim berbeda; duplikat hanya dicek di dalam tim yang sama.
+- **Ekspor**: BDO/Sales mengekspor lead miliknya dari halaman profil (CSV/Excel). BM/DM mengekspor lead tim yang sedang difilter, rekap tim, dan aktivitas tim. `database.html` mengekspor kontak tim (manager) atau kontak sendiri (BDO). File Excel memakai SheetJS lokal di `vendor/xlsx.full.min.js`; CSV memakai BOM UTF-8 agar terbaca benar di Excel.
+
+Setelah menyalin backend baru, jalankan `setup()` sekali untuk menambahkan header `team` pada `Users`, `ChatGroups`, dan `Contacts`. Kolom baru tidak mengubah akun, password, atau data lama. Deploy ulang Web App agar endpoint memakai filter tim baru.

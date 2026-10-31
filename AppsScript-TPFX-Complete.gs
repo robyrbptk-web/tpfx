@@ -16,10 +16,138 @@ function ss_() {
   return s;
 }
 
+const DEFAULT_TEAM = 'TPFX';
+let TEAM_HEADER_READY_ = false;
+
 function users_() {
   const s = ss_().getSheetByName('Users');
   if (!s) throw new Error('Sheet Users belum ada. Jalankan fungsi setup dulu.');
+  if (!TEAM_HEADER_READY_) {
+    if (s.getLastColumn() < 7 || !String(s.getRange(1, 7).getValue()).trim()) {
+      s.getRange(1, 7).setValue('team');
+    }
+    TEAM_HEADER_READY_ = true;
+  }
   return s;
+}
+
+function teamLabel_(value) {
+  const label = String(value == null ? '' : value).trim();
+  return label || DEFAULT_TEAM;
+}
+
+function teamKey_(value) {
+  return teamLabel_(value).toLowerCase();
+}
+
+function teamOfRow_(row) {
+  return teamLabel_(row && row[6]);
+}
+
+function teamMap_() {
+  const map = {};
+  users_().getDataRange().getValues().slice(1).forEach(r => {
+    const key = String(r[0] || '').toLowerCase();
+    if (key) map[key] = teamOfRow_(r);
+  });
+  return map;
+}
+
+function isRootManager_(username) {
+  const raw = PropertiesService.getScriptProperties()
+    .getProperty('TEAM_ROOT_USERS') || 'kevin,roby';
+  const key = String(username || '').toLowerCase();
+  return raw.split(',').map(v => String(v || '').trim().toLowerCase())
+    .filter(Boolean).indexOf(key) >= 0;
+}
+
+function canManageAccount_(account, targetRow) {
+  if (!account || !targetRow) return false;
+  if (isRootManager_(account[0])) return true;
+  return teamKey_(teamOfRow_(account)) == teamKey_(teamOfRow_(targetRow));
+}
+
+function teamUserKeys_(team) {
+  const wanted = teamKey_(team);
+  const keys = {};
+  users_().getDataRange().getValues().slice(1).forEach(r => {
+    if (String(r[3]).toUpperCase() != 'Y') return;
+    if (teamKey_(teamOfRow_(r)) != wanted) return;
+    const key = String(r[0] || '').toLowerCase();
+    if (key) keys[key] = true;
+  });
+  return keys;
+}
+
+function teamRecipients_(team) {
+  const wanted = teamKey_(team);
+  const names = [];
+  users_().getDataRange().getValues().slice(1).forEach(r => {
+    if (String(r[3]).toUpperCase() != 'Y') return;
+    if (teamKey_(teamOfRow_(r)) != wanted) return;
+    const name = String(r[0] || '');
+    if (name) names.push(name);
+  });
+  return names;
+}
+
+function teamList_() {
+  const seen = {};
+  const list = [];
+  users_().getDataRange().getValues().slice(1).forEach(r => {
+    if (String(r[3]).toUpperCase() != 'Y') return;
+    const label = teamOfRow_(r);
+    const key = teamKey_(label);
+    if (seen[key]) return;
+    seen[key] = true;
+    list.push(label);
+  });
+  return list.sort((a, b) => a.localeCompare(b));
+}
+
+function normalizeTeamName_(value, fallback) {
+  const label = String(value == null ? '' : value).trim().replace(/\s+/g, ' ');
+  if (!label) return teamLabel_(fallback);
+  if (!/^[A-Za-z0-9][A-Za-z0-9 ._-]{1,39}$/.test(label)) return '';
+  return label;
+}
+
+function callerContext_(t) {
+  const username = user_(t);
+  if (!username) return null;
+  const account = findUser_(username);
+  if (!account) return null;
+  return {
+    username: String(account[0]),
+    account: account,
+    role: String(account[4] || 'BDO').toUpperCase(),
+    team: teamOfRow_(account),
+    teamKey: teamKey_(teamOfRow_(account)),
+    root: isRootManager_(account[0])
+  };
+}
+
+function accountInTeam_(account, team) {
+  return !!account && teamKey_(teamOfRow_(account)) == teamKey_(team);
+}
+
+function chatGroupTeam_(row, map) {
+  const label = String(row && row[5] == null ? '' : row[5]).trim();
+  if (label) return teamLabel_(label);
+  const owner = String(row && row[2] || '').toLowerCase();
+  return teamLabel_((map || teamMap_())[owner]);
+}
+
+function canChatWith_(account, peerRow) {
+  if (!account || !peerRow) return false;
+  if (isRootManager_(account[0])) return true;
+  return accountInTeam_(account, teamOfRow_(peerRow));
+}
+
+function postInTeam_(postId, allowedKeys) {
+  return postData_().some(post =>
+    post.id == String(postId) && allowedKeys[String(post.username).toLowerCase()]
+  );
 }
 
 function data_() {
@@ -143,7 +271,14 @@ function postComments_() {
 }
 
 function chatGroups_() {
-  return sheetEnsure_('ChatGroups', ['id', 'name', 'owner', 'members_json', 'ts']);
+  const sheet = sheetEnsure_(
+    'ChatGroups', ['id', 'name', 'owner', 'members_json', 'ts', 'team']
+  );
+  if (sheet.getLastColumn() < 6 ||
+      !String(sheet.getRange(1, 6).getValue()).trim()) {
+    sheet.getRange(1, 6).setValue('team');
+  }
+  return sheet;
 }
 
 
@@ -267,7 +402,7 @@ function setup() {
 
   if (!b.getSheetByName('Users')) {
     b.insertSheet('Users')
-      .appendRow(['username', 'password', 'nama', 'aktif', 'role']);
+      .appendRow(['username', 'password', 'nama', 'aktif', 'role', 'photoUrl', 'team']);
   }
 
   if (!b.getSheetByName('Data')) {
@@ -306,7 +441,7 @@ function setup() {
 
   if (!b.getSheetByName('ChatGroups')) {
     b.insertSheet('ChatGroups').appendRow([
-      'id', 'name', 'owner', 'members_json', 'ts'
+      'id', 'name', 'owner', 'members_json', 'ts', 'team'
     ]);
   }
 
@@ -320,6 +455,9 @@ function setup() {
   const usersSheet = b.getSheetByName('Users');
   if (!String(usersSheet.getRange(1, 6).getValue() || '').trim()) {
     usersSheet.getRange(1, 6).setValue('photoUrl');
+  }
+  if (!String(usersSheet.getRange(1, 7).getValue() || '').trim()) {
+    usersSheet.getRange(1, 7).setValue('team');
   }
 
   // Existing manager passwords are preserved. For a missing manager account,
@@ -381,7 +519,7 @@ function ensureManager_(username, password, nama, role) {
 // API
 // ============================================================
 
-const API_VERSION = '2026-10-29-storage-maintenance';
+const API_VERSION = '2026-10-31-multiteam';
 
 function doGet() {
   return out_({
@@ -568,7 +706,7 @@ function role_(t) {
 }
 
 
-function ensureUser_(username, password, nama, role) {
+function ensureUser_(username, password, nama, role, team) {
 
   const existing = findUser_(username);
 
@@ -579,7 +717,9 @@ function ensureUser_(username, password, nama, role) {
     hash_(username, password),
     String(nama).trim(),
     'Y',
-    String(role).toUpperCase()
+    String(role).toUpperCase(),
+    '',
+    teamLabel_(team)
   ]);
 
   return true;
@@ -689,6 +829,9 @@ function loadState(t) {
       name: me[2],
       user: u,
       role: String(me[4] || 'BDO').toUpperCase(),
+      team: teamOfRow_(me),
+      root: isRootManager_(u),
+      teams: isRootManager_(u) ? teamList_() : [],
       target: targetOverride === null
         ? (state && state.target || 10)
         : Number(targetOverride),
@@ -865,6 +1008,12 @@ function dashboardDM(t) {
     return { err: 1 };
   }
 
+  const callerRow = findUser_(u);
+
+  if (!callerRow) return { err: 1 };
+
+  const team = teamOfRow_(callerRow);
+
   const ch = {};
 
   data_()
@@ -884,7 +1033,8 @@ function dashboardDM(t) {
     .slice(1)
     .filter(r =>
       String(r[3]).toUpperCase() == 'Y' &&
-      !['BM', 'DM'].includes(String(r[4]).toUpperCase())
+      !['BM', 'DM'].includes(String(r[4]).toUpperCase()) &&
+      accountInTeam_(r, team)
     )
     .map(r => {
 
@@ -907,6 +1057,7 @@ function dashboardDM(t) {
       return {
         user: r[0],
         nama: r[2],
+        team: teamOfRow_(r),
         state: {
           target: targetOverride === null ? (s.target || 10) : Number(targetOverride),
           leads: s.leads || [],
@@ -926,9 +1077,9 @@ function dashboardDM(t) {
 
 function listUsers(t) {
 
-  const r = role_(t);
+  const ctx = callerContext_(t);
 
-  if (r != 'BM' && r != 'DM') {
+  if (!ctx || (ctx.role != 'BM' && ctx.role != 'DM')) {
     return { err: 1 };
   }
 
@@ -936,12 +1087,16 @@ function listUsers(t) {
     .getDataRange()
     .getValues()
     .slice(1)
-    .filter(x => String(x[3]).toUpperCase() == 'Y')
+    .filter(x =>
+      String(x[3]).toUpperCase() == 'Y' &&
+      (ctx.root || accountInTeam_(x, ctx.team))
+    )
     .map(x => ({
       username: String(x[0]),
       nama: String(x[2]),
       role: String(x[4] || 'BDO').toUpperCase(),
-      photoUrl: String(x[5] || '')
+      photoUrl: String(x[5] || ''),
+      team: teamOfRow_(x)
     }));
 
   return { rows: rows };
@@ -952,11 +1107,11 @@ function listUsers(t) {
 // CREATE USER
 // ============================================================
 
-function createUser(t, username, password, nama, role) {
+function createUser(t, username, password, nama, role, team) {
 
-  const caller = role_(t);
+  const ctx = callerContext_(t);
 
-  if (caller != 'BM' && caller != 'DM') {
+  if (!ctx || (ctx.role != 'BM' && ctx.role != 'DM')) {
     return { err: 'Akses ditolak' };
   }
 
@@ -981,6 +1136,19 @@ function createUser(t, username, password, nama, role) {
     return { err: 'Role tidak valid' };
   }
 
+  const teamName = ctx.root
+    ? normalizeTeamName_(team, ctx.team)
+    : ctx.team;
+
+  if (!teamName) {
+    return { err: 'Nama tim 2-40 karakter: huruf, angka, spasi, titik, _ atau -' };
+  }
+
+  // Manager tim hanya boleh membuat akun di timnya sendiri, termasuk BM/DM.
+  if (!ctx.root && teamKey_(teamName) != ctx.teamKey) {
+    return { err: 'Anda hanya dapat membuat akun untuk tim sendiri' };
+  }
+
   if (findUser_(username)) {
     return { err: 'Username sudah digunakan' };
   }
@@ -999,7 +1167,9 @@ function createUser(t, username, password, nama, role) {
       hash_(username, password),
       nama,
       'Y',
-      role
+      role,
+      '',
+      teamName
     ]);
 
   } finally {
@@ -1008,7 +1178,7 @@ function createUser(t, username, password, nama, role) {
 
   }
 
-  return { ok: 1 };
+  return { ok: 1, team: teamName };
 }
 
 
@@ -1057,6 +1227,10 @@ function resetBDOPassword(t, username, newPassword) {
 
     if (!target || String(target[4]).toUpperCase() != 'BDO') {
       return { err: 'Akun BDO tidak ditemukan atau tidak aktif' };
+    }
+
+    if (!canManageAccount_(findUser_(caller), target)) {
+      return { err: 'Akun ini bukan anggota tim Anda' };
     }
 
     users_().getRange(target.idx, 2).setValue(hash_(target[0], newPassword));
@@ -1118,6 +1292,10 @@ function updateBDOTarget(t, username, targetValue) {
 
     if (!account || String(account[4]).toUpperCase() != 'BDO') {
       return { err: 'Akun BDO tidak ditemukan atau tidak aktif' };
+    }
+
+    if (!canManageAccount_(findUser_(caller), account)) {
+      return { err: 'Akun ini bukan anggota tim Anda' };
     }
 
     PropertiesService.getScriptProperties()
@@ -1241,6 +1419,14 @@ function deleteUser(t, username) {
 
     if (!target) {
       return { err: 'Akun tidak ditemukan atau sudah dihapus' };
+    }
+
+    if (!canManageAccount_(findUser_(caller), target)) {
+      return { err: 'Akun ini bukan anggota tim Anda' };
+    }
+
+    if (isRootManager_(target[0]) && !isRootManager_(caller)) {
+      return { err: 'Akun owner tidak dapat dihapus' };
     }
 
     const targetUsername = String(target[0]).toLowerCase();
@@ -1430,6 +1616,10 @@ function storageReport(t) {
 
   if (role != 'BM' && role != 'DM') {
     return { err: 'Hanya manager yang dapat memeriksa kapasitas database' };
+  }
+
+  if (!isRootManager_(me[0])) {
+    return { err: 'Perawatan database hanya untuk owner aplikasi' };
   }
 
   const book = ss_();
@@ -1663,6 +1853,10 @@ function storageCleanup(t) {
     return { err: 'Hanya manager yang dapat merapikan database' };
   }
 
+  if (!isRootManager_(me[0])) {
+    return { err: 'Perawatan database hanya untuk owner aplikasi' };
+  }
+
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
 
@@ -1693,7 +1887,7 @@ function storageCleanup(t) {
 
 const CONTACT_HEADERS = [
   'id', 'group', 'name', 'seq', 'job', 'phone',
-  'assignedTo', 'createdBy', 'createdAt', 'status', 'statusAt'
+  'assignedTo', 'createdBy', 'createdAt', 'status', 'statusAt', 'team'
 ];
 
 const CONTACT_STATUSES = [
@@ -1718,16 +1912,19 @@ function contacts_() {
   return sheet;
 }
 
-function activeBdos_() {
+function activeBdos_(team) {
+  const wanted = team == null ? null : teamKey_(team);
   return users_().getDataRange().getValues().slice(1)
     .filter(r =>
       String(r[3]).toUpperCase() == 'Y' &&
-      String(r[4]).toUpperCase() == 'BDO'
+      String(r[4]).toUpperCase() == 'BDO' &&
+      (!wanted || teamKey_(teamOfRow_(r)) == wanted)
     )
     .map(r => ({
       username: String(r[0]),
       name: String(r[2] || r[0]),
-      key: String(r[0]).toLowerCase()
+      key: String(r[0]).toLowerCase(),
+      team: teamOfRow_(r)
     }));
 }
 
@@ -1770,8 +1967,9 @@ function pickLeastLoaded_(bdos, counts) {
   return best;
 }
 
-function migrateLegacyContacts_(sheet, bdos, username) {
+function migrateLegacyContacts_(sheet, bdos, username, team) {
   if (sheet.getLastRow() > 1) return;
+  if (teamKey_(team) != teamKey_(DEFAULT_TEAM)) return;
   const legacy = legacyContacts_();
   if (!legacy.length) return;
   const counts = {};
@@ -1789,7 +1987,8 @@ function migrateLegacyContacts_(sheet, bdos, username) {
       String(username || ''),
       Date.now(),
       '',
-      0
+      0,
+      teamLabel_(team)
     ];
   });
   sheet.getRange(2, 1, values.length, CONTACT_HEADERS.length).setValues(values);
@@ -1804,7 +2003,7 @@ function importContacts(t, group, rows) {
     return { err: 'Impor kontak hanya untuk akun manager (BM/DM)' };
   }
 
-  const bdos = activeBdos_();
+  const bdos = activeBdos_(session.team);
   if (!bdos.length) {
     return { err: 'Belum ada akun BDO aktif untuk pembagian kontak' };
   }
@@ -1826,12 +2025,15 @@ function importContacts(t, group, rows) {
 
   try {
     const sheet = contacts_();
-    migrateLegacyContacts_(sheet, bdos, session.user);
+    migrateLegacyContacts_(sheet, bdos, session.user, session.team);
 
     const lastRow = sheet.getLastRow();
-    const existing = lastRow > 1
+    const allExisting = lastRow > 1
       ? sheet.getRange(2, 1, lastRow - 1, CONTACT_HEADERS.length).getValues()
       : [];
+    const existing = allExisting.filter(r =>
+      teamKey_(r[11]) == teamKey_(session.team)
+    );
 
     const counts = {};
     const seen = {};
@@ -1888,7 +2090,8 @@ function importContacts(t, group, rows) {
         String(session.user || ''),
         Date.now(),
         '',
-        0
+        0,
+        String(session.team || DEFAULT_TEAM)
       ]);
     });
 
@@ -1915,7 +2118,7 @@ function importContacts(t, group, rows) {
       skipped: skipped,
       duplicate: duplicate,
       invalid: invalid,
-      total: lastRow - 1 + values.length,
+      total: existing.length + values.length,
       perBdo: bdos.map(bdo => ({
         username: bdo.username,
         name: bdo.name,
@@ -1949,29 +2152,36 @@ function contactRecords_(sheet) {
       phone: normalizePhone_(r[5]),
       assignedTo: String(r[6] || ''),
       status: normalizeContactStatus_(r[9]),
-      statusAt: Number(r[10] || 0)
+      statusAt: Number(r[10] || 0),
+      team: teamLabel_(r[11])
     }));
 }
 
-function contactByPhone_(sheet, phone) {
+function contactByPhone_(sheet, phone, team) {
   const target = normalizePhone_(phone);
   if (!target) return null;
-  return contactRecords_(sheet).find(r => r.phone == target) || null;
+  const wanted = team == null ? null : teamKey_(team);
+  return contactRecords_(sheet).find(r =>
+    r.phone == target && (!wanted || teamKey_(r.team) == wanted)
+  ) || null;
 }
 
 function canManageContact_(session, record) {
+  if (!record) return false;
   const role = String(session.role || '').toUpperCase();
+  if (teamKey_(record.team) != teamKey_(session.team)) return false;
   if (role == 'BM' || role == 'DM') return true;
   return String(record.assignedTo || '').toLowerCase() ==
     String(session.user || '').toLowerCase();
 }
 
-function ensureContactsMigrated_(sheet, bdos, username) {
+function ensureContactsMigrated_(sheet, bdos, username, team) {
   if (sheet.getLastRow() > 1) return;
+  if (teamKey_(team) != teamKey_(DEFAULT_TEAM)) return;
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    migrateLegacyContacts_(sheet, bdos, username);
+    migrateLegacyContacts_(sheet, bdos, username, team);
   } finally {
     lock.releaseLock();
   }
@@ -1983,7 +2193,7 @@ function databaseData(t) {
 
   if (!session || session.err) return { err: session.err || 'AUTH' };
 
-  const bdos = activeBdos_();
+  const bdos = activeBdos_(session.team);
 
   if (!bdos.length) {
     return { err: 'Belum ada akun BDO aktif untuk pembagian kontak' };
@@ -1997,11 +2207,13 @@ function databaseData(t) {
   });
 
   const sheet = contacts_();
-  ensureContactsMigrated_(sheet, bdos, session.user);
+  ensureContactsMigrated_(sheet, bdos, session.user, session.team);
 
-  let records = contactRecords_(sheet);
+  let records = contactRecords_(sheet).filter(r =>
+    teamKey_(r.team) == teamKey_(session.team)
+  );
 
-  if (!records.length) {
+  if (!records.length && teamKey_(session.team) == teamKey_(DEFAULT_TEAM)) {
     records = legacyContacts_().map(r => ({
       group: r.group,
       name: r.name,
@@ -2009,7 +2221,8 @@ function databaseData(t) {
       job: r.job,
       phone: r.phone,
       assignedTo: '',
-      status: 'new'
+      status: 'new',
+      team: session.team
     }));
   }
 
@@ -2060,6 +2273,8 @@ function databaseData(t) {
     role: String(session.role || 'BDO').toUpperCase(),
     user: String(session.user || ''),
     name: String(session.name || ''),
+    team: String(session.team || DEFAULT_TEAM),
+    root: isRootManager_(session.user),
     groups: groups,
     total: records.length
   };
@@ -2083,7 +2298,7 @@ function setContactStatus(t, phone, status) {
 
   if (!/^62\d{8,13}$/.test(target)) return { err: 'Nomor kontak tidak valid' };
 
-  const bdos = activeBdos_();
+  const bdos = activeBdos_(session.team);
 
   if (!bdos.length) {
     return { err: 'Belum ada akun BDO aktif untuk pembagian kontak' };
@@ -2095,9 +2310,9 @@ function setContactStatus(t, phone, status) {
   try {
 
     const sheet = contacts_();
-    migrateLegacyContacts_(sheet, bdos, session.user);
+    migrateLegacyContacts_(sheet, bdos, session.user, session.team);
 
-    const record = contactByPhone_(sheet, target);
+    const record = contactByPhone_(sheet, target, session.team);
 
     if (!record) {
       return { err: 'Kontak tidak ditemukan. Muat ulang halaman.' };
@@ -2132,7 +2347,7 @@ function addContactToPipeline(t, phone) {
 
   if (!/^62\d{8,13}$/.test(target)) return { err: 'Nomor kontak tidak valid' };
 
-  const bdos = activeBdos_();
+  const bdos = activeBdos_(session.team);
 
   if (!bdos.length) {
     return { err: 'Belum ada akun BDO aktif untuk pembagian kontak' };
@@ -2140,9 +2355,9 @@ function addContactToPipeline(t, phone) {
 
   const sheet = contacts_();
 
-  ensureContactsMigrated_(sheet, bdos, session.user);
+  ensureContactsMigrated_(sheet, bdos, session.user, session.team);
 
-  const record = contactByPhone_(sheet, target);
+  const record = contactByPhone_(sheet, target, session.team);
 
   if (!record) {
     return { err: 'Kontak tidak ditemukan. Muat ulang halaman.' };
@@ -2210,7 +2425,7 @@ function addContactToPipeline(t, phone) {
 
   try {
     const contactsSheet = contacts_();
-    const fresh = contactByPhone_(contactsSheet, target);
+    const fresh = contactByPhone_(contactsSheet, target, session.team);
     if (fresh) {
       contactsSheet.getRange(fresh.row, 10, 1, 2)
         .setValues([['pipeline', Date.now()]]);
@@ -2243,7 +2458,8 @@ function teamLeads(t) {
   users_().getDataRange().getValues().slice(1).forEach(r => {
     const role = String(r[4] || '').toUpperCase();
     if (String(r[3]).toUpperCase() == 'Y' &&
-        (role == 'BDO' || role == 'SALES')) {
+        (role == 'BDO' || role == 'SALES') &&
+        accountInTeam_(r, teamOfRow_(caller))) {
       owners[String(r[0]).toLowerCase()] = String(r[2] || r[0]);
     }
   });
@@ -2308,22 +2524,23 @@ function checkSession(t) {
 // SOCIAL FEED
 // ============================================================
 
-function socialUsers_() {
+function socialUsers_(team) {
   const users = {};
+  const wanted = team == null ? null : teamKey_(team);
   users_().getDataRange().getValues().slice(1).forEach(r => {
     const key = String(r[0] || '').toLowerCase();
-    if (key && String(r[3]).toUpperCase() == 'Y') {
-      users[key] = {
-        nama: String(r[2] || r[0]),
-        role: String(r[4] || 'BDO').toUpperCase(),
-        photoUrl: String(r[5] || '')
-      };
-    }
+    if (!key || String(r[3]).toUpperCase() != 'Y') return;
+    if (wanted && teamKey_(teamOfRow_(r)) != wanted) return;
+    users[key] = {
+      nama: String(r[2] || r[0]),
+      role: String(r[4] || 'BDO').toUpperCase(),
+      photoUrl: String(r[5] || '')
+    };
   });
   return users;
 }
 
-function postData_(limit) {
+function postData_(limit, allowed) {
   const sheet = posts_();
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return [];
@@ -2344,6 +2561,7 @@ function postData_(limit) {
 
   return Object.keys(selected).map(id => selected[id])
     .filter(r => String(r[3] || '').trim() || String(r[5] || '').trim())
+    .filter(r => !allowed || allowed[String(r[1]).toLowerCase()])
     .map(r => ({
       id: String(r[0]),
       username: String(r[1]),
@@ -2355,7 +2573,7 @@ function postData_(limit) {
     }));
 }
 
-function enrichPosts_(rows, viewer) {
+function enrichPosts_(rows, viewer, team) {
   const likes = {};
   const liked = {};
   postLikes_().getDataRange().getValues().slice(1).forEach(r => {
@@ -2379,7 +2597,7 @@ function enrichPosts_(rows, viewer) {
     if (postId) comments[postId] = (comments[postId] || 0) + 1;
   });
 
-  const profiles = socialUsers_();
+  const profiles = socialUsers_(team);
   return rows.map(post => {
     const profile = profiles[String(post.username).toLowerCase()] || {};
     return Object.assign({}, post, {
@@ -2401,8 +2619,10 @@ function socialFeed(t) {
   const account = username && findUser_(username);
   if (!account) return { err: 'AUTH' };
 
-  const feed = enrichPosts_(postData_(100), username);
-  const activeUsers = socialUsers_();
+  const team = teamOfRow_(account);
+  const allowed = teamUserKeys_(team);
+  const feed = enrichPosts_(postData_(100, allowed), username, team);
+  const activeUsers = socialUsers_(team);
   const chunks = {};
   data_().getDataRange().getValues().slice(1).forEach(r => {
     const key = String(r[0] || '').toLowerCase();
@@ -2455,7 +2675,10 @@ function recentPosts(t) {
   const username = user_(t);
   const account = username && findUser_(username);
   if (!account) return { err: 'AUTH' };
-  return { rows: enrichPosts_(postData_(100), username) };
+  const team = teamOfRow_(account);
+  return {
+    rows: enrichPosts_(postData_(100, teamUserKeys_(team)), username, team)
+  };
 }
 
 function createPost(t, text, imageUrl) {
@@ -2482,11 +2705,9 @@ function createPost(t, text, imageUrl) {
     lock.releaseLock();
   }
 
-  // Postingan BM/DM adalah pengumuman: kirim push ke seluruh akun aktif.
+  // Postingan BM/DM adalah pengumuman: kirim push ke seluruh akun aktif satu tim.
   if (['BM', 'DM'].includes(String(account[4] || '').toUpperCase())) {
-    const recipients = users_().getDataRange().getValues().slice(1)
-      .filter(r => String(r[3]).toUpperCase() == 'Y')
-      .map(r => String(r[0] || ''))
+    const recipients = teamRecipients_(teamOfRow_(account))
       .filter(name => name && name.toLowerCase() != String(username).toLowerCase());
     pushQuiet_(() => pushToUsers_(recipients, {
       title: String(account[2] || 'Manajemen') + ' · Pengumuman',
@@ -2544,7 +2765,7 @@ function togglePostLike(t, postId) {
   const account = username && findUser_(username);
   if (!account) return { err: 'AUTH' };
   postId = String(postId || '').trim();
-  if (!postData_().some(post => post.id == postId)) {
+  if (!postInTeam_(postId, teamUserKeys_(teamOfRow_(account)))) {
     return { err: 'Postingan tidak ditemukan' };
   }
 
@@ -2576,7 +2797,7 @@ function togglePostPin(t, postId) {
     return { err: 'Hanya BM/DM yang dapat menyematkan postingan' };
   }
   postId = String(postId || '').trim();
-  if (!postData_().some(post => post.id == postId)) {
+  if (!postInTeam_(postId, teamUserKeys_(teamOfRow_(account)))) {
     return { err: 'Postingan tidak ditemukan' };
   }
 
@@ -2602,11 +2823,12 @@ function postComments(t, postId) {
   const account = username && findUser_(username);
   if (!account) return { err: 'AUTH' };
   postId = String(postId || '').trim();
-  if (!postData_().some(post => post.id == postId)) {
+  const team = teamOfRow_(account);
+  if (!postInTeam_(postId, teamUserKeys_(team))) {
     return { err: 'Postingan tidak ditemukan' };
   }
 
-  const profiles = socialUsers_();
+  const profiles = socialUsers_(team);
   const rows = postComments_().getDataRange().getValues().slice(1)
     .filter(r => String(r[1]) == postId)
     .slice(-100)
@@ -2633,7 +2855,7 @@ function addPostComment(t, postId, text) {
   text = String(text || '').trim();
   if (!text) return { err: 'Komentar tidak boleh kosong' };
   if (text.length > 500) return { err: 'Komentar maksimal 500 karakter' };
-  if (!postData_().some(post => post.id == postId)) {
+  if (!postInTeam_(postId, teamUserKeys_(teamOfRow_(account)))) {
     return { err: 'Postingan tidak ditemukan' };
   }
   postComments_().appendRow([
@@ -2647,10 +2869,12 @@ function addPostComment(t, postId, text) {
 // CHAT
 // ============================================================
 
-function conversationMatches_(row, type, target, username) {
+function conversationMatches_(row, type, target, username, visibleKeys) {
   const from = String(row[1] || '').toLowerCase();
   const to = String(row[2] || '').toLowerCase();
-  if (type == 'global') return to == 'global';
+  if (type == 'global') {
+    return to == 'global' && (!visibleKeys || !!visibleKeys[from]);
+  }
   if (type == 'group') return to == ('group:' + target).toLowerCase();
   return (from == username.toLowerCase() && to == target.toLowerCase()) ||
     (from == target.toLowerCase() && to == username.toLowerCase());
@@ -2673,7 +2897,7 @@ function chatMessageObject_(row, rowNumber, profiles, type) {
   return message;
 }
 
-function conversationPage_(type, target, username, beforeRow, profiles, pageSize) {
+function conversationPage_(type, target, username, beforeRow, profiles, pageSize, visibleKeys) {
   const messages = messages_();
   const cursor = messages.getLastRow();
   const before = Number(beforeRow) > 1
@@ -2686,7 +2910,7 @@ function conversationPage_(type, target, username, beforeRow, profiles, pageSize
     const start = Math.max(2, end - blockSize + 1);
     const values = messages.getRange(start, 1, end - start + 1, 5).getValues();
     for (let i = values.length - 1; i >= 0; i--) {
-      if (conversationMatches_(values[i], type, target, username)) {
+      if (conversationMatches_(values[i], type, target, username, visibleKeys)) {
         found.push(chatMessageObject_(values[i], start + i, profiles, type));
         if (found.length > pageSize) break;
       }
@@ -2699,20 +2923,27 @@ function conversationPage_(type, target, username, beforeRow, profiles, pageSize
 }
 
 function chatSync(t, type, target, afterRow) {
-  const username = user_(t);
-  const account = username && findUser_(username);
-  if (!account) return { err: 'AUTH' };
+  const ctx = callerContext_(t);
+  if (!ctx) return { err: 'AUTH' };
+
+  const username = ctx.username;
+  const team = ctx.team;
+  const visible = teamUserKeys_(team);
 
   type = String(type || '');
   target = String(target || '').trim();
   if (type == 'personal') {
-    if (!target || target.toLowerCase() == username.toLowerCase() || !findUser_(target)) {
+    const peer = target && findUser_(target);
+    if (!peer || target.toLowerCase() == username.toLowerCase() ||
+        !canChatWith_(ctx.account, peer)) {
       return { err: 'Akun chat tidak ditemukan' };
     }
   } else if (type == 'group') {
     const group = chatGroups_().getDataRange().getValues().slice(1)
       .find(row => String(row[0]) == target);
-    if (!group) return { err: 'Grup tidak ditemukan' };
+    if (!group || teamKey_(chatGroupTeam_(group)) != ctx.teamKey) {
+      return { err: 'Grup tidak ditemukan' };
+    }
     if (groupMembers_(group).indexOf(String(username).toLowerCase()) < 0) {
       return { err: 'Anda bukan anggota grup ini' };
     }
@@ -2728,10 +2959,10 @@ function chatSync(t, type, target, afterRow) {
   const start = Math.max(2, cursor + 1);
   const end = Math.min(lastRow, start + 999);
   const values = messages.getRange(start, 1, end - start + 1, 5).getValues();
-  const profiles = socialUsers_();
+  const profiles = socialUsers_(ctx.root ? null : team);
   const rows = [];
   values.forEach((row, index) => {
-    if (conversationMatches_(row, type, target, username)) {
+    if (conversationMatches_(row, type, target, username, visible)) {
       rows.push(chatMessageObject_(row, start + index, profiles, type));
     }
   });
@@ -2740,10 +2971,11 @@ function chatSync(t, type, target, afterRow) {
 
 function chatContacts(t) {
 
-  const username = user_(t);
+  const ctx = callerContext_(t);
 
-  if (!username || !findUser_(username)) return { err: 'AUTH' };
+  if (!ctx) return { err: 'AUTH' };
 
+  const username = ctx.username;
   const contacts = {};
 
   users_().getDataRange().getValues().slice(1).forEach(r => {
@@ -2752,7 +2984,8 @@ function chatContacts(t) {
 
     if (
       String(r[3]).toUpperCase() != 'Y' ||
-      other.toLowerCase() == username.toLowerCase()
+      other.toLowerCase() == username.toLowerCase() ||
+      !canChatWith_(ctx.account, r)
     ) return;
 
     contacts[other.toLowerCase()] = {
@@ -2791,17 +3024,21 @@ function chatContacts(t) {
 
 function chatHistory(t, peer, beforeRow) {
 
-  const username = user_(t);
+  const ctx = callerContext_(t);
 
-  if (!username || !findUser_(username)) return { err: 'AUTH' };
-  const profiles = socialUsers_();
+  if (!ctx) return { err: 'AUTH' };
+
+  const username = ctx.username;
+  const profiles = socialUsers_(ctx.root ? null : ctx.team);
 
   peer = String(peer || '').trim();
+  const peerRow = peer && findUser_(peer);
 
   if (
     !peer ||
     peer.toLowerCase() == username.toLowerCase() ||
-    !findUser_(peer)
+    !peerRow ||
+    !canChatWith_(ctx.account, peerRow)
   ) return { err: 'Akun chat tidak ditemukan' };
 
   return conversationPage_(
@@ -2812,16 +3049,20 @@ function chatHistory(t, peer, beforeRow) {
 
 function sendChat(t, peer, text) {
 
-  const username = user_(t);
+  const ctx = callerContext_(t);
 
-  if (!username || !findUser_(username)) return { err: 'AUTH' };
+  if (!ctx) return { err: 'AUTH' };
+
+  const username = ctx.username;
 
   peer = String(peer || '').trim();
+  const peerRow = peer && findUser_(peer);
 
   if (
     !peer ||
     peer.toLowerCase() == username.toLowerCase() ||
-    !findUser_(peer)
+    !peerRow ||
+    !canChatWith_(ctx.account, peerRow)
   ) return { err: 'Akun chat tidak ditemukan' };
 
   text = String(text || '').trim();
@@ -2877,11 +3118,12 @@ function groupMembers_(row) {
 
 function chatGroups(t) {
 
-  const username = user_(t);
-  const account = username && findUser_(username);
+  const ctx = callerContext_(t);
 
-  if (!account || String(account[3]).toUpperCase() != 'Y') return { err: 'AUTH' };
+  if (!ctx) return { err: 'AUTH' };
 
+  const username = ctx.username;
+  const teams = teamMap_();
   const lastMessages = {};
   chatSummaryRows_().forEach(r => {
     if (String(r[1]) != 'group') return;
@@ -2893,7 +3135,10 @@ function chatGroups(t) {
   });
 
   const rows = chatGroups_().getDataRange().getValues().slice(1)
-    .filter(r => groupMembers_(r).indexOf(String(username).toLowerCase()) >= 0)
+    .filter(r =>
+      teamKey_(chatGroupTeam_(r, teams)) == ctx.teamKey &&
+      groupMembers_(r).indexOf(String(username).toLowerCase()) >= 0
+    )
     .map(r => {
       const id = String(r[0]);
       const members = groupMembers_(r);
@@ -2902,6 +3147,7 @@ function chatGroups(t) {
         id: id,
         name: String(r[1]),
         owner: String(r[2] || ''),
+        team: chatGroupTeam_(r, teams),
         memberCount: members.length,
         lastText: String(last.text || ''),
         lastTs: Number(last.ts) || 0,
@@ -2916,10 +3162,11 @@ function chatGroups(t) {
 
 function createChatGroup(t, name, selectedMembers) {
 
-  const username = user_(t);
-  const account = username && findUser_(username);
+  const ctx = callerContext_(t);
 
-  if (!account || String(account[3]).toUpperCase() != 'Y') return { err: 'AUTH' };
+  if (!ctx) return { err: 'AUTH' };
+
+  const username = ctx.username;
 
   name = String(name || '').trim();
 
@@ -2930,7 +3177,7 @@ function createChatGroup(t, name, selectedMembers) {
   const active = {};
 
   users_().getDataRange().getValues().slice(1).forEach(r => {
-    if (String(r[3]).toUpperCase() == 'Y') {
+    if (String(r[3]).toUpperCase() == 'Y' && accountInTeam_(r, ctx.team)) {
       active[String(r[0]).toLowerCase()] = String(r[0]);
     }
   });
@@ -2940,7 +3187,7 @@ function createChatGroup(t, name, selectedMembers) {
   selectedMembers.forEach(value => {
     const key = String(value || '').trim().toLowerCase();
     if (!key || key == String(username).toLowerCase()) return;
-    if (!active[key]) throw new Error('Anggota grup tidak aktif atau tidak ditemukan: ' + key);
+    if (!active[key]) throw new Error('Anggota grup tidak aktif atau beda tim: ' + key);
     if (members.map(x => x.toLowerCase()).indexOf(key) < 0) members.push(active[key]);
   });
 
@@ -2954,7 +3201,9 @@ function createChatGroup(t, name, selectedMembers) {
 
     const id = Utilities.getUuid();
 
-    chatGroups_().appendRow([id, name, username, JSON.stringify(members), Date.now()]);
+    chatGroups_().appendRow([
+      id, name, username, JSON.stringify(members), Date.now(), ctx.team
+    ]);
 
     return { ok: 1, groupId: id };
 
@@ -2968,41 +3217,47 @@ function createChatGroup(t, name, selectedMembers) {
 
 function groupHistory(t, groupId, beforeRow) {
 
-  const username = user_(t);
-  const account = username && findUser_(username);
+  const ctx = callerContext_(t);
 
-  if (!account || String(account[3]).toUpperCase() != 'Y') return { err: 'AUTH' };
+  if (!ctx) return { err: 'AUTH' };
+
+  const username = ctx.username;
 
   groupId = String(groupId || '').trim();
 
   const group = chatGroups_().getDataRange().getValues().slice(1)
     .find(r => String(r[0]) == groupId);
 
-  if (!group) return { err: 'Grup tidak ditemukan' };
+  if (!group || teamKey_(chatGroupTeam_(group)) != ctx.teamKey) {
+    return { err: 'Grup tidak ditemukan' };
+  }
 
   if (groupMembers_(group).indexOf(String(username).toLowerCase()) < 0) {
     return { err: 'Anda bukan anggota grup ini' };
   }
 
   return conversationPage_(
-    'group', groupId, username, beforeRow, socialUsers_(), 50
+    'group', groupId, username, beforeRow, socialUsers_(ctx.team), 50
   );
 }
 
 
 function sendGroupChat(t, groupId, text) {
 
-  const username = user_(t);
-  const account = username && findUser_(username);
+  const ctx = callerContext_(t);
 
-  if (!account || String(account[3]).toUpperCase() != 'Y') return { err: 'AUTH' };
+  if (!ctx) return { err: 'AUTH' };
+
+  const username = ctx.username;
 
   groupId = String(groupId || '').trim();
 
   const group = chatGroups_().getDataRange().getValues().slice(1)
     .find(r => String(r[0]) == groupId);
 
-  if (!group) return { err: 'Grup tidak ditemukan' };
+  if (!group || teamKey_(chatGroupTeam_(group)) != ctx.teamKey) {
+    return { err: 'Grup tidak ditemukan' };
+  }
 
   if (groupMembers_(group).indexOf(String(username).toLowerCase()) < 0) {
     return { err: 'Anda bukan anggota grup ini' };
@@ -3046,9 +3301,9 @@ function sendGroupChat(t, groupId, text) {
 }
 
 function deleteChatGroup(t, groupId) {
-  const username = user_(t);
-  const account = username && findUser_(username);
-  if (!account) return { err: 'AUTH' };
+  const ctx = callerContext_(t);
+  if (!ctx) return { err: 'AUTH' };
+  const username = ctx.username;
   groupId = String(groupId || '').trim();
   if (!groupId) return { err: 'ID grup tidak valid' };
 
@@ -3058,10 +3313,12 @@ function deleteChatGroup(t, groupId) {
     const groups = chatGroups_();
     const rows = groups.getDataRange().getValues();
     const index = rows.findIndex((r, i) => i > 0 && String(r[0]) == groupId);
-    if (index < 1) return { err: 'Grup tidak ditemukan' };
+    if (index < 1 || teamKey_(chatGroupTeam_(rows[index])) != ctx.teamKey) {
+      return { err: 'Grup tidak ditemukan' };
+    }
     const owner = String(rows[index][2] || '');
     if (owner.toLowerCase() != String(username).toLowerCase() &&
-        !['BM', 'DM'].includes(String(account[4]).toUpperCase())) {
+        !['BM', 'DM'].includes(ctx.role)) {
       return { err: 'Hanya pembuat grup atau BM/DM yang dapat menghapus grup' };
     }
 
@@ -3081,19 +3338,19 @@ function deleteChatGroup(t, groupId) {
 }
 
 function globalChatHistory(t, unusedTarget, beforeRow) {
-  const username = user_(t);
-  const account = username && findUser_(username);
-  if (!account) return { err: 'AUTH' };
+  const ctx = callerContext_(t);
+  if (!ctx) return { err: 'AUTH' };
 
   return conversationPage_(
-    'global', 'global', username, beforeRow, socialUsers_(), 50
+    'global', 'global', ctx.username, beforeRow, socialUsers_(ctx.team), 50,
+    teamUserKeys_(ctx.team)
   );
 }
 
 function sendGlobalChat(t, unusedTarget, text) {
-  const username = user_(t);
-  const account = username && findUser_(username);
-  if (!account) return { err: 'AUTH' };
+  const ctx = callerContext_(t);
+  if (!ctx) return { err: 'AUTH' };
+  const username = ctx.username;
 
   text = String(text || '').trim();
   if (!text) return { err: 'Pesan tidak boleh kosong' };
@@ -3113,9 +3370,7 @@ function sendGlobalChat(t, unusedTarget, text) {
   }
 
   const senderName = chatSenderName_(username);
-  const recipients = users_().getDataRange().getValues().slice(1)
-    .filter(r => String(r[3]).toUpperCase() == 'Y')
-    .map(r => String(r[0] || ''))
+  const recipients = teamRecipients_(ctx.team)
     .filter(name => name && name.toLowerCase() != String(username).toLowerCase());
   pushQuiet_(() => pushToUsers_(recipients, {
     title: senderName + ' · Grup Global',
@@ -3133,13 +3388,14 @@ function sendGlobalChat(t, unusedTarget, text) {
 
 function chatNotificationSummary(t) {
 
-  const username = user_(t);
-  const account = username && findUser_(username);
+  const ctx = callerContext_(t);
 
-  if (!account || String(account[3]).toUpperCase() != 'Y') return { err: 'AUTH' };
+  if (!ctx) return { err: 'AUTH' };
 
-  const userKey = String(username).toLowerCase();
-  const profiles = socialUsers_();
+  const userKey = String(ctx.username).toLowerCase();
+  const profiles = socialUsers_(ctx.team);
+  const teamKeys = teamUserKeys_(ctx.team);
+  const teams = teamMap_();
 
   const contacts = {};
 
@@ -3148,6 +3404,7 @@ function chatNotificationSummary(t) {
     const peer = String(r[0] || '');
 
     if (String(r[3]).toUpperCase() != 'Y' || peer.toLowerCase() == userKey) return;
+    if (!accountInTeam_(r, ctx.team)) return;
 
     contacts[peer.toLowerCase()] = {
       username: peer,
@@ -3169,6 +3426,7 @@ function chatNotificationSummary(t) {
     const members = groupMembers_(r);
 
     if (members.indexOf(userKey) < 0) return;
+    if (teamKey_(chatGroupTeam_(r, teams)) != ctx.teamKey) return;
 
     groups[id] = {
       id: id,
@@ -3194,9 +3452,11 @@ function chatNotificationSummary(t) {
     const target = String(r[2] || '');
     const from = String(r[5] || '');
     if (type == 'global') {
-      global.lastText = String(r[3] || '');
-      global.lastTs = Number(r[4]) || 0;
-      global.lastFrom = from;
+      if (teamKeys[String(from || '').toLowerCase()]) {
+        global.lastText = String(r[3] || '');
+        global.lastTs = Number(r[4]) || 0;
+        global.lastFrom = from;
+      }
     } else if (type == 'group') {
       const group = groups[target];
       if (group) {

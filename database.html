@@ -131,6 +131,7 @@ tr.table-more td{text-align:center;color:var(--mut);font-size:11.5px;white-space
 .search-wrap svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--mut);pointer-events:none}
 .search-wrap input{padding-left:37px}
 .chips{display:flex;gap:7px;overflow-x:auto;padding:10px 2px 2px;scrollbar-width:none}
+.export-actions{display:flex;gap:7px;padding-top:10px;flex-wrap:wrap}
 .chip{flex:none;border:1px solid var(--line);background:#fff;color:var(--ink2);border-radius:11px;padding:8px 12px;font-size:12px;font-weight:700;transition:.18s}
 .chip:hover{border-color:#c9d5f5;transform:translateY(-1px)}
 .chip[aria-pressed=true]{background:#16224a;color:#fff;border-color:#16224a;box-shadow:0 10px 18px -12px rgba(22,34,74,.8)}
@@ -356,6 +357,10 @@ main{padding:16px 12px calc(38px + env(safe-area-inset-bottom,0px))}
 <input type="search" id="q" placeholder="Cari nama, nomor, atau pekerjaan" aria-label="Cari kontak">
 </div>
 <div class="chips" id="chips"></div>
+<div class="export-actions">
+<button class="btn-quiet" type="button" id="exportCsv">Ekspor CSV</button>
+<button class="btn-quiet" type="button" id="exportXlsx">Ekspor Excel</button>
+</div>
 <details><summary>Ubah pesan pembuka WhatsApp</summary><textarea id="tpl" aria-label="Pesan pembuka WhatsApp"></textarea><p class="hint tpl-hint">Dikirim atas nama <b id="tplName">BDO Anda</b> · gunakan <b>{bdo}</b> untuk nama Anda dan <b>{nama}</b> untuk nama kontak.</p></details>
 </section>
 
@@ -365,7 +370,7 @@ main{padding:16px 12px calc(38px + env(safe-area-inset-bottom,0px))}
 </main>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>
-let DATA=[],ROLE='',TOTAL=0,MY_USER='',MY_NAME='',SERVER_STATUS=false;
+let DATA=[],ROLE='',TOTAL=0,MY_USER='',MY_NAME='',SERVER_STATUS=false,ROOT=false;
 let cur=0,job='Semua',PAGE=60,allowItemAnim=true,mem={},OVR={};
 const ST=[
  {k:'new',t:'Belum dihubungi'},
@@ -592,6 +597,7 @@ async function loadDatabase(){
   MY_USER=String(result.user||'').toLowerCase();
   MY_NAME=String(result.name||'').trim();
   SERVER_STATUS=Object.prototype.hasOwnProperty.call(result,'name');
+  ROOT=!!result.root;
   OVR={};
   if(ROLE!=='BM'&&ROLE!=='DM'){
    const own=DATA.findIndex(d=>String(d.u||'').toLowerCase()===MY_USER);
@@ -599,7 +605,7 @@ async function loadDatabase(){
   }
   const isManager=ROLE==='BM'||ROLE==='DM';
   $('importCard').hidden=!isManager;
-  $('maintCard').hidden=!isManager;
+  $('maintCard').hidden=!ROOT;
   $('roleBadge').hidden=false;
   $('roleBadge').textContent=isManager?'Manager':(ROLE||'BDO');
   animateNumber($('heroTotal'),TOTAL);
@@ -1053,7 +1059,7 @@ function loadSheetJs(){
  if(loadSheetJs.pending)return loadSheetJs.pending;
  loadSheetJs.pending=new Promise((resolve,reject)=>{
   const s=document.createElement('script');
-  s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  s.src='./vendor/xlsx.full.min.js';
   s.async=true;
   s.onload=()=>{window.XLSX?resolve(window.XLSX):reject(new Error('Pustaka Excel gagal dimuat'));};
   s.onerror=()=>reject(new Error('Pustaka Excel gagal dimuat. Periksa koneksi internet.'));
@@ -1068,6 +1074,43 @@ async function parseXlsx(file){
  const sheet=workbook.Sheets[workbook.SheetNames[0]];
  if(!sheet)throw new Error('File Excel tidak memiliki lembar data');
  return XLSX.utils.sheet_to_json(sheet,{header:1,raw:true,defval:''});
+}
+function downloadCsvRows(filename,rows){
+ const csv='\ufeff'+rows.map(row=>row.map(value=>'"'+String(value==null?'':value).replace(/"/g,'""')+'"').join(',')).join('\r\n');
+ const link=document.createElement('a');
+ link.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+ link.download=filename;
+ link.click();
+ setTimeout(()=>URL.revokeObjectURL(link.href),1500);
+}
+async function exportContacts(format){
+ const manager=ROLE==='BM'||ROLE==='DM';
+ const rows=[['BDO','No','Nama','Pekerjaan','Nomor','Status']];
+ DATA.forEach(d=>{
+  if(!manager&&String(d.u||'').toLowerCase()!==String(MY_USER||'').toLowerCase())return;
+  (d.r||[]).forEach(r=>{
+   rows.push([d.n||d.u,r[0],r[3]||'',jobLabel(r[1]),fmt(r[2]),ST[statusOf(r)].t]);
+  });
+ });
+ if(rows.length<2){toast('Belum ada kontak untuk diekspor.','bad');return;}
+ const base='kontak-'+(manager?'tim':'bdo')+'-'+new Date().toISOString().slice(0,10);
+ if(format==='xlsx'){
+  try{
+   const XLSX=await loadSheetJs();
+   const sheet=XLSX.utils.aoa_to_sheet(rows);
+   sheet['!cols']=[{wch:20},{wch:6},{wch:28},{wch:24},{wch:18},{wch:22}];
+   const book=XLSX.utils.book_new();
+   XLSX.utils.book_append_sheet(book,sheet,'Kontak');
+   XLSX.writeFile(book,base+'.xlsx',{compression:true});
+   toast('File Excel diunduh.','ok');
+  }catch(e){
+   downloadCsvRows(base+'.csv',rows);
+   toast('Excel gagal dimuat, file CSV diunduh.','bad');
+  }
+  return;
+ }
+ downloadCsvRows(base+'.csv',rows);
+ toast('File CSV diunduh.','ok');
 }
 function fmtBytes(n){
  const size=Number(n)||0;
@@ -1422,5 +1465,7 @@ function initImport(){
 }
 initImport();
 initMaint();
+$('exportCsv').addEventListener('click',()=>exportContacts('csv'));
+$('exportXlsx').addEventListener('click',()=>exportContacts('xlsx'));
 loadDatabase();
 </script></body></html>
