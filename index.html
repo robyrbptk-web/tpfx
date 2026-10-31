@@ -831,10 +831,11 @@ display:flex;
 align-items:center;
 gap:10px;
 margin-top:14px;
-padding:9px 10px 9px 12px;
-border:1px solid #ffe0c2;
-border-radius:14px;
-background:linear-gradient(90deg,#fff7ed,#fff);
+padding:8px 10px 8px 12px;
+border:1px solid rgba(56,189,248,.28);
+border-radius:16px;
+background:linear-gradient(105deg,#081c33 0%,#12385e 52%,#0b6b78 100%);
+box-shadow:0 10px 24px rgba(8,47,73,.22);
 overflow:hidden
 }
 
@@ -843,30 +844,32 @@ flex:none;
 display:inline-flex;
 align-items:center;
 gap:6px;
-padding:4px 9px;
+padding:4px 10px;
 border-radius:999px;
-background:#ffedd5;
-color:#b45309;
+border:1px solid rgba(125,211,252,.35);
+background:rgba(56,189,248,.14);
+color:#bae6fd;
 font-size:10px;
 font-weight:800;
-letter-spacing:.08em
+letter-spacing:.1em
 }
 
 .deposit-ticker-label:before{
 content:'●';
 font-size:8px;
-animation:depositBlink 1.4s ease-in-out infinite
+color:#34d399;
+animation:depositBlink 1.6s ease-in-out infinite
 }
 
-@keyframes depositBlink{50%{opacity:.25}}
+@keyframes depositBlink{50%{opacity:.2}}
 
 .deposit-ticker-window{
 flex:1;
 min-width:0;
 overflow:hidden;
 white-space:nowrap;
--webkit-mask-image:linear-gradient(90deg,transparent,#000 4%,#000 96%,transparent);
-mask-image:linear-gradient(90deg,transparent,#000 4%,#000 96%,transparent)
+-webkit-mask-image:linear-gradient(90deg,transparent,#000 18px,#000 calc(100% - 18px),transparent);
+mask-image:linear-gradient(90deg,transparent,#000 18px,#000 calc(100% - 18px),transparent)
 }
 
 .deposit-ticker-track{
@@ -875,15 +878,39 @@ width:max-content;
 animation:depositTicker 32s linear infinite
 }
 
+.deposit-ticker-group{display:inline-flex;padding-left:18px}
+
 .deposit-ticker:hover .deposit-ticker-track{animation-play-state:paused}
 
 .deposit-ticker-item{
-display:inline-block;
-padding-right:34px;
-color:#7c2d12;
+display:inline-flex;
+align-items:baseline;
+gap:0;
+padding-right:38px;
+color:#dbeafe;
 font-size:12px;
-font-weight:700
+font-weight:600
 }
+
+.deposit-ticker-item b{
+color:#fff;
+font-weight:800;
+letter-spacing:.01em
+}
+
+.deposit-ticker-sep{
+margin:0 8px;
+color:#7dd3fc;
+opacity:.6
+}
+
+.deposit-ticker-amount{
+color:#5eead4;
+font-weight:800;
+font-variant-numeric:tabular-nums
+}
+
+.deposit-ticker-empty{color:#cbd5e1;font-weight:600}
 
 @keyframes depositTicker{
 from{transform:translateX(0)}
@@ -4960,8 +4987,6 @@ if(!lead||String(lead.status)!='deal')return;
 const note=String(lead.notes||'');
 const amount=(note.match(/rp\.?\s*([\d][\d.,]*)/i)||[])[1]||'';
 items.push({
-name:String(lead.name||'Nasabah'),
-product:String(lead.product||''),
 by:String(by||''),
 amount:amount,
 ts:Date.parse(lead.last||lead.c)||0
@@ -4973,20 +4998,21 @@ const leads=member&&member.state&&member.state.leads||[];
 leads.forEach(lead=>add(lead,member.nama||member.user));
 });
 }else{
-(S.leads||[]).forEach(lead=>add(lead,S.name));
+(S.leads||[]).forEach(lead=>add(lead,S.name||USER));
 }
 items.sort((a,b)=>b.ts-a.ts);
-const messages=items.slice(0,8).map(item=>
-`🎉 ${item.name} berhasil closing${item.product?' — '+item.product:''}${item.amount?' · Rp'+item.amount:''}${item.by?' · '+item.by:''}`
+const rows=items.slice(0,8).map(item=>
+`<span class="deposit-ticker-item"><b>${esc(item.by||'BDO')}</b><span class="deposit-ticker-sep">·</span><span class="deposit-ticker-amount">${item.amount?'Rp'+esc(item.amount):'Closing baru'}</span></span>`
 );
-if(!messages.length)messages.push('Belum ada deposit tercatat — jemput closing berikutnya!');
-const doubled=messages.concat(messages);
-const duration=Math.max(26,Math.min(70,12+messages.length*6));
+if(!rows.length)rows.push('<span class="deposit-ticker-item deposit-ticker-empty">Belum ada deposit tercatat — jemput closing berikutnya!</span>');
+const group=`<span class="deposit-ticker-group">${rows.join('')}</span>`;
+const doubled=group+group;
+const duration=Math.max(26,Math.min(70,12+rows.length*6));
 return`<div class="deposit-ticker" role="status" aria-live="polite">
 <span class="deposit-ticker-label">CLOSING</span>
 <div class="deposit-ticker-window">
 <div class="deposit-ticker-track" style="animation-duration:${duration}s">
-${doubled.map(text=>`<span class="deposit-ticker-item">${esc(text)}</span>`).join('')}
+${doubled}
 </div>
 </div>
 </div>`;
