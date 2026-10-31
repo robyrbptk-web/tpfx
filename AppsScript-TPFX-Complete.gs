@@ -172,13 +172,89 @@ function posts_() {
   return sheetEnsure_('Posts', ['id', 'username', 'nama', 'text', 'ts', 'imageUrl']);
 }
 
+const CHAT_FILE_MAX_BYTES = 8 * 1024 * 1024;
+const CHAT_FILE_FOLDER = 'TPFX Chat Files';
+
 function messages_() {
-  return sheetEnsure_('Messages', ['id', 'from', 'to', 'text', 'ts']);
+  const sh = sheetEnsure_('Messages', [
+    'id', 'from', 'to', 'text', 'ts',
+    'kind', 'fileId', 'fileName', 'mimeType', 'fileSize'
+  ]);
+  if (sh.getLastColumn() < 10) {
+    sh.getRange(1, 6, 1, 5).setValues([
+      ['kind', 'fileId', 'fileName', 'mimeType', 'fileSize']
+    ]);
+  }
+  return sh;
+}
+
+function chatFileKind_(mime) {
+  mime = String(mime || '').toLowerCase();
+  if (mime.indexOf('image/') == 0) return 'image';
+  if (mime.indexOf('audio/') == 0) return 'audio';
+  return 'file';
+}
+
+function chatFileAllowed_(kind, mime) {
+  mime = String(mime || '').toLowerCase().split(';')[0].trim();
+  if (kind == 'image') {
+    return /^image\/(?:jpeg|png|webp|gif)$/.test(mime);
+  }
+  if (kind == 'audio') {
+    return /^audio\/(?:webm|ogg|mp4|mpeg|mp3|wav|x-m4a|m4a)$/.test(mime);
+  }
+  return /^(?:application\/pdf|text\/plain|text\/csv|application\/msword|application\/vnd\.ms-excel|application\/vnd\.ms-powerpoint|application\/vnd\.openxmlformats-officedocument\.(?:wordprocessingml\.document|spreadsheetml\.sheet|presentationml\.presentation)|application\/zip|application\/x-zip-compressed|application\/vnd\.rar)$/.test(mime);
+}
+
+function chatAttachmentPreview_(attachment) {
+  if (!attachment) return '';
+  const kind = String(attachment.kind || 'file').toLowerCase();
+  if (kind == 'image') return '📷 Foto';
+  if (kind == 'audio') return '🎤 Pesan suara';
+  return '📎 ' + String(attachment.name || 'Lampiran');
+}
+
+function chatAttachmentInput_(value) {
+  if (!value || typeof value != 'object') return null;
+  const id = String(value.id || '').trim();
+  if (!/^[A-Za-z0-9_-]{10,}$/.test(id)) return null;
+  const rawKind = String(value.kind || '').toLowerCase();
+  const kind = ['image', 'audio', 'file'].indexOf(rawKind) >= 0 ? rawKind : 'file';
+  const mime = String(value.mime || '').toLowerCase().split(';')[0].trim().slice(0, 120);
+  const name = String(value.name || 'Lampiran')
+    .replace(/[\r\n\t]+/g, ' ')
+    .slice(0, 120) || 'Lampiran';
+  const size = Math.max(0, Math.min(
+    CHAT_FILE_MAX_BYTES,
+    Number(value.size) || 0
+  ));
+  return { kind: kind, id: id, mime: mime, name: name, size: size };
+}
+
+function chatAttachmentFromRow_(row) {
+  const id = String(row[6] || '').trim();
+  if (!/^[A-Za-z0-9_-]{10,}$/.test(id)) return null;
+  const rawKind = String(row[5] || '').toLowerCase();
+  const kind = ['image', 'audio', 'file'].indexOf(rawKind) >= 0
+    ? rawKind
+    : 'file';
+  const openUrl = 'https://drive.google.com/file/d/' + id + '/view';
+  return {
+    kind: kind,
+    id: id,
+    name: String(row[7] || 'Lampiran'),
+    mime: String(row[8] || ''),
+    size: Number(row[9]) || 0,
+    url: kind == 'image'
+      ? 'https://drive.google.com/thumbnail?id=' + id + '&sz=w1600'
+      : 'https://drive.google.com/uc?export=download&id=' + id,
+    openUrl: openUrl
+  };
 }
 
 // Keep row numbers stable for active chat cursors while removing message contents.
 function redactMessageRow_(sheet, rowNumber) {
-  sheet.getRange(rowNumber, 2, 1, 4).clearContent();
+  sheet.getRange(rowNumber, 2, 1, 9).clearContent();
 }
 
 function chatSummary_() {
@@ -201,7 +277,7 @@ function rebuildChatSummary_() {
   const summary = chatSummary_();
   const latest = {};
   if (lastRow > 1) {
-    messages.getRange(2, 1, lastRow - 1, 5).getValues().forEach((row, index) => {
+    messages.getRange(2, 1, lastRow - 1, 10).getValues().forEach((row, index) => {
       const from = String(row[1] || '');
       const to = String(row[2] || '');
       if (!String(row[0] || '').trim() || (!from && !to)) return;
@@ -219,8 +295,11 @@ function rebuildChatSummary_() {
       const key = chatThreadKey_(type, from, target);
       const sheetRow = index + 2;
       if (!latest[key] || sheetRow > latest[key][6]) {
+        const attachment = chatAttachmentFromRow_(row);
+        const preview = String(row[3] || '') ||
+          chatAttachmentPreview_(attachment);
         latest[key] = [
-          key, type, target, String(row[3] || ''), Number(row[4]) || 0,
+          key, type, target, preview, Number(row[4]) || 0,
           from, sheetRow
         ];
       }
@@ -435,7 +514,14 @@ function setup() {
 
   if (!b.getSheetByName('Messages')) {
     b.insertSheet('Messages').appendRow([
-      'id', 'from', 'to', 'text', 'ts'
+      'id', 'from', 'to', 'text', 'ts',
+      'kind', 'fileId', 'fileName', 'mimeType', 'fileSize'
+    ]);
+  }
+  const messagesSheet = b.getSheetByName('Messages');
+  if (messagesSheet.getLastColumn() < 10) {
+    messagesSheet.getRange(1, 6, 1, 5).setValues([
+      ['kind', 'fileId', 'fileName', 'mimeType', 'fileSize']
     ]);
   }
 
@@ -519,7 +605,7 @@ function ensureManager_(username, password, nama, role) {
 // API
 // ============================================================
 
-const API_VERSION = '2026-10-31-multiteam';
+const API_VERSION = '2026-10-31-chatmedia';
 
 function doGet() {
   return out_({
@@ -547,6 +633,7 @@ function api_() {
     saveState: saveState,
     dashboardDM: dashboardDM,
     uploadImg: uploadImg,
+    uploadChatFile: uploadChatFile,
     listUsers: listUsers,
     createUser: createUser,
     resetBDOPassword: resetBDOPassword,
@@ -1545,6 +1632,82 @@ function uploadImg(t, dataUrl) {
     );
 
     return 'https://drive.google.com/thumbnail?id=' + f.getId() + '&sz=w1200';
+  } catch (e) {
+    throw driveError_(e);
+  }
+}
+
+
+function uploadChatFile(t, dataUrl, name, mime) {
+
+  const u = user_(t);
+
+  if (!u || !findUser_(u)) return { err: 'AUTH' };
+
+  touchSession_(t, u);
+
+  const raw = String(dataUrl || '');
+  const match = raw.match(
+    /^data:([^;,]+)(?:;[^,]*)?;base64,([A-Za-z0-9+/]+={0,2})$/
+  );
+
+  if (!match) return { err: 'Format lampiran tidak valid' };
+
+  let type = String(mime || match[1] || '')
+    .toLowerCase().split(';')[0].trim();
+  if (!type) type = 'application/octet-stream';
+
+  const kind = chatFileKind_(type);
+  if (!chatFileAllowed_(kind, type)) {
+    return { err: 'Jenis lampiran tidak didukung' };
+  }
+
+  let bytes;
+  try {
+    bytes = Utilities.base64Decode(match[2]);
+  } catch (e) {
+    return { err: 'Lampiran rusak atau tidak dapat dibaca' };
+  }
+
+  if (!bytes || !bytes.length) return { err: 'Lampiran kosong' };
+  if (bytes.length > CHAT_FILE_MAX_BYTES) {
+    return { err: 'Ukuran lampiran maksimal 8 MB' };
+  }
+
+  let folder;
+  try {
+    const it = DriveApp.getFoldersByName(CHAT_FILE_FOLDER);
+    folder = it.hasNext()
+      ? it.next()
+      : DriveApp.createFolder(CHAT_FILE_FOLDER);
+  } catch (e) {
+    throw driveError_(e);
+  }
+
+  const safeName = String(name || 'lampiran')
+    .replace(/[^\w.\- ()\[\]]+/g, '_')
+    .slice(-80) || 'lampiran';
+
+  try {
+    const file = folder.createFile(Utilities.newBlob(
+      bytes,
+      type,
+      u + '_' + Date.now() + '_' + safeName
+    ));
+    file.setSharing(
+      DriveApp.Access.ANYONE_WITH_LINK,
+      DriveApp.Permission.VIEW
+    );
+    return {
+      ok: 1,
+      file: {
+        id: file.getId(),
+        name: file.getName() || safeName,
+        mime: type,
+        size: bytes.length,
+        kind: kind
+      }
+    };
   } catch (e) {
     throw driveError_(e);
   }
@@ -2893,22 +3056,44 @@ function chatMessageObject_(row, rowNumber, profiles, type) {
     ts: Number(row[4]) || 0,
     row: rowNumber
   };
+  const attachment = chatAttachmentFromRow_(row);
+  if (attachment) message.attachment = attachment;
   if (type == 'personal') message.to = String(row[2] || '');
   return message;
+}
+
+function chatThreadAnchor_(type, target, username) {
+  const key = type == 'personal'
+    ? chatThreadKey_('personal', username, target)
+    : type + ':' + String(target);
+  const summary = chatSummaryRows_();
+  for (let i = summary.length - 1; i >= 0; i--) {
+    if (String(summary[i][0]) != key) continue;
+    const row = Number(summary[i][6]) || 0;
+    if (row > 1) return row + 1;
+  }
+  return 0;
 }
 
 function conversationPage_(type, target, username, beforeRow, profiles, pageSize, visibleKeys) {
   const messages = messages_();
   const cursor = messages.getLastRow();
-  const before = Number(beforeRow) > 1
+  const explicit = Number(beforeRow) > 1
     ? Math.min(cursor + 1, Math.floor(Number(beforeRow)))
-    : cursor + 1;
+    : 0;
+  // Mulai dari baris pesan terakhir thread (ChatSummary) supaya riwayat
+  // percakapan lama tidak perlu memindai seluruh sheet dari bawah.
+  const anchor = explicit || chatThreadAnchor_(type, target, username);
+  const before = anchor ? Math.min(cursor + 1, anchor) : cursor + 1;
   let end = before - 1;
   const found = [];
-  const blockSize = 5000;
-  while (end >= 2 && found.length <= pageSize) {
+  const blockSize = 1000;
+  const maxBlocks = 12;
+  let blocks = 0;
+  while (end >= 2 && found.length <= pageSize && blocks < maxBlocks) {
     const start = Math.max(2, end - blockSize + 1);
-    const values = messages.getRange(start, 1, end - start + 1, 5).getValues();
+    const values = messages
+      .getRange(start, 1, end - start + 1, 10).getValues();
     for (let i = values.length - 1; i >= 0; i--) {
       if (conversationMatches_(values[i], type, target, username, visibleKeys)) {
         found.push(chatMessageObject_(values[i], start + i, profiles, type));
@@ -2916,8 +3101,9 @@ function conversationPage_(type, target, username, beforeRow, profiles, pageSize
       }
     }
     end = start - 1;
+    blocks++;
   }
-  const hasMore = found.length > pageSize;
+  const hasMore = found.length > pageSize || end >= 2;
   const rows = found.slice(0, pageSize).reverse();
   return { rows: rows, cursor: cursor, hasMore: hasMore };
 }
@@ -2958,7 +3144,7 @@ function chatSync(t, type, target, afterRow) {
 
   const start = Math.max(2, cursor + 1);
   const end = Math.min(lastRow, start + 999);
-  const values = messages.getRange(start, 1, end - start + 1, 5).getValues();
+  const values = messages.getRange(start, 1, end - start + 1, 10).getValues();
   const profiles = socialUsers_(ctx.root ? null : team);
   const rows = [];
   values.forEach((row, index) => {
@@ -3047,7 +3233,7 @@ function chatHistory(t, peer, beforeRow) {
 }
 
 
-function sendChat(t, peer, text) {
+function sendChat(t, peer, text, attachment) {
 
   const ctx = callerContext_(t);
 
@@ -3066,10 +3252,13 @@ function sendChat(t, peer, text) {
   ) return { err: 'Akun chat tidak ditemukan' };
 
   text = String(text || '').trim();
+  const attach = chatAttachmentInput_(attachment);
 
-  if (!text) return { err: 'Pesan tidak boleh kosong' };
+  if (!text && !attach) return { err: 'Pesan tidak boleh kosong' };
 
   if (text.length > 1000) return { err: 'Pesan maksimal 1000 karakter' };
+
+  const preview = text || chatAttachmentPreview_(attach);
 
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
@@ -3083,9 +3272,14 @@ function sendChat(t, peer, text) {
       username,
       peer,
       text,
-      ts
+      ts,
+      attach ? attach.kind : '',
+      attach ? attach.id : '',
+      attach ? attach.name : '',
+      attach ? attach.mime : '',
+      attach ? attach.size : ''
     ]);
-    updateChatSummary_('personal', peer, username, text, ts, messages.getLastRow());
+    updateChatSummary_('personal', peer, username, preview, ts, messages.getLastRow());
 
   } finally {
 
@@ -3096,7 +3290,7 @@ function sendChat(t, peer, text) {
   const senderName = chatSenderName_(username);
   pushQuiet_(() => pushToUsers_([peer], {
     title: senderName,
-    body: text,
+    body: preview,
     url: './index.html#chat=personal:' + encodeURIComponent(username),
     tag: 'tpfx-dm-' + String(username).toLowerCase()
   }));
@@ -3242,7 +3436,7 @@ function groupHistory(t, groupId, beforeRow) {
 }
 
 
-function sendGroupChat(t, groupId, text) {
+function sendGroupChat(t, groupId, text, attachment) {
 
   const ctx = callerContext_(t);
 
@@ -3264,9 +3458,12 @@ function sendGroupChat(t, groupId, text) {
   }
 
   text = String(text || '').trim();
+  const attach = chatAttachmentInput_(attachment);
 
-  if (!text) return { err: 'Pesan tidak boleh kosong' };
+  if (!text && !attach) return { err: 'Pesan tidak boleh kosong' };
   if (text.length > 1000) return { err: 'Pesan maksimal 1000 karakter' };
+
+  const preview = text || chatAttachmentPreview_(attach);
 
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
@@ -3276,9 +3473,14 @@ function sendGroupChat(t, groupId, text) {
     const messages = messages_();
     const ts = Date.now();
     messages.appendRow([
-      Utilities.getUuid(), username, 'group:' + groupId, text, ts
+      Utilities.getUuid(), username, 'group:' + groupId, text, ts,
+      attach ? attach.kind : '',
+      attach ? attach.id : '',
+      attach ? attach.name : '',
+      attach ? attach.mime : '',
+      attach ? attach.size : ''
     ]);
-    updateChatSummary_('group', groupId, username, text, ts, messages.getLastRow());
+    updateChatSummary_('group', groupId, username, preview, ts, messages.getLastRow());
 
   } finally {
 
@@ -3292,7 +3494,7 @@ function sendGroupChat(t, groupId, text) {
     .filter(name => name != String(username).toLowerCase());
   pushQuiet_(() => pushToUsers_(recipients, {
     title: senderName + ' · ' + groupName,
-    body: text,
+    body: preview,
     url: './index.html#chat=group:' + encodeURIComponent(groupId),
     tag: 'tpfx-group-' + groupId
   }));
@@ -3347,14 +3549,18 @@ function globalChatHistory(t, unusedTarget, beforeRow) {
   );
 }
 
-function sendGlobalChat(t, unusedTarget, text) {
+function sendGlobalChat(t, unusedTarget, text, attachment) {
   const ctx = callerContext_(t);
   if (!ctx) return { err: 'AUTH' };
   const username = ctx.username;
 
   text = String(text || '').trim();
-  if (!text) return { err: 'Pesan tidak boleh kosong' };
+  const attach = chatAttachmentInput_(attachment);
+
+  if (!text && !attach) return { err: 'Pesan tidak boleh kosong' };
   if (text.length > 1000) return { err: 'Pesan maksimal 1000 karakter' };
+
+  const preview = text || chatAttachmentPreview_(attach);
 
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
@@ -3362,9 +3568,14 @@ function sendGlobalChat(t, unusedTarget, text) {
     const messages = messages_();
     const ts = Date.now();
     messages.appendRow([
-      Utilities.getUuid(), username, 'global', text, ts
+      Utilities.getUuid(), username, 'global', text, ts,
+      attach ? attach.kind : '',
+      attach ? attach.id : '',
+      attach ? attach.name : '',
+      attach ? attach.mime : '',
+      attach ? attach.size : ''
     ]);
-    updateChatSummary_('global', 'global', username, text, ts, messages.getLastRow());
+    updateChatSummary_('global', 'global', username, preview, ts, messages.getLastRow());
   } finally {
     lock.releaseLock();
   }
@@ -3374,7 +3585,7 @@ function sendGlobalChat(t, unusedTarget, text) {
     .filter(name => name && name.toLowerCase() != String(username).toLowerCase());
   pushQuiet_(() => pushToUsers_(recipients, {
     title: senderName + ' · Grup Global',
-    body: text,
+    body: preview,
     url: './index.html#chat=global',
     tag: 'tpfx-global'
   }));

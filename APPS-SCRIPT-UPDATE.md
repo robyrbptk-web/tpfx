@@ -1515,7 +1515,7 @@ Frontend mengharapkan setiap request Apps Script mengembalikan JSON dengan prope
 
 1. Fungsi `loadState(t)` harus selalu mengembalikan `{ err: 'AUTH' }` untuk token tidak valid, atau object `{ state, name, user, role }` untuk sesi aktif. Jangan menghapus `return` pada hasil sesi.
 2. Fungsi `doPost(e)` harus membungkus hasil fungsi API sebagai `{ result: f.apply(null, req.args || []) }`.
-3. Pastikan fungsi lama dan baru terdaftar pada `api_()`: `loadState`, `socialFeed`, `recentPosts`, `createPost`, `deletePost`, `togglePostLike`, `togglePostPin`, `postComments`, `addPostComment`, `updateProfilePhoto`, `chatContacts`, `chatNotificationSummary`, `chatHistory`, `chatSync`, `sendChat`, `chatGroups`, `createChatGroup`, `deleteChatGroup`, `groupHistory`, `sendGroupChat`, `globalChatHistory`, `sendGlobalChat`, `pushConfig`, `subscribePush`, `unsubscribePush`, dan `testPush`.
+3. Pastikan fungsi lama dan baru terdaftar pada `api_()`: `loadState`, `socialFeed`, `recentPosts`, `createPost`, `deletePost`, `togglePostLike`, `togglePostPin`, `postComments`, `addPostComment`, `updateProfilePhoto`, `uploadChatFile`, `chatContacts`, `chatNotificationSummary`, `chatHistory`, `chatSync`, `sendChat`, `chatGroups`, `createChatGroup`, `deleteChatGroup`, `groupHistory`, `sendGroupChat`, `globalChatHistory`, `sendGlobalChat`, `pushConfig`, `subscribePush`, `unsubscribePush`, dan `testPush`.
 4. Jalankan `setup()` agar sheet `Posts`, `PostLikes`, `PostPins`, `PostComments`, `Messages`, `ChatGroups`, `ChatSummary`, dan `PushSubs` tersedia, kolom foto tersedia di `Posts` dan `Users`, serta ringkasan chat lama diindeks sekali. Menyimpan kode saja tidak memperbarui deployment Web App.
 5. Keluar dari aplikasi, login kembali, lalu buka Feed/Chat. Token yang lama dapat tidak berlaku setelah akun dihapus atau sesi berakhir.
 
@@ -1523,7 +1523,7 @@ Frontend mengharapkan setiap request Apps Script mengembalikan JSON dengan prope
 
 Frontend menampilkan postingan/pesan secara langsung sambil menyimpan ke Apps Script. Feed mengambil postingan terbaru dari `recentPosts` setiap 10 detik saat tab Feed terbuka; endpoint ini hanya membaca maksimal 100 baris terakhir dari sheet `Posts`, tidak memindai sheet `Data`. Tambahkan `recentPosts` pada `api_()` dan tempel fungsi di atas sebelum deploy versi baru.
 
-Saat halaman Chat terlihat, `chatSync` memeriksa pesan baru setiap 1,5 detik dan hanya membaca baris `Messages` yang bertambah setelah cursor terakhir; request tidak ditumpuk jika request sebelumnya belum selesai. Ringkasan percakapan dibaca dari sheet `ChatSummary`, bukan dengan memindai semua pesan setiap polling. `chatHistory`, `groupHistory`, dan `globalChatHistory` memuat 50 pesan terbaru, lalu tombol **Muat pesan sebelumnya** melakukan pagination berdasarkan nomor baris sheet. Tidak ada pemangkasan otomatis riwayat; saat grup/akun dihapus, isi pesan terkait dibersihkan tanpa menggeser baris agar cursor aktif tetap akurat. Jalankan `setup()` sekali setelah menyalin backend baru agar index `ChatSummary` dibuat dari pesan lama.
+Saat halaman Chat terlihat, `chatSync` memeriksa pesan baru setiap 3 detik dan hanya membaca baris `Messages` yang bertambah setelah cursor terakhir; request tidak ditumpuk jika request sebelumnya belum selesai, tab sedang tersembunyi, atau pengiriman/unggahan masih berjalan. Riwayat 50 pesan terbaru dibaca dengan bantuan nomor baris terakhir thread di `ChatSummary`, sehingga sheet `Messages` tidak lagi dipindai dari bawah untuk percakapan lama. Frontend juga menyimpan 60 pesan terakhir per percakapan di `localStorage`; saat chat dibuka, cache langsung ditampilkan sebelum respons server tiba. Request RPC biasa dibatasi 30 detik dan unggahan lampiran 120 detik, dengan pesan kesalahan yang jelas jika koneksi lambat. Ringkasan percakapan tetap dibaca dari sheet `ChatSummary`, bukan dengan memindai semua pesan setiap polling. `chatHistory`, `groupHistory`, dan `globalChatHistory` memuat 50 pesan terbaru, lalu tombol **Muat pesan sebelumnya** melakukan pagination berdasarkan nomor baris sheet. Tidak ada pemangkasan otomatis riwayat; saat grup/akun dihapus, isi pesan terkait dibersihkan tanpa menggeser baris agar cursor aktif tetap akurat. Jalankan `setup()` sekali setelah menyalin backend baru agar index `ChatSummary` dibuat dari pesan lama.
 
 Polling Apps Script bukan push real-time: interval aktual juga dipengaruhi waktu eksekusi Google, jaringan, dan throttling browser. Tab yang ditutup tidak menerima pesan atau notifikasi. Untuk foto, endpoint `uploadImg` menyimpan gambar di Drive dengan akses tautan dan mengembalikan URL thumbnail langsung (`thumbnail?id=...&sz=w1200`); `updateProfilePhoto` menyimpannya di kolom F `Users`. Deploy backend baru agar unggahan berikutnya memakai URL thumbnail. Frontend juga mengubah URL `uc?export=view` lama ke format thumbnail saat ditampilkan.
 
@@ -1543,3 +1543,29 @@ Setiap akun memiliki kolom `team` di sheet `Users` (kolom ke-7). Akun lama yang 
 - **Ekspor**: BDO/Sales mengekspor lead miliknya dari halaman profil (CSV/Excel). BM/DM mengekspor lead tim yang sedang difilter, rekap tim, dan aktivitas tim. `database.html` mengekspor kontak tim (manager) atau kontak sendiri (BDO). File Excel memakai SheetJS lokal di `vendor/xlsx.full.min.js`; CSV memakai BOM UTF-8 agar terbaca benar di Excel.
 
 Setelah menyalin backend baru, jalankan `setup()` sekali untuk menambahkan header `team` pada `Users`, `ChatGroups`, dan `Contacts`. Kolom baru tidak mengubah akun, password, atau data lama. Deploy ulang Web App agar endpoint memakai filter tim baru.
+
+## 10. Lampiran chat, pesan suara, dan riwayat cepat
+
+Sheet `Messages` sekarang memiliki 10 kolom: `id, from, to, text, ts, kind, fileId, fileName, mimeType, fileSize`. Kolom 6–10 boleh kosong untuk pesan teks lama. `messages_()` dan `setup()` menambahkan header kolom baru secara otomatis bila sheet lama masih 5 kolom; tidak ada data lama yang diubah, dan `redactMessageRow_` membersihkan kolom 2–10 saat pesan/grup dihapus.
+
+Endpoint baru `uploadChatFile(t, dataUrl, name, mime)`:
+
+- Hanya menerima data URL `data:<mime>;base64,...` dengan sesi login valid.
+- Ukuran maksimal 8 MB. Jenis yang diizinkan: foto JPG/PNG/WEBP/GIF; audio WebM/OGG/MP4/MPEG/MP3/WAV/M4A; dokumen PDF, Word, Excel, PowerPoint, TXT, CSV, ZIP, RAR.
+- File disimpan di folder Drive `TPFX Chat Files` dengan akses "siapa saja yang memiliki tautan dapat melihat", lalu mengembalikan `{ ok: 1, file: { id, name, mime, size, kind } }`.
+- Jenis file lain, data rusak, atau file terlalu besar dikembalikan sebagai `{ err: '...' }` agar frontend dapat menampilkan pesan yang jelas.
+
+`sendChat`, `sendGroupChat`, dan `sendGlobalChat` menerima parameter keempat `attachment` (`{ id, kind, name, mime, size }` dari hasil unggahan). Pesan boleh berisi teks saja, lampiran saja, atau keduanya; pesan kosong ditolak. Metadata lampiran disimpan pada kolom 6–10 dan preview thread di `ChatSummary` memakai `📷 Foto`, `🎤 Pesan suara`, atau `📎 <nama file>` bila teks kosong. `chatHistory`, `groupHistory`, `globalChatHistory`, dan `chatSync` mengembalikan properti `attachment` berisi `url` (thumbnail Drive untuk foto, unduhan langsung untuk audio/file), `openUrl` (`/file/d/<id>/view`), nama, mime, dan ukuran.
+
+Di frontend:
+
+- Tombol 📎 membuka pemilih foto/file. Foto non-GIF dikecilkan ke maksimal 1400 px dan dikompres JPEG sebelum diunggah; jenis file divalidasi di browser dan di server.
+- Tombol 🎤 merekam pesan suara dengan `MediaRecorder` (WebM/Opus, OGG, atau MP4 sesuai dukungan browser), maksimal 120 detik, dengan tombol Kirim/Batal. Rekaman di bawah 0,7 detik dibuang.
+- Lampiran ditampilkan sebagai pratinjau lokal, baru diunggah saat tombol Kirim ditekan. Bila unggahan/gagal kirim, teks dan lampiran dikembalikan ke composer agar tidak hilang.
+- Penerima melihat foto (tautan membuka Drive), pemutar audio dengan tautan **Buka**, atau kartu file beserta ukurannya. Bila thumbnail Drive gagal dimuat, muncul tautan **Foto — buka di Drive**.
+
+Setelah menyalin backend baru: jalankan `setup()` sekali (menambah header `Messages`), lalu deploy versi baru dengan ID deployment yang sama. Frontend lama tetap dapat membaca pesan teks; fitur lampiran baru aktif setelah kedua sisi diperbarui.
+
+## 11. Running text deposit (CLOSING)
+
+Halaman Home (BDO/Sales) dan dashboard BM/DM menampilkan running text **CLOSING** berisi maksimal 8 lead berstatus `deal` terbaru. Untuk BM/DM, lead diambil dari seluruh anggota tim. Nominal diambil dari catatan lead bila ada pola `Rp` (contoh `Rp15.000.000`), lalu ditampilkan sebagai `· Rp15.000.000`. Bila belum ada deposit, teks ajakan tampil agar bagian ini tidak kosong. Animasi memakai CSS (`translateX(-50%)` dengan daftar yang diduplikasi), berhenti saat kursor diarahkan, dan otomatis nonaktif pada pengaturan `prefers-reduced-motion`.

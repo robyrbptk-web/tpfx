@@ -826,6 +826,75 @@ background:linear-gradient(110deg,#fff 0%,#fff 74%,#f5f7ff 100%)
 color:var(--pri)
 }
 
+.deposit-ticker{
+display:flex;
+align-items:center;
+gap:10px;
+margin-top:14px;
+padding:9px 10px 9px 12px;
+border:1px solid #ffe0c2;
+border-radius:14px;
+background:linear-gradient(90deg,#fff7ed,#fff);
+overflow:hidden
+}
+
+.deposit-ticker-label{
+flex:none;
+display:inline-flex;
+align-items:center;
+gap:6px;
+padding:4px 9px;
+border-radius:999px;
+background:#ffedd5;
+color:#b45309;
+font-size:10px;
+font-weight:800;
+letter-spacing:.08em
+}
+
+.deposit-ticker-label:before{
+content:'●';
+font-size:8px;
+animation:depositBlink 1.4s ease-in-out infinite
+}
+
+@keyframes depositBlink{50%{opacity:.25}}
+
+.deposit-ticker-window{
+flex:1;
+min-width:0;
+overflow:hidden;
+white-space:nowrap;
+-webkit-mask-image:linear-gradient(90deg,transparent,#000 4%,#000 96%,transparent);
+mask-image:linear-gradient(90deg,transparent,#000 4%,#000 96%,transparent)
+}
+
+.deposit-ticker-track{
+display:inline-flex;
+width:max-content;
+animation:depositTicker 32s linear infinite
+}
+
+.deposit-ticker:hover .deposit-ticker-track{animation-play-state:paused}
+
+.deposit-ticker-item{
+display:inline-block;
+padding-right:34px;
+color:#7c2d12;
+font-size:12px;
+font-weight:700
+}
+
+@keyframes depositTicker{
+from{transform:translateX(0)}
+to{transform:translateX(-50%)}
+}
+
+@media (prefers-reduced-motion:reduce){
+.deposit-ticker-track{animation:none}
+.deposit-ticker-window{overflow-x:auto}
+}
+
 .social-composer textarea{
 border-radius:16px;
 background:#f7f8fb
@@ -1216,8 +1285,7 @@ align-self:flex-start;
 padding:10px 12px;
 border-radius:16px 16px 16px 5px;
 background:var(--bg);
-overflow-wrap:anywhere;
-white-space:pre-wrap
+overflow-wrap:anywhere
 }
 
 .chat-bubble.mine{
@@ -1236,13 +1304,21 @@ opacity:.7
 
 .chat-compose{
 display:flex;
-align-items:flex-end;
+flex-direction:column;
 gap:8px;
 padding:12px;
 border-top:1px solid var(--line)
 }
 
+.chat-compose-row{
+display:flex;
+align-items:flex-end;
+gap:8px
+}
+
 .chat-compose textarea{
+flex:1;
+min-width:0;
 min-height:44px;
 max-height:120px;
 resize:vertical;
@@ -1253,6 +1329,211 @@ margin:0
 flex:none;
 padding:11px 14px
 }
+
+.chat-icon-btn{
+width:44px;
+height:44px;
+padding:0!important;
+display:inline-flex;
+align-items:center;
+justify-content:center;
+font-size:18px;
+line-height:1
+}
+
+.chat-icon-btn.recording{
+background:#b42318;
+border-color:#b42318;
+color:#fff;
+animation:chatRecPulse 1.2s ease-in-out infinite
+}
+
+@keyframes chatRecPulse{
+0%,100%{box-shadow:0 0 0 0 rgba(180,35,24,.35)}
+50%{box-shadow:0 0 0 7px rgba(180,35,24,0)}
+}
+
+.chat-file-input{display:none}
+
+.chat-attach-preview{display:block}
+
+.chat-attach-card{
+display:flex;
+align-items:center;
+gap:10px;
+padding:8px 10px;
+border:1px solid var(--line);
+border-radius:12px;
+background:var(--bg)
+}
+
+.chat-attach-card>img{
+width:56px;
+height:56px;
+object-fit:cover;
+border-radius:10px;
+flex:none
+}
+
+.chat-attach-card>audio{
+flex:1;
+min-width:0;
+height:38px
+}
+
+.chat-attach-icon{font-size:26px;flex:none}
+
+.chat-attach-meta{
+display:flex;
+flex-direction:column;
+gap:2px;
+flex:1;
+min-width:0
+}
+
+.chat-attach-meta b{
+overflow:hidden;
+text-overflow:ellipsis;
+white-space:nowrap;
+font-size:13px
+}
+
+.chat-attach-meta small{color:var(--mut);font-size:11px}
+
+.chat-attach-remove{
+flex:none;
+width:30px;
+height:30px;
+border-radius:50%;
+border:0;
+background:rgba(0,0,0,.08);
+color:inherit;
+cursor:pointer;
+font-size:14px
+}
+
+.chat-recording{
+display:flex;
+align-items:center;
+gap:10px;
+padding:8px 12px;
+border:1px solid #b42318;
+border-radius:12px;
+background:#fff5f5;
+color:#b42318;
+font-size:13px
+}
+
+.chat-recording b{flex:1}
+
+.chat-rec-dot{
+width:10px;
+height:10px;
+border-radius:50%;
+background:#b42318;
+animation:chatRecPulse 1.2s ease-in-out infinite;
+flex:none
+}
+
+.chat-recording .btn{
+min-height:32px;
+padding:6px 10px;
+font-size:12px
+}
+
+.chat-uploading{
+padding:8px 12px;
+border:1px dashed var(--line);
+border-radius:12px;
+color:var(--mut);
+font-size:12px
+}
+
+.chat-loading{
+display:flex;
+align-items:center;
+gap:8px;
+padding:6px 2px;
+color:var(--mut);
+font-size:12px
+}
+
+.chat-loading span{
+width:14px;
+height:14px;
+border-radius:50%;
+border:2px solid var(--line);
+border-top-color:var(--social);
+animation:chatSpin .8s linear infinite
+}
+
+@keyframes chatSpin{to{transform:rotate(360deg)}}
+
+.chat-image{
+display:block;
+max-width:100%;
+max-height:320px;
+margin:6px 0 2px;
+border-radius:12px;
+object-fit:cover;
+background:rgba(0,0,0,.06)
+}
+
+.chat-media-link{display:block;color:inherit;text-decoration:none}
+
+.chat-image-fallback{
+display:flex;
+align-items:center;
+gap:6px;
+margin-top:6px;
+padding:10px 12px;
+border-radius:10px;
+background:rgba(0,0,0,.08);
+font-weight:700;
+text-decoration:none
+}
+
+.chat-image-fallback[hidden]{display:none}
+
+.chat-audio-wrap{display:flex;flex-direction:column;gap:4px;margin-top:6px}
+
+.chat-audio{
+width:min(260px,100%);
+height:38px
+}
+
+.chat-audio-open{
+font-size:11px;
+color:inherit;
+opacity:.75
+}
+
+.chat-file{
+display:flex;
+align-items:center;
+gap:8px;
+margin-top:6px;
+padding:8px 10px;
+border-radius:10px;
+background:rgba(0,0,0,.08);
+color:inherit;
+text-decoration:none
+}
+
+.chat-file span{
+flex:1;
+min-width:0;
+overflow:hidden;
+text-overflow:ellipsis;
+white-space:nowrap;
+font-weight:700
+}
+
+.chat-file small{opacity:.7;font-size:10px}
+
+.chat-bubble.mine .chat-file{background:rgba(255,255,255,.18)}
+
+.chat-bubble .chat-text{white-space:pre-wrap}
 
 .chat-create-group{
 padding:12px 14px;
@@ -1751,6 +2032,15 @@ CHAT_OLDEST_ROW=0,
 CHAT_HAS_MORE=false,
 CHAT_SYNC_ERROR_AT=0,
 CHAT_SENDING=false,
+CHAT_ATTACHMENT=null,
+CHAT_UPLOADING=false,
+CHAT_RECORDER=null,
+CHAT_RECORDING=false,
+CHAT_RECORD_STARTED=0,
+CHAT_RECORD_TIMER=null,
+CHAT_RECORD_CHUNKS=[],
+CHAT_RECORD_STREAM=null,
+CHAT_RECORD_CANCEL=false,
 CHAT_NOTIFICATIONS_LOADING=false,
 CHAT_NOTIFICATION_ERROR_AT=0,
 SW_REG=null,
@@ -1796,7 +2086,7 @@ const API=
 // RPC
 // ============================================================
 
-const rpc=async(fn,...a)=>{
+const rpcFetch=async(timeout,fn,...a)=>{
 
 if(
 API.indexOf('PASTE')==0
@@ -1809,6 +2099,8 @@ throw new Error(
 let r,
 j,
 txt='';
+const controller=new AbortController();
+const timer=setTimeout(()=>controller.abort(),timeout);
 
 try{
 
@@ -1827,7 +2119,8 @@ fn,
 args:a
 }),
 
-cache:'no-store'
+cache:'no-store',
+signal:controller.signal
 }
 );
 
@@ -1849,7 +2142,15 @@ r.status+
 
 }catch(e){
 
+if(e&&e.name=='AbortError'){
+throw new Error('Koneksi ke server terlalu lama. Periksa internet lalu coba lagi.');
+}
+
 throw e;
+
+}finally{
+
+clearTimeout(timer);
 
 }
 
@@ -1890,6 +2191,10 @@ fn+
 return j.result;
 
 };
+
+const rpc=(fn,...a)=>rpcFetch(30000,fn,...a);
+
+const rpcLong=(fn,...a)=>rpcFetch(120000,fn,...a);
 
 
 function isAuthError(e){
@@ -3826,20 +4131,48 @@ await openChatHistory();
 }
 
 
+function chatCacheKey(type,target){
+return 'tpfx-chat-cache-'+String(USER||'').toLowerCase()+'-'+type+'-'+String(target);
+}
+
+
+function readChatCache(type,target){
+try{
+const value=JSON.parse(localStorage.getItem(chatCacheKey(type,target))||'[]');
+return Array.isArray(value)?value.filter(item=>item&&item.id&&item.ts&&item.from):[];
+}catch(e){
+return[];
+}
+}
+
+
+function writeChatCache(type,target,messages){
+try{
+const rows=(messages||[]).filter(item=>!item.pending).slice(-60);
+localStorage.setItem(chatCacheKey(type,target),JSON.stringify(rows));
+}catch(e){}
+}
+
+
 async function openChatHistory(){
 
+stopChatRecording(true);
+CHAT_ATTACHMENT=null;
 CHAT_MESSAGES=[];
 CHAT_SYNC_CURSOR=0;
 CHAT_OLDEST_ROW=0;
 CHAT_HAS_MORE=false;
 if(ROLE=='DM'||ROLE=='BM')dmTab='chat';else tab='chat';
-render();
 const requestId=++CHAT_HISTORY_REQUEST;
 CHAT_HISTORY_LOADING=true;
 
 try{
 const type=CHAT_ACTIVE.type;
 const target=CHAT_ACTIVE.id;
+const cached=readChatCache(type,target);
+if(cached.length)CHAT_MESSAGES=mergeChatRows(cached,type,target);
+render();
+scrollChatToBottom();
 const r=await rpc(
 type=='group'?'groupHistory':type=='global'?'globalChatHistory':'chatHistory',
 TOK,
@@ -3859,13 +4192,17 @@ CHAT_SYNC_CURSOR=Number(r.cursor)||0;
 CHAT_HAS_MORE=!!r.hasMore;
 CHAT_OLDEST_ROW=r.rows.length?Number(r.rows[0].row)||0:0;
 CHAT_MESSAGES=mergeChatRows(r.rows,type,target);
+writeChatCache(type,target,CHAT_MESSAGES);
 markChatSeen(type,target,CHAT_MESSAGES.reduce((latest,message)=>Math.max(latest,Number(message.ts)||0),0));
 render();
 scrollChatToBottom();
 }catch(e){
 if(requestId==CHAT_HISTORY_REQUEST)toast('Pesan gagal dimuat: '+String((e&&e.message)||e));
 }finally{
-if(requestId==CHAT_HISTORY_REQUEST)CHAT_HISTORY_LOADING=false;
+if(requestId==CHAT_HISTORY_REQUEST){
+CHAT_HISTORY_LOADING=false;
+renderChatMessages();
+}
 }
 
 }
@@ -3892,6 +4229,7 @@ if(requestId!=CHAT_HISTORY_REQUEST||!CHAT_ACTIVE||CHAT_ACTIVE.type!=type||CHAT_A
 CHAT_HAS_MORE=!!result.hasMore;
 if(result.rows.length)CHAT_OLDEST_ROW=Number(result.rows[0].row)||CHAT_OLDEST_ROW;
 CHAT_MESSAGES=mergeChatRows(CHAT_MESSAGES.concat(result.rows),type,target);
+writeChatCache(type,target,CHAT_MESSAGES);
 renderChatMessages();
 const updated=$('#chatPreview');
 if(updated)updated.scrollTop=updated.scrollHeight-oldHeight+oldTop;
@@ -3942,16 +4280,296 @@ return serverRows.sort((a,b)=>
 }
 
 
+function chatFileSize(bytes){
+const n=Number(bytes)||0;
+if(!n)return '';
+if(n<1024)return n+' B';
+if(n<1048576)return (n/1024).toFixed(n<10240?1:0)+' KB';
+return (n/1048576).toFixed(n<10485760?1:0)+' MB';
+}
+
+
+function chatAttachmentAllowed(kind,mime){
+mime=String(mime||'').toLowerCase().split(';')[0].trim();
+if(kind=='image')return /^image\/(?:jpeg|png|webp|gif)$/.test(mime);
+if(kind=='audio')return /^audio\/(?:webm|ogg|mp4|mpeg|mp3|wav|x-m4a|m4a)$/.test(mime);
+return /^(?:application\/pdf|text\/plain|text\/csv|application\/msword|application\/vnd\.ms-excel|application\/vnd\.ms-powerpoint|application\/vnd\.openxmlformats-officedocument\.(?:wordprocessingml\.document|spreadsheetml\.sheet|presentationml\.presentation)|application\/zip|application\/x-zip-compressed|application\/vnd\.rar)$/.test(mime);
+}
+
+
+function chatMessageHtml(message){
+const mine=String(message.from||'').toLowerCase()==String(USER||'').toLowerCase();
+const attachment=message.attachment||null;
+let media='';
+if(attachment){
+const kind=String(attachment.kind||'file');
+if(kind=='image'){
+const image=`<img class="chat-image" src="${esc(attachment.url||'')}" alt="" loading="lazy" onerror="this.style.display='none';var f=this.nextElementSibling;if(f)f.hidden=false"><span class="chat-image-fallback" hidden>📷 Foto — buka di Drive</span>`;
+media=attachment.openUrl&&!message.pending
+?`<a class="chat-media-link" href="${esc(attachment.openUrl)}" target="_blank" rel="noopener">${image}</a>`
+:image;
+}else if(kind=='audio'){
+media=`<div class="chat-audio-wrap"><audio class="chat-audio" controls preload="metadata" src="${esc(attachment.url||'')}"></audio>${attachment.openUrl?`<a class="chat-audio-open" href="${esc(attachment.openUrl)}" target="_blank" rel="noopener">Buka</a>`:''}</div>`;
+}else{
+media=`<a class="chat-file" href="${esc(attachment.openUrl||attachment.url||'#')}" target="_blank" rel="noopener">📎<span>${esc(attachment.name||'Lampiran')}</span><small>${chatFileSize(attachment.size)}</small></a>`;
+}
+}
+return `<div class="chat-bubble ${mine?'mine':''}">
+<div class="chat-bubble-author">${socialAvatar(message.nama,message.photoUrl,'social-avatar small')}<b>${esc(message.nama||message.from||'Anggota TPFX')}</b>${message.role?`<span class="role-mark role-${['BM','DM'].includes(String(message.role).toUpperCase())?String(message.role).toLowerCase():'other'}">${esc(message.role)}</span>`:''}</div>
+${message.text?`<div class="chat-text">${esc(message.text)}</div>`:''}
+${media}
+${message.pending?'<time>Mengirim...</time>':`<time>${socialTime(message.ts)}</time>`}
+</div>`;
+}
+
+
+function chatMessagesHtml(){
+if(CHAT_HISTORY_LOADING&&!CHAT_MESSAGES.length){
+return '<div class="chat-loading"><span></span>Memuat pesan…</div>';
+}
+return (CHAT_HAS_MORE?'<button class="btn sec chat-load-older" type="button" onclick="loadOlderChat()">Muat pesan sebelumnya</button>':'')+CHAT_MESSAGES.map(chatMessageHtml).join('');
+}
+
+
 function renderChatMessages(){
 const box=$('#chatPreview');
 if(!box)return;
-box.innerHTML=(CHAT_HAS_MORE?'<button class="btn sec chat-load-older" type="button" onclick="loadOlderChat()">Muat pesan sebelumnya</button>':'')+CHAT_MESSAGES.map(m=>`
-<div class="chat-bubble ${m.from==USER?'mine':''}">
-<div class="chat-bubble-author">${socialAvatar(m.nama,m.photoUrl,'social-avatar small')}<b>${esc(m.nama||m.from||'Anggota TPFX')}</b>${m.role?`<span class="role-mark role-${['BM','DM'].includes(String(m.role).toUpperCase())?String(m.role).toLowerCase():'other'}">${esc(m.role)}</span>`:''}</div>
-${esc(m.text)}
-${m.pending?'<time>Mengirim...</time>':`<time>${socialTime(m.ts)}</time>`}
-</div>
-`).join('')||'<div class="empty">Mulai percakapan dengan menyapa anggota.</div>';
+box.innerHTML=chatMessagesHtml()||'<div class="empty">Mulai percakapan dengan menyapa anggota.</div>';
+}
+
+
+function chatAfterRender(){
+const onChat=(ROLE=='DM'||ROLE=='BM')?dmTab=='chat':tab=='chat';
+if(!onChat)return;
+chatRenderAttachmentPreview();
+updateChatMicButton();
+}
+
+
+function chatPickFile(){
+const input=$('#chatFileInput');
+if(input)input.click();
+}
+
+
+function chatReadFile(file){
+return new Promise((resolve,reject)=>{
+const reader=new FileReader();
+reader.onerror=()=>reject(new Error('File gagal dibaca.'));
+reader.onload=()=>resolve(String(reader.result||''));
+reader.readAsDataURL(file);
+});
+}
+
+
+function chatCompressImage(file){
+return new Promise(resolve=>{
+const reader=new FileReader();
+reader.onerror=()=>resolve('');
+reader.onload=()=>{
+const image=new Image();
+image.onerror=()=>resolve('');
+image.onload=()=>{
+try{
+const scale=Math.min(1,1400/image.width,1400/image.height);
+const canvas=document.createElement('canvas');
+canvas.width=Math.max(1,Math.round(image.width*scale));
+canvas.height=Math.max(1,Math.round(image.height*scale));
+const context=canvas.getContext('2d');
+if(!context){resolve('');return;}
+context.drawImage(image,0,0,canvas.width,canvas.height);
+resolve(canvas.toDataURL('image/jpeg',.82));
+}catch(e){
+resolve('');
+}
+};
+image.src=String(reader.result||'');
+};
+reader.readAsDataURL(file);
+});
+}
+
+
+async function chatHandleFile(input){
+const file=input.files&&input.files[0];
+input.value='';
+if(!file)return;
+if(file.size>8*1024*1024){
+toast('Ukuran lampiran maksimal 8 MB.');
+return;
+}
+const rawKind=String(file.type||'').split('/')[0];
+const kind=rawKind=='image'?'image':rawKind=='audio'?'audio':'file';
+try{
+let dataUrl='';
+let mime=String(file.type||'application/octet-stream');
+let name=String(file.name||'lampiran');
+if(kind=='image'&&mime!='image/gif'){
+dataUrl=await chatCompressImage(file);
+if(dataUrl){
+mime='image/jpeg';
+name=name.replace(/\.[A-Za-z0-9]+$/,'')+'.jpg';
+}
+}
+if(!dataUrl)dataUrl=await chatReadFile(file);
+if(!dataUrl||dataUrl.indexOf('data:')!=0)throw new Error('File gagal dibaca.');
+if(!chatAttachmentAllowed(kind,mime)){
+toast('Jenis file ini belum didukung. Gunakan foto JPG/PNG/WEBP/GIF, audio, PDF, dokumen Office, TXT/CSV, atau ZIP.');
+return;
+}
+CHAT_ATTACHMENT={
+kind:kind,
+dataUrl:dataUrl,
+name:name,
+mime:mime,
+size:Math.round(dataUrl.length*3/4)
+};
+chatRenderAttachmentPreview();
+}catch(e){
+toast('Lampiran gagal dipilih: '+String((e&&e.message)||e));
+}
+}
+
+
+function chatClearAttachment(){
+CHAT_ATTACHMENT=null;
+const box=$('#chatAttachPreview');
+if(box)box.querySelectorAll('audio').forEach(audio=>audio.pause());
+chatRenderAttachmentPreview();
+}
+
+
+function chatRenderAttachmentPreview(){
+const box=$('#chatAttachPreview');
+if(!box)return;
+if(CHAT_RECORDING){
+box.hidden=false;
+box.innerHTML=`<div class="chat-recording"><span class="chat-rec-dot"></span><b>Merekam…</b><span id="chatRecTime">${chatRecordTime()}</span><button type="button" class="btn sec" onclick="stopChatRecording(false)">Kirim</button><button type="button" class="btn sec" onclick="stopChatRecording(true)">Batal</button></div>`;
+return;
+}
+if(!CHAT_ATTACHMENT){
+box.hidden=true;
+box.innerHTML='';
+return;
+}
+const item=CHAT_ATTACHMENT;
+const media=item.kind=='image'
+?`<img src="${esc(item.dataUrl)}" alt="Pratinjau lampiran">`
+:item.kind=='audio'
+?`<audio controls preload="metadata" src="${esc(item.dataUrl)}"></audio>`
+:`<span class="chat-attach-icon">📎</span>`;
+box.hidden=false;
+box.innerHTML=`<div class="chat-attach-card">${media}<div class="chat-attach-meta"><b>${esc(item.name)}</b><small>${chatFileSize(item.size)}</small></div><button type="button" class="chat-attach-remove" onclick="chatClearAttachment()" aria-label="Hapus lampiran">✕</button></div>`;
+}
+
+
+function chatRecordTime(){
+const seconds=Math.max(0,Math.floor((Date.now()-CHAT_RECORD_STARTED)/1000));
+return Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0');
+}
+
+
+function updateChatMicButton(){
+const button=$('#chatMicBtn');
+if(!button)return;
+button.classList.toggle('recording',CHAT_RECORDING);
+button.setAttribute('aria-label',CHAT_RECORDING?'Hentikan dan kirim rekaman':'Rekam pesan suara');
+button.textContent=CHAT_RECORDING?'⏹':'🎤';
+}
+
+
+async function toggleChatRecording(){
+if(CHAT_RECORDING){
+stopChatRecording(false);
+return;
+}
+if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!window.MediaRecorder){
+toast('Browser ini belum mendukung rekaman suara.');
+return;
+}
+try{
+const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+const candidates=[
+'audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus',
+'audio/mp4','audio/mpeg'
+];
+const mime=candidates.find(type=>{
+try{return MediaRecorder.isTypeSupported(type);}catch(e){return false;}
+})||'';
+const recorder=new MediaRecorder(stream,mime?{mimeType:mime}:undefined);
+CHAT_RECORDER=recorder;
+CHAT_RECORD_CHUNKS=[];
+CHAT_RECORD_STREAM=stream;
+CHAT_RECORD_CANCEL=false;
+CHAT_RECORD_STARTED=Date.now();
+recorder.ondataavailable=event=>{
+if(event.data&&event.data.size)CHAT_RECORD_CHUNKS.push(event.data);
+};
+recorder.onstop=()=>{
+const chunks=CHAT_RECORD_CHUNKS.slice();
+const canceled=CHAT_RECORD_CANCEL;
+const recordedMime=String(recorder.mimeType||mime||'audio/webm').split(';')[0];
+CHAT_RECORD_CHUNKS=[];
+CHAT_RECORD_CANCEL=false;
+if(canceled||!chunks.length)return;
+const blob=new Blob(chunks,{type:recordedMime});
+const reader=new FileReader();
+reader.onerror=()=>toast('Rekaman gagal dibaca.');
+reader.onload=()=>{
+const dataUrl=String(reader.result||'');
+if(!dataUrl)return;
+const ext=recordedMime.indexOf('mp4')>=0?'m4a':
+recordedMime.indexOf('ogg')>=0?'ogg':
+recordedMime.indexOf('mpeg')>=0?'mp3':'webm';
+CHAT_ATTACHMENT={
+kind:'audio',
+dataUrl:dataUrl,
+name:'Pesan suara.'+ext,
+mime:recordedMime,
+size:blob.size
+};
+chatRenderAttachmentPreview();
+toast('Rekaman siap dikirim.');
+};
+reader.readAsDataURL(blob);
+};
+recorder.start();
+CHAT_RECORDING=true;
+updateChatMicButton();
+chatRenderAttachmentPreview();
+CHAT_RECORD_TIMER=setInterval(()=>{
+const label=$('#chatRecTime');
+if(label)label.textContent=chatRecordTime();
+},500);
+setTimeout(()=>{
+if(CHAT_RECORDING)stopChatRecording(false);
+},120000);
+}catch(e){
+toast('Mikrofon tidak dapat diakses: '+String((e&&e.message)||e));
+}
+}
+
+
+function stopChatRecording(cancel){
+if(!CHAT_RECORDING||!CHAT_RECORDER){
+CHAT_RECORDING=false;
+if(CHAT_RECORD_TIMER){clearInterval(CHAT_RECORD_TIMER);CHAT_RECORD_TIMER=null;}
+updateChatMicButton();
+return;
+}
+const elapsed=Date.now()-CHAT_RECORD_STARTED;
+CHAT_RECORD_CANCEL=!!cancel||elapsed<700;
+CHAT_RECORDING=false;
+if(CHAT_RECORD_TIMER){clearInterval(CHAT_RECORD_TIMER);CHAT_RECORD_TIMER=null;}
+try{CHAT_RECORDER.stop();}catch(e){}
+CHAT_RECORDER=null;
+if(CHAT_RECORD_STREAM){
+try{CHAT_RECORD_STREAM.getTracks().forEach(track=>track.stop());}catch(e){}
+CHAT_RECORD_STREAM=null;
+}
+if(elapsed<700&&!cancel)toast('Rekaman terlalu pendek, coba lagi.');
+updateChatMicButton();
+chatRenderAttachmentPreview();
 }
 
 
@@ -4003,13 +4621,7 @@ const activeContact=CHAT_ACTIVE&&CHAT_ACTIVE.type=='personal'
 ?CHAT_CONTACTS.find(x=>String(x.username)==CHAT_ACTIVE.id):null;
 const activeGlobal=CHAT_ACTIVE&&CHAT_ACTIVE.type=='global'?CHAT_GLOBAL:null;
 const active=activeGroup||activeContact||activeGlobal;
-const messages=(CHAT_HAS_MORE?'<button class="btn sec chat-load-older" type="button" onclick="loadOlderChat()">Muat pesan sebelumnya</button>':'')+CHAT_MESSAGES.map(m=>`
-<div class="chat-bubble ${m.from==USER?'mine':''}">
-<div class="chat-bubble-author">${socialAvatar(m.nama,m.photoUrl,'social-avatar small')}<b>${esc(m.nama||m.from||'Anggota TPFX')}</b>${m.role?`<span class="role-mark role-${['BM','DM'].includes(String(m.role).toUpperCase())?String(m.role).toLowerCase():'other'}">${esc(m.role)}</span>`:''}</div>
-${esc(m.text)}
-<time>${socialTime(m.ts)}</time>
-</div>
-`).join('');
+const messages=chatMessagesHtml();
 const notificationStatus=chatNotificationStatus();
 const contactOptions=CHAT_CONTACTS.map(c=>`
 <option value="${esc(c.username)}">${esc(c.nama)} (${esc(c.role)})</option>
@@ -4072,8 +4684,14 @@ ${activeGlobal?'<div class="social-avatar">🌐</div>':activeGroup?'<div class="
 </div>
 <div class="chat-preview" id="chatPreview">${messages||'<div class="empty">Mulai percakapan dengan menyapa anggota.</div>'}</div>
 <form class="chat-compose" onsubmit="sendTeamMessage(event)">
+<div class="chat-attach-preview" id="chatAttachPreview" hidden></div>
+<div class="chat-compose-row">
+<button type="button" class="btn sec chat-icon-btn" onclick="chatPickFile()" aria-label="Lampirkan foto atau file">📎</button>
+<button type="button" class="btn sec chat-icon-btn" id="chatMicBtn" onclick="toggleChatRecording()" aria-label="Rekam pesan suara">🎤</button>
 <textarea id="chatText" maxlength="1000" placeholder="Tulis pesan..." aria-label="Tulis pesan"></textarea>
 <button class="btn" type="submit">Kirim</button>
+</div>
+<input type="file" id="chatFileInput" class="chat-file-input" onchange="chatHandleFile(this)" accept="image/jpeg,image/png,image/webp,image/gif,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip" tabindex="-1">
 </form>`:'<div class="empty">Pilih Chat Global, percakapan, atau buat grup baru.</div>'}
 </section>
 </div>
@@ -4129,7 +4747,7 @@ return '';
 
 async function refreshChatHistory(){
 
-if(!(tab=='chat'||dmTab=='chat')||!CHAT_ACTIVE||CHAT_HISTORY_LOADING||CHAT_SYNC_LOADING)return;
+if(!(tab=='chat'||dmTab=='chat')||!CHAT_ACTIVE||CHAT_HISTORY_LOADING||CHAT_SYNC_LOADING||CHAT_SENDING||CHAT_UPLOADING)return;
 if(document.visibilityState=='hidden')return;
 
 CHAT_SYNC_LOADING=true;
@@ -4153,6 +4771,7 @@ const box=$('#chatPreview');
 const shouldScroll=!box||box.scrollHeight-box.scrollTop-box.clientHeight<60;
 CHAT_SYNC_CURSOR=Number(r.cursor);
 if(r.rows.length)CHAT_MESSAGES=mergeChatRows(CHAT_MESSAGES.concat(r.rows),type,target);
+if(r.rows.length)writeChatCache(type,target,CHAT_MESSAGES);
 if((tab=='chat'||dmTab=='chat')&&document.visibilityState!='hidden'){
 markChatSeen(type,target,CHAT_MESSAGES.reduce((latest,message)=>Math.max(latest,Number(message.ts)||0),0));
 updateChatNavBadge();
@@ -4173,13 +4792,38 @@ CHAT_SYNC_LOADING=false;
 }
 
 
+function chatAttachmentFromUpload(file){
+const id=String(file&&file.id||'');
+const kind=String(file&&file.kind||'file');
+if(!id)return null;
+return{
+kind:kind,
+id:id,
+name:String(file.name||'Lampiran'),
+mime:String(file.mime||''),
+size:Number(file.size)||0,
+url:kind=='image'?'https://drive.google.com/thumbnail?id='+id+'&sz=w1600':'https://drive.google.com/uc?export=download&id='+id,
+openUrl:'https://drive.google.com/file/d/'+id+'/view'
+};
+}
+
+
+function chatAttachmentLabel(attachment){
+if(!attachment)return '';
+if(attachment.kind=='image')return '📷 Foto';
+if(attachment.kind=='audio')return '🎤 Pesan suara';
+return '📎 '+String(attachment.name||'Lampiran');
+}
+
+
 async function sendTeamMessage(event){
 
 event.preventDefault();
 if(CHAT_SENDING)return;
 const input=$('#chatText');
 const text=input.value.trim();
-if(!CHAT_ACTIVE||!text)return;
+const draft=CHAT_ATTACHMENT;
+if(!CHAT_ACTIVE||(!text&&!draft))return;
 
 const target=CHAT_ACTIVE.id;
 const type=CHAT_ACTIVE.type;
@@ -4191,7 +4835,13 @@ text:text,
 ts:Date.now(),
 pending:true,
 type:type,
-target:target
+target:target,
+attachment:draft?{
+kind:draft.kind,
+name:draft.name,
+size:draft.size,
+url:draft.dataUrl
+}:null
 };
 
 CHAT_LOCAL_ECHOES.push(local);
@@ -4204,11 +4854,30 @@ renderChatMessages();
 scrollChatToBottom();
 
 try{
+let uploaded=null;
+if(draft){
+CHAT_UPLOADING=true;
+const status=$('#chatAttachPreview');
+if(status)status.innerHTML='<div class="chat-uploading">Mengunggah '+esc(chatAttachmentLabel(draft))+'…</div>';
+const up=await rpcLong('uploadChatFile',TOK,draft.dataUrl,draft.name,draft.mime);
+if(!up||typeof up!='object')throw new Error('Respons upload lampiran tidak valid.');
+if(up.err){
+if(up.err=='AUTH'){logout();return;}
+throw new Error(typeof up.err=='string'?up.err:'Lampiran gagal diunggah');
+}
+if(up.ok!==1||!up.file||!up.file.id)throw new Error('Server tidak mengembalikan data lampiran.');
+uploaded=up.file;
+local.attachment=chatAttachmentFromUpload(uploaded);
+if(CHAT_ACTIVE&&CHAT_ACTIVE.type==type&&CHAT_ACTIVE.id==target)renderChatMessages();
+}
+CHAT_UPLOADING=false;
+
 const r=await rpc(
 type=='group'?'sendGroupChat':type=='global'?'sendGlobalChat':'sendChat',
 TOK,
 target,
-text
+text,
+uploaded
 );
 if(!r||typeof r!='object')throw new Error('Format respons pengiriman pesan tidak valid.');
 if(r.err){
@@ -4217,15 +4886,16 @@ throw new Error(typeof r.err=='string'?r.err:'Pesan gagal dikirim');
 }
 if(r.ok!==1)throw new Error('Apps Script belum mengonfirmasi pengiriman pesan.');
 
+const preview=text||chatAttachmentLabel(uploaded);
 local.pending=false;
 if(type=='group'){
 const group=CHAT_GROUPS.find(item=>String(item.id)==target);
-if(group){group.lastText=text;group.lastTs=local.ts;group.lastFrom=USER;}
+if(group){group.lastText=preview;group.lastTs=local.ts;group.lastFrom=USER;}
 }else if(type=='personal'){
 const contact=CHAT_CONTACTS.find(item=>String(item.username)==target);
-if(contact){contact.lastText=text;contact.lastTs=local.ts;contact.lastFrom=USER;}
+if(contact){contact.lastText=preview;contact.lastTs=local.ts;contact.lastFrom=USER;}
 }else if(CHAT_GLOBAL){
-CHAT_GLOBAL.lastText=text;CHAT_GLOBAL.lastTs=local.ts;CHAT_GLOBAL.lastFrom=USER;
+CHAT_GLOBAL.lastText=preview;CHAT_GLOBAL.lastTs=local.ts;CHAT_GLOBAL.lastFrom=USER;
 }
 markChatSeen(type,target,local.ts);
 
@@ -4233,13 +4903,17 @@ const listSelector=type=='group'?'[data-group]':type=='global'?'[data-global]':'
 Array.from(document.querySelectorAll(listSelector)).forEach(button=>{
 const key=type=='group'?button.dataset.group:type=='global'?'global':button.dataset.username;
 if(String(key)!=target)return;
-const preview=button.querySelector('.chat-contact-copy span');
-if(preview)preview.textContent=text;
+const contactPreview=button.querySelector('.chat-contact-copy span');
+if(contactPreview)contactPreview.textContent=preview;
 });
 
+CHAT_ATTACHMENT=null;
+chatRenderAttachmentPreview();
 if(CHAT_ACTIVE&&CHAT_ACTIVE.type==type&&CHAT_ACTIVE.id==target){
 CHAT_MESSAGES=mergeChatRows(CHAT_MESSAGES,type,target);
+writeChatCache(type,target,CHAT_MESSAGES);
 renderChatMessages();
+scrollChatToBottom();
 }
 
 toast('Pesan terkirim');
@@ -4248,12 +4922,14 @@ CHAT_LOCAL_ECHOES=CHAT_LOCAL_ECHOES.filter(item=>item.id!=local.id);
 if(CHAT_ACTIVE&&CHAT_ACTIVE.type==type&&CHAT_ACTIVE.id==target){
 CHAT_MESSAGES=CHAT_MESSAGES.filter(item=>item.id!=local.id);
 renderChatMessages();
-if(input&& !input.value)input.value=text;
+if(input&&!input.value)input.value=text;
 }
 toast('Pesan gagal dikirim: '+String((e&&e.message)||e));
 }finally{
+CHAT_UPLOADING=false;
 CHAT_SENDING=false;
 if(submit&&submit.isConnected)submit.disabled=false;
+chatRenderAttachmentPreview();
 }
 
 }
@@ -4261,21 +4937,61 @@ if(submit&&submit.isConnected)submit.disabled=false;
 
 CHAT_TIMER=setInterval(
 async()=>{
-if(TOK){
+if(TOK&&!CHAT_HISTORY_LOADING&&!CHAT_SENDING&&!CHAT_UPLOADING){
 await pollChatNotifications();
 }
 },
-5000
+8000
 );
 
 CHAT_SYNC_TIMER=setInterval(
 ()=>{
-if(TOK&&document.visibilityState!='hidden'&&(tab=='chat'||dmTab=='chat')&&CHAT_ACTIVE){
+if(TOK&&document.visibilityState!='hidden'&&(tab=='chat'||dmTab=='chat')&&CHAT_ACTIVE&&!CHAT_HISTORY_LOADING&&!CHAT_SENDING&&!CHAT_UPLOADING){
 refreshChatHistory();
 }
 },
-1500
+3000
 );
+
+function depositTicker(){
+const items=[];
+const add=(lead,by)=>{
+if(!lead||String(lead.status)!='deal')return;
+const note=String(lead.notes||'');
+const amount=(note.match(/rp\.?\s*([\d][\d.,]*)/i)||[])[1]||'';
+items.push({
+name:String(lead.name||'Nasabah'),
+product:String(lead.product||''),
+by:String(by||''),
+amount:amount,
+ts:Date.parse(lead.last||lead.c)||0
+});
+};
+if(ROLE=='DM'||ROLE=='BM'){
+(TEAM||[]).forEach(member=>{
+const leads=member&&member.state&&member.state.leads||[];
+leads.forEach(lead=>add(lead,member.nama||member.user));
+});
+}else{
+(S.leads||[]).forEach(lead=>add(lead,S.name));
+}
+items.sort((a,b)=>b.ts-a.ts);
+const messages=items.slice(0,8).map(item=>
+`🎉 ${item.name} berhasil closing${item.product?' — '+item.product:''}${item.amount?' · Rp'+item.amount:''}${item.by?' · '+item.by:''}`
+);
+if(!messages.length)messages.push('Belum ada deposit tercatat — jemput closing berikutnya!');
+const doubled=messages.concat(messages);
+const duration=Math.max(26,Math.min(70,12+messages.length*6));
+return`<div class="deposit-ticker" role="status" aria-live="polite">
+<span class="deposit-ticker-label">CLOSING</span>
+<div class="deposit-ticker-window">
+<div class="deposit-ticker-track" style="animation-duration:${duration}s">
+${doubled.map(text=>`<span class="deposit-ticker-item">${esc(text)}</span>`).join('')}
+</div>
+</div>
+</div>`;
+}
+
 
 function home(){
 
@@ -4346,6 +5062,8 @@ year:'numeric'
 </div>
 </div>
 </div>
+
+${depositTicker()}
 
 <div class="card home-progress" style="margin-top:14px">
 
@@ -7048,6 +7766,7 @@ aria-label="Muat ulang"
 
 ${perChips()}
 
+${depositTicker()}
 
 <div class="grid">
 
@@ -8350,6 +9069,7 @@ ${n[1]}
 .join('');
 
 syncChatFocus();
+chatAfterRender();
 
 }
 
@@ -8454,6 +9174,7 @@ ${n[1]}
 .join('');
 
 syncChatFocus();
+chatAfterRender();
 
 }
 
