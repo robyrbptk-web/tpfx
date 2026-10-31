@@ -1604,7 +1604,17 @@ Cache berita di memori function berlaku 5 menit, cache harga 60 detik, dan respo
 
 Di frontend, tombol kaca pembesar di kepala percakapan membuka kolom pencarian. Pesan yang sudah dimuat disaring langsung dengan sorotan kata kunci, lalu hasil dari riwayat lebih lama ditampilkan di bagian **Dari riwayat lebih lama**. Mengetuk hasil memuat 50 pesan konteks di sekitar baris tersebut, menutup pencarian, dan menyorot gelembung yang dituju.
 
-**Kamera dan lokasi** — tombol kamera memakai `<input type="file" accept="image/*" capture="environment">` sehingga langsung membuka kamera belakang di HP (di desktop menjadi pemilih file). Tombol lokasi memakai `navigator.geolocation` dan mengirim teks `📍 Lokasi saya` + tautan `https://www.google.com/maps?q=<lat>,<lng>`. Pesan seperti ini dirender sebagai kartu lokasi dengan koordinat dan tautan ke Google Maps; tidak ada perubahan skema backend.
+**Kamera dan lokasi** — tombol lampiran di composer membuka menu berisi **Kamera**, **Foto & file**, dan **Lokasi**, sehingga deretan tombol tidak lagi berdesakan. Kamera memakai `<input type="file" accept="image/*" capture="environment">` (kamera belakang di HP, pemilih file di desktop); foto & file memakai input lampiran biasa.
+
+Bagikan lokasi memakai GPS presisi tinggi (`watchPosition`, `enableHighAccuracy`, `maximumAge: 0`) dengan beberapa sampel hingga 7 detik lalu memilih titik dengan akurasi terbaik. Sheet pengirim menampilkan pratinjau peta, badge akurasi (`Akurasi bagus` ≤30 m, `Cukup akurat` ≤100 m, `Akurasi rendah` >100 m), alamat hasil reverse geocode, dan tombol **Perbarui** sebelum **Kirim lokasi**. Pesan terkirim berformat:
+
+```
+📍 Lokasi saya (akurasi ±8 m)
+https://www.google.com/maps?q=-0.918600,104.466500
+Jl. Jend. Sudirman No. 12, Tanjung Pinang
+```
+
+Tautan Google tetap dipakai agar pesan lama tetap terbaca. Di chat, pesan dirender sebagai kartu dengan pratinjau tile **OpenStreetMap** (gratis, tanpa API key), pin, alamat, dan koordinat; mengetuk kartu membuka sheet peta interaktif OpenStreetMap berisi tombol **Rute Google Maps**, **OpenStreetMap**, dan **Salin** koordinat. Alamat diambil dari `api/geocode.js` (Vercel Function) yang memanggil Nominatim reverse geocoding dengan cache memori 24 jam; bila gagal, titik tetap bisa dikirim tanpa alamat. Tidak ada perubahan skema backend.
 
 **Emoji dan stiker** — panel emoji/stiker di atas composer berisi 86 emoji dan 50 stiker. Mode Emoji menyisipkan karakter ke teks; mode Stiker langsung mengirim pesan. Pesan yang isinya hanya emoji (tanpa teks/lampiran) dirender besar dengan animasi pop dan mengapung. GIF juga tetap didukung sebagai lampiran foto dan beranimasi di `<img>`; tidak ada API GIF berbayar/berkunci yang dipakai.
 
