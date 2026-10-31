@@ -19,14 +19,19 @@ self.addEventListener('push', event => {
     } catch (e) {}
 
     const title = String(data.title || 'TPFX Workspace');
+    const ts = Number(data.ts) || Date.now();
     const options = {
       body: String(data.body || 'Anda menerima pesan baru'),
       icon: NOTIFICATION_ICON,
       badge: NOTIFICATION_ICON,
       tag: String(data.tag || 'tpfx'),
       renotify: !!data.tag,
-      data: { url: String(data.url || './index.html') },
-      vibrate: [80, 40, 80]
+      data: { url: String(data.url || './index.html'), ts: ts },
+      vibrate: [90, 40, 90],
+      lang: 'id',
+      dir: 'auto',
+      silent: false,
+      timestamp: ts
     };
 
     try {
@@ -63,6 +68,10 @@ self.addEventListener('message', event => {
     icon: NOTIFICATION_ICON,
     badge: NOTIFICATION_ICON,
     tag: String(data.tag || 'tpfx-local'),
-    data: { url: String(data.url || './index.html') }
+    data: { url: String(data.url || './index.html'), ts: Date.now() },
+    lang: 'id',
+    dir: 'auto',
+    silent: false,
+    timestamp: Date.now()
   });
 });
