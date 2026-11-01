@@ -36,6 +36,12 @@ self.addEventListener('push', event => {
 
     try {
       const list = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      const target = new URL(String(data.url || './index.html'), self.registration.scope).href;
+      if (String(data.tag || '').indexOf('tpfx-call-') === 0 && target.indexOf('#call=') >= 0) {
+        list.forEach(client => {
+          try { client.postMessage({ type: 'incoming-call', url: target }); } catch (e) {}
+        });
+      }
       if (list.some(client => client.focused)) return;
     } catch (e) {}
 

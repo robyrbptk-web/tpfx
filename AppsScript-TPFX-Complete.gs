@@ -17,6 +17,9 @@ function ss_() {
 }
 
 const DEFAULT_TEAM = 'TPFX';
+const USER_HEADERS = [
+  'username', 'password', 'nama', 'aktif', 'role', 'photoUrl', 'team', 'bio', 'wa'
+];
 let TEAM_HEADER_READY_ = false;
 
 function users_() {
@@ -25,6 +28,10 @@ function users_() {
   if (!TEAM_HEADER_READY_) {
     if (s.getLastColumn() < 7 || !String(s.getRange(1, 7).getValue()).trim()) {
       s.getRange(1, 7).setValue('team');
+    }
+    // bio (kolom 8) dan wa (kolom 9) dipakai profil, chat, dan fallback telepon.
+    if (s.getLastColumn() < 9) {
+      s.getRange(1, 8, 1, 2).setValues([['bio', 'wa']]);
     }
     TEAM_HEADER_READY_ = true;
   }
@@ -192,6 +199,7 @@ function chatFileKind_(mime) {
   mime = String(mime || '').toLowerCase();
   if (mime.indexOf('image/') == 0) return 'image';
   if (mime.indexOf('audio/') == 0) return 'audio';
+  if (mime.indexOf('video/') == 0) return 'video';
   return 'file';
 }
 
@@ -199,6 +207,9 @@ function chatFileAllowed_(kind, mime) {
   mime = String(mime || '').toLowerCase().split(';')[0].trim();
   if (kind == 'image') {
     return /^image\/(?:jpeg|png|webp|gif)$/.test(mime);
+  }
+  if (kind == 'video') {
+    return storyFileAllowed_('video', mime);
   }
   if (kind == 'audio') {
     return /^audio\/(?:webm|ogg|mp4|mpeg|mp3|wav|x-m4a|m4a)$/.test(mime);
@@ -480,8 +491,7 @@ function setup() {
   const properties = PropertiesService.getScriptProperties();
 
   if (!b.getSheetByName('Users')) {
-    b.insertSheet('Users')
-      .appendRow(['username', 'password', 'nama', 'aktif', 'role', 'photoUrl', 'team']);
+    b.insertSheet('Users').appendRow(USER_HEADERS);
   }
 
   if (!b.getSheetByName('Data')) {
@@ -531,6 +541,9 @@ function setup() {
     ]);
   }
 
+  stories_();
+  signals_();
+
   chatSummary_();
   pushSubs_();
   if (properties.getProperty('CHAT_SUMMARY_VERSION') != '1') {
@@ -544,6 +557,9 @@ function setup() {
   }
   if (!String(usersSheet.getRange(1, 7).getValue() || '').trim()) {
     usersSheet.getRange(1, 7).setValue('team');
+  }
+  if (usersSheet.getLastColumn() < 9) {
+    usersSheet.getRange(1, 8, 1, 2).setValues([['bio', 'wa']]);
   }
 
   // Existing manager passwords are preserved. For a missing manager account,
@@ -673,7 +689,14 @@ function api_() {
     pushConfig: pushConfig,
     subscribePush: subscribePush,
     unsubscribePush: unsubscribePush,
-    testPush: testPush
+    testPush: testPush,
+    updateContactDetails: updateContactDetails,
+    addStory: addStory,
+    listStories: listStories,
+    deleteStory: deleteStory,
+    sendSignal: sendSignal,
+    pullSignals: pullSignals,
+    callConfig: callConfig
   };
 }
 
@@ -923,7 +946,9 @@ function loadState(t) {
       target: targetOverride === null
         ? (state && state.target || 10)
         : Number(targetOverride),
-      photoUrl: String(me[5] || '')
+      photoUrl: String(me[5] || ''),
+      bio: String(me[7] || ''),
+      wa: String(me[8] || '')
     };
 
   } catch (e) {
@@ -2698,7 +2723,9 @@ function socialUsers_(team) {
     users[key] = {
       nama: String(r[2] || r[0]),
       role: String(r[4] || 'BDO').toUpperCase(),
-      photoUrl: String(r[5] || '')
+      photoUrl: String(r[5] || ''),
+      bio: String(r[7] || ''),
+      wa: String(r[8] || '')
     };
   });
   return users;
@@ -3180,6 +3207,8 @@ function chatContacts(t) {
       nama: String(r[2] || other),
       role: String(r[4] || 'BDO').toUpperCase(),
       photoUrl: String(r[5] || ''),
+      bio: String(r[7] || ''),
+      wa: String(r[8] || ''),
       lastText: '',
       lastTs: 0,
       lastFrom: ''
@@ -3693,6 +3722,8 @@ function chatNotificationSummary(t) {
       nama: profiles[peer.toLowerCase()].nama || peer,
       role: profiles[peer.toLowerCase()].role || 'BDO',
       photoUrl: profiles[peer.toLowerCase()].photoUrl || '',
+      bio: profiles[peer.toLowerCase()].bio || '',
+      wa: profiles[peer.toLowerCase()].wa || '',
       lastText: '',
       lastTs: 0,
       lastFrom: ''
@@ -4070,6 +4101,28 @@ function purgeSocialData_(username) {
     }
   });
 
+  const stories = stories_();
+  const storyRows = stories.getDataRange().getValues();
+  for (let i = storyRows.length - 1; i >= 1; i--) {
+    if (String(storyRows[i][1]).toLowerCase() != key) continue;
+    const fileId = String(storyRows[i][5] || '').trim();
+    stories.deleteRow(i + 1);
+    if (/^[A-Za-z0-9_-]{10,}$/.test(fileId)) {
+      try {
+        DriveApp.getFileById(fileId).setTrashed(true);
+      } catch (e) {}
+    }
+  }
+
+  const signals = signals_();
+  const signalRows = signals.getDataRange().getValues();
+  for (let i = signalRows.length - 1; i >= 1; i--) {
+    if (String(signalRows[i][1]).toLowerCase() == key ||
+        String(signalRows[i][2]).toLowerCase() == key) {
+      signals.deleteRow(i + 1);
+    }
+  }
+
   const messages = messages_();
   const messageRows = messages.getDataRange().getValues();
 
@@ -4113,4 +4166,413 @@ function purgeSocialData_(username) {
   }
 
   rebuildChatSummary_();
+}
+// ============================================================
+// PROFIL: BIO & NOMOR WHATSAPP
+// ============================================================
+// Bio (kolom 8) dan nomor WhatsApp (kolom 9) diisi sendiri oleh tiap akun.
+// Nomor WhatsApp dipakai sebagai tautan fallback bila panggilan
+// peer-to-peer di dalam aplikasi tidak tersambung.
+
+function normalizeWa_(value) {
+  const raw = String(value || '').replace(/[^\d+]/g, '');
+  if (!raw) return '';
+  let digits = raw.replace(/^\+/, '');
+  if (/^0+/.test(digits)) digits = '62' + digits.replace(/^0+/, '');
+  if (!/^\d+$/.test(digits)) return '';
+  if (digits.length < 9 || digits.length > 15) return '';
+  return digits;
+}
+
+function updateContactDetails(t, bio, wa) {
+  const username = user_(t);
+  const account = username && findUser_(username);
+  if (!account) return { err: 'AUTH' };
+
+  bio = String(bio == null ? (account[7] == null ? '' : account[7]) : bio)
+    .replace(/[\r\n\t]+/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+    .slice(0, 140);
+
+  const waDigits = wa == null ? String(account[8] || '') : normalizeWa_(wa);
+  if (String(wa || '').trim() && !waDigits) {
+    return { err: 'Nomor WhatsApp tidak valid. Gunakan format 08xx atau +628xx.' };
+  }
+
+  const sheet = users_();
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    sheet.getRange(account.idx, 8, 1, 2).setValues([[bio, waDigits]]);
+  } finally {
+    lock.releaseLock();
+  }
+
+  touchSession_(t, username);
+  return { ok: 1, bio: bio, wa: waDigits };
+}
+
+
+// ============================================================
+// STORY (HILANG OTOMATIS SESUDAH 24 JAM)
+// ============================================================
+
+const STORY_TTL_MS = 24 * 60 * 60 * 1000;
+const STORY_PER_USER_LIMIT = 10;
+const STORY_TEXT_MAX = 200;
+const STORY_CAPTION_MAX = 200;
+
+function stories_() {
+  return sheetEnsure_('Stories', [
+    'id', 'username', 'nama', 'kind', 'text',
+    'fileId', 'fileName', 'mimeType', 'size', 'ts', 'expires'
+  ]);
+}
+
+function storyFileAllowed_(kind, mime) {
+  mime = String(mime || '').toLowerCase().split(';')[0].trim();
+  if (kind == 'image') return /^image\/(?:jpeg|png|webp|gif)$/.test(mime);
+  if (kind == 'video') return /^video\/(?:mp4|webm|quicktime|x-m4v|3gpp)$/.test(mime);
+  return false;
+}
+
+function storyFileInput_(value, kind) {
+  if (!value || typeof value != 'object') return null;
+  const id = String(value.id || '').trim();
+  if (!/^[A-Za-z0-9_-]{10,}$/.test(id)) return null;
+  const mime = String(value.mime || '').toLowerCase().split(';')[0].trim();
+  if (!storyFileAllowed_(kind, mime)) return null;
+  return {
+    id: id,
+    mime: mime.slice(0, 120),
+    name: String(value.name || 'Story')
+      .replace(/[\r\n\t]+/g, ' ')
+      .slice(0, 120) || 'Story',
+    size: Math.max(0, Math.min(CHAT_FILE_MAX_BYTES, Number(value.size) || 0))
+  };
+}
+
+function storyFileFromRow_(row) {
+  const id = String(row[5] || '').trim();
+  if (!/^[A-Za-z0-9_-]{10,}$/.test(id)) return null;
+  const kind = String(row[3] || 'image');
+  return {
+    kind: kind,
+    id: id,
+    name: String(row[6] || 'Story'),
+    mime: String(row[7] || ''),
+    size: Number(row[8]) || 0,
+    url: kind == 'video'
+      ? 'https://drive.google.com/uc?export=download&id=' + id
+      : 'https://drive.google.com/thumbnail?id=' + id + '&sz=w1600'
+  };
+}
+
+function addStory(t, kind, text, file) {
+  const ctx = callerContext_(t);
+  if (!ctx) return { err: 'AUTH' };
+
+  kind = String(kind || '').toLowerCase();
+  if (['image', 'video', 'text'].indexOf(kind) < 0) {
+    return { err: 'Jenis story tidak dikenal' };
+  }
+
+  text = String(text || '').replace(/[\r\n\t]{2,}/g, ' ').trim();
+  const limit = kind == 'text' ? STORY_TEXT_MAX : STORY_CAPTION_MAX;
+  if (text.length > limit) {
+    return { err: 'Teks story maksimal ' + limit + ' karakter' };
+  }
+  if (kind == 'text' && !text) return { err: 'Teks story tidak boleh kosong' };
+
+  let input = null;
+  if (kind != 'text') {
+    input = storyFileInput_(file, kind);
+    if (!input) return { err: 'File story tidak valid atau formatnya tidak didukung' };
+  }
+
+  const sheet = stories_();
+  const rows = sheet.getDataRange().getValues();
+  const now = Date.now();
+  const mine = rows.slice(1).filter(function (r) {
+    return String(r[1] || '').toLowerCase() == ctx.username.toLowerCase() &&
+      (Number(r[10]) || 0) > now;
+  });
+  if (mine.length >= STORY_PER_USER_LIMIT) {
+    return { err: 'Maksimal ' + STORY_PER_USER_LIMIT + ' story aktif. Hapus story lama dulu.' };
+  }
+
+  const id = Utilities.getUuid();
+  sheet.appendRow([
+    id, ctx.username, String(ctx.account[2] || ctx.username), kind, text,
+    input ? input.id : '', input ? input.name : '', input ? input.mime : '',
+    input ? input.size : 0, now, now + STORY_TTL_MS
+  ]);
+
+  return {
+    ok: 1,
+    story: {
+      id: id,
+      username: ctx.username,
+      nama: String(ctx.account[2] || ctx.username),
+      kind: kind,
+      text: text,
+      file: input ? Object.assign({}, input, { type: kind }) : null,
+      ts: now,
+      expires: now + STORY_TTL_MS
+    }
+  };
+}
+
+function listStories(t) {
+  const ctx = callerContext_(t);
+  if (!ctx) return { err: 'AUTH' };
+
+  const sheet = stories_();
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return { rows: [] };
+
+  const start = Math.max(2, lastRow - 1999);
+  const values = sheet.getRange(start, 1, lastRow - start + 1, 11).getValues();
+  const profiles = socialUsers_(ctx.root ? null : ctx.team);
+  const now = Date.now();
+  const expired = [];
+  const stories = [];
+
+  values.forEach(function (row, index) {
+    const author = String(row[1] || '').toLowerCase();
+    if (!author) return;
+    if ((Number(row[10]) || 0) <= now) {
+      expired.push({ row: start + index, id: String(row[5] || '') });
+      return;
+    }
+    // Story hanya tampil untuk anggota tim yang sama (BM/DM melihat semua).
+    if (!ctx.root && !profiles[author]) return;
+
+    const profile = profiles[author] || {};
+    stories.push({
+      id: String(row[0]),
+      username: String(row[1]),
+      nama: String(row[2] || profile.nama || row[1]),
+      photoUrl: String(profile.photoUrl || ''),
+      kind: String(row[3] || 'text'),
+      text: String(row[4] || ''),
+      file: storyFileFromRow_(row),
+      ts: Number(row[9]) || 0,
+      expires: Number(row[10]) || 0
+    });
+  });
+
+  for (let i = expired.length - 1; i >= 0; i--) {
+    if (expired[i].id && /^[A-Za-z0-9_-]{10,}$/.test(expired[i].id)) {
+      try {
+        DriveApp.getFileById(expired[i].id).setTrashed(true);
+      } catch (e) {}
+    }
+    try {
+      sheet.deleteRow(expired[i].row);
+    } catch (e) {}
+  }
+
+  return { rows: stories };
+}
+
+function deleteStory(t, id) {
+  const ctx = callerContext_(t);
+  if (!ctx) return { err: 'AUTH' };
+
+  id = String(id || '').trim();
+  if (!id) return { err: 'Story tidak ditemukan' };
+
+  const sheet = stories_();
+  const values = sheet.getDataRange().getValues();
+
+  for (let i = values.length - 1; i >= 1; i--) {
+    if (String(values[i][0]) != id) continue;
+    const author = String(values[i][1] || '').toLowerCase();
+    const isMine = author == ctx.username.toLowerCase();
+    if (!isMine && !canManageAccount_(ctx.account, findUser_(values[i][1]))) {
+      return { err: 'Anda tidak dapat menghapus story ini' };
+    }
+    const fileId = String(values[i][5] || '').trim();
+    sheet.deleteRow(i + 1);
+    if (fileId && /^[A-Za-z0-9_-]{10,}$/.test(fileId)) {
+      try {
+        DriveApp.getFileById(fileId).setTrashed(true);
+      } catch (e) {}
+    }
+    return { ok: 1 };
+  }
+
+  return { err: 'Story tidak ditemukan' };
+}
+
+
+// ============================================================
+// SINYAL PANGGILAN (WebRTC suara & video di dalam aplikasi)
+// ============================================================
+// Baris sinyal terus ditambahkan; pembaca memakai kursor baris seperti
+// chatSync sehingga tiap perangkat hanya menarik baris baru. Setiap pesan
+// signaling hanya bisa dibaca oleh penerimanya (kolom to == akun saya).
+
+const SIGNAL_MAX_PAYLOAD = 60000;
+const SIGNAL_PRUNE_ROWS = 5000;
+const SIGNAL_MAX_AGE_MS = 60 * 60 * 1000;
+const SIGNAL_TYPES = [
+  'invite', 'accept', 'decline', 'busy', 'offer', 'answer', 'hangup'
+];
+const RTC_ICE_PROP = 'RTC_ICE_SERVERS';
+const RTC_DEFAULT_ICE_ = [
+  {
+    urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302']
+  },
+  {
+    urls: [
+      'turn:openrelay.metered.ca:80',
+      'turn:openrelay.metered.ca:443?transport=tcp'
+    ],
+    username: 'openrelayproject',
+    credential: 'openrelayproject'
+  }
+];
+
+function signals_() {
+  return sheetEnsure_('Signals', ['room', 'from', 'to', 'type', 'payload', 'ts']);
+}
+
+function signalRoomPartners_(room) {
+  const values = signals_().getDataRange().getValues();
+  for (let i = values.length - 1; i >= 1; i--) {
+    if (String(values[i][0]) != room) continue;
+    return [
+      String(values[i][1] || '').toLowerCase(),
+      String(values[i][2] || '').toLowerCase()
+    ];
+  }
+  return null;
+}
+
+function sendSignal(t, room, to, type, payload) {
+  const ctx = callerContext_(t);
+  if (!ctx) return { err: 'AUTH' };
+
+  room = String(room || '').trim();
+  to = String(to || '').trim();
+  type = String(type || '').toLowerCase();
+
+  if (!/^[A-Za-z0-9_-]{6,64}$/.test(room)) return { err: 'Ruang panggilan tidak valid' };
+  if (SIGNAL_TYPES.indexOf(type) < 0) return { err: 'Jenis sinyal tidak dikenal' };
+
+  const peerRow = to && findUser_(to);
+  if (!peerRow || to.toLowerCase() == ctx.username.toLowerCase() ||
+      !canChatWith_(ctx.account, peerRow)) {
+    return { err: 'Akun panggilan tidak ditemukan' };
+  }
+
+  const body = String(payload == null ? '' : payload);
+  if (body.length > SIGNAL_MAX_PAYLOAD) return { err: 'Data sinyal terlalu besar' };
+
+  const me = ctx.username.toLowerCase();
+  const partners = signalRoomPartners_(room);
+  if (partners) {
+    const samePair = (partners[0] == me && partners[1] == to.toLowerCase()) ||
+      (partners[1] == me && partners[0] == to.toLowerCase());
+    if (!samePair || type == 'invite') {
+      return { err: 'Ruang panggilan sudah dipakai percakapan lain' };
+    }
+  }
+
+  const sheet = signals_();
+  const ts = Date.now();
+  sheet.appendRow([room, ctx.username, to, type, body, ts]);
+
+  if (type == 'invite') {
+    pushQuiet_(function () {
+      pushToUsers_([to], {
+        title: 'Panggilan masuk',
+        body: String(ctx.account[2] || ctx.username) + ' menelepon Anda',
+        url: './index.html#call=personal:' + ctx.username,
+        tag: 'tpfx-call-' + room
+      });
+    });
+  }
+
+  return { ok: 1, ts: ts };
+}
+
+function pullSignals(t, afterRow, room) {
+  const ctx = callerContext_(t);
+  if (!ctx) return { err: 'AUTH' };
+
+  const sheet = signals_();
+  let lastRow = sheet.getLastRow();
+  const wanted = String(room || '').trim();
+  const me = ctx.username.toLowerCase();
+  let cursor = Math.max(1, Math.floor(Number(afterRow) || 1));
+  let pruned = 0;
+
+  if (lastRow > SIGNAL_PRUNE_ROWS) {
+    const cutoff = Date.now() - SIGNAL_MAX_AGE_MS;
+    const times = sheet.getRange(2, 6, lastRow - 1, 1).getValues();
+    let stop = 1;
+    for (let i = 0; i < times.length; i++) {
+      if ((Number(times[i][0]) || 0) > cutoff) break;
+      stop = i + 2;
+    }
+    if (stop >= 2) {
+      try {
+        sheet.deleteRows(2, stop - 1);
+        pruned = stop - 1;
+        cursor = Math.max(1, cursor - pruned);
+        lastRow = sheet.getLastRow();
+      } catch (e) {}
+    }
+  }
+
+  if (cursor >= lastRow) return { rows: [], cursor: lastRow, pruned: pruned };
+
+  const start = cursor + 1;
+  const end = Math.min(lastRow, start + 999);
+  const values = sheet.getRange(start, 1, end - start + 1, 6).getValues();
+  const rows = [];
+
+  values.forEach(function (row, index) {
+    if (String(row[2] || '').toLowerCase() != me) return;
+    if (wanted && String(row[0]) != wanted) return;
+    rows.push({
+      row: start + index,
+      room: String(row[0]),
+      from: String(row[1] || ''),
+      type: String(row[3] || ''),
+      payload: String(row[4] || ''),
+      ts: Number(row[5]) || 0
+    });
+  });
+
+  return { rows: rows, cursor: end, pruned: pruned };
+}
+
+function callConfig(t) {
+  const ctx = callerContext_(t);
+  if (!ctx) return { err: 'AUTH' };
+
+  let ice = RTC_DEFAULT_ICE_;
+  const raw = String(
+    PropertiesService.getScriptProperties().getProperty(RTC_ICE_PROP) || ''
+  ).trim();
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length &&
+          parsed.every(function (s) { return s && s.urls; })) {
+        ice = parsed;
+      }
+    } catch (e) {}
+  }
+
+  return {
+    ice: ice,
+    ttlMs: SIGNAL_MAX_AGE_MS,
+    wa: String(ctx.account[8] || '')
+  };
 }

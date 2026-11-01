@@ -2630,6 +2630,415 @@ transition:opacity .22s ease,transform .32s cubic-bezier(.22,1,.36,1)
 .lead,.col .lead{transition:transform .2s cubic-bezier(.22,1,.36,1),box-shadow .2s ease}
 }
 
+/* ===================== STORY 24 JAM ===================== */
+.chat-peer-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chat-call-actions{display:flex;gap:6px;flex:none}
+.story-tray{
+display:flex;
+gap:10px;
+overflow-x:auto;
+padding:12px 14px;
+border-bottom:1px solid var(--line);
+scrollbar-width:thin
+}
+.story-tray[hidden]{display:none}
+.story-item{
+flex:none;
+width:66px;
+display:flex;
+flex-direction:column;
+align-items:center;
+gap:6px;
+padding:0;
+background:none;
+border:0;
+cursor:pointer
+}
+.story-item>b{
+font-size:11px;
+font-weight:700;
+color:var(--mut);
+max-width:66px;
+overflow:hidden;
+text-overflow:ellipsis;
+white-space:nowrap
+}
+.story-ring{
+position:relative;
+display:grid;
+place-items:center;
+width:52px;
+height:52px;
+border-radius:50%;
+padding:3px;
+background:conic-gradient(from 210deg,#f7b733,#fc4a1a,#e850a5,#4b6cb7,#f7b733)
+}
+.story-ring.seen{background:var(--line)}
+.story-ring>.social-avatar{
+width:100%;
+height:100%;
+border:2px solid var(--card);
+border-radius:50%;
+overflow:hidden;
+display:grid;
+place-items:center
+}
+.story-ring .social-avatar{
+width:100%;
+height:100%;
+border-radius:50%;
+font-size:13px
+}
+.story-plus{
+position:absolute;
+right:-2px;
+bottom:-2px;
+width:21px;
+height:21px;
+border-radius:50%;
+background:var(--pri);
+color:#fff;
+border:2px solid var(--card);
+display:grid;
+place-items:center;
+font-style:normal;
+font-weight:800;
+font-size:12px;
+line-height:1
+}
+.story-plus svg{width:11px;height:11px}
+
+.story-viewer{
+position:fixed;
+inset:0;
+z-index:70;
+display:flex;
+flex-direction:column;
+background:#05070d;
+color:#fff;
+animation:tpfx-view-in .18s ease both
+}
+.story-viewer[hidden]{display:none}
+.story-head{
+flex:none;
+display:flex;
+align-items:center;
+gap:10px;
+padding:calc(10px + env(safe-area-inset-top,0px)) 14px 8px
+}
+.story-who{
+flex:1;
+min-width:0;
+display:flex;
+flex-direction:column
+}
+.story-who b{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.story-who span{font-size:11px;color:rgba(255,255,255,.72)}
+.story-viewer .social-avatar{width:34px;height:34px;font-size:12px}
+.story-close{
+flex:none;
+width:34px;
+height:34px;
+border-radius:50%;
+border:0;
+background:rgba(255,255,255,.16);
+color:#fff;
+display:grid;
+place-items:center;
+cursor:pointer
+}
+.story-close svg{width:17px;height:17px}
+.story-bars{
+flex:none;
+display:flex;
+gap:4px;
+padding:2px 14px 8px
+}
+.story-bar{
+flex:1;
+height:3px;
+border-radius:99px;
+background:rgba(255,255,255,.28);
+overflow:hidden
+}
+.story-bar i{
+display:block;
+height:100%;
+width:0;
+border-radius:99px;
+background:#fff
+}
+.story-bar.done i{width:100%}
+.story-bar.current i{animation:storyFill var(--dur,5000ms) linear forwards}
+@keyframes storyFill{from{width:0}to{width:100%}}
+.story-body{
+position:relative;
+flex:1;
+min-height:0;
+display:grid;
+place-items:center;
+overflow:hidden
+}
+.story-media{
+width:100%;
+height:100%;
+object-fit:contain;
+background:#05070d
+}
+.story-text-card{
+width:100%;
+height:100%;
+display:grid;
+place-items:center;
+padding:26px 20px
+}
+.story-text-card p{
+margin:0;
+max-width:20ch;
+text-align:center;
+font-size:clamp(20px,6vw,32px);
+font-weight:800;
+line-height:1.3;
+word-break:break-word
+}
+.bg0{background:linear-gradient(135deg,#3158d8,#8b5cf6)}
+.bg1{background:linear-gradient(135deg,#0f9d58,#1d9bf0)}
+.bg2{background:linear-gradient(135deg,#e850a5,#fc4a1a)}
+.bg3{background:linear-gradient(135deg,#f7b733,#e53935)}
+.bg4{background:linear-gradient(135deg,#155e75,#0ea5a4)}
+.bg5{background:linear-gradient(135deg,#4a5060,#192238)}
+.story-caption{
+position:absolute;
+left:0;
+right:0;
+bottom:0;
+padding:14px 16px calc(10px + env(safe-area-inset-bottom,0px));
+background:linear-gradient(transparent,rgba(5,7,13,.82));
+font-size:14px;
+text-align:center
+}
+.story-nav{
+position:absolute;
+top:0;
+bottom:0;
+width:36%;
+border:0;
+background:transparent;
+cursor:pointer
+}
+.story-nav.left{left:0}
+.story-nav.right{left:36%;width:64%}
+.story-foot{
+flex:none;
+display:flex;
+align-items:center;
+gap:10px;
+padding:10px 14px calc(16px + env(safe-area-inset-bottom,0px))
+}
+.story-foot .btn{flex:1}
+.story-foot .story-reply{
+flex:1;
+height:40px;
+border-radius:99px;
+border:1px solid rgba(255,255,255,.34);
+background:transparent;
+color:#fff;
+font-size:13px;
+font-weight:700;
+padding:0 14px
+}
+
+.story-sheet{
+position:fixed;
+inset:0;
+z-index:75;
+display:grid;
+place-items:center;
+padding:18px;
+background:rgba(8,12,22,.72)
+}
+.story-sheet[hidden]{display:none}
+.story-sheet-card{
+width:min(430px,100%);
+max-height:88vh;
+overflow:auto;
+display:flex;
+flex-direction:column;
+gap:12px;
+padding:16px;
+border-radius:20px;
+background:var(--card);
+color:var(--ink);
+animation:tpfx-sheet-in .26s cubic-bezier(.22,1,.36,1) both
+}
+.story-sheet-card h3{margin:0;font-size:16px}
+.story-choice{
+display:flex;
+align-items:center;
+gap:12px;
+padding:12px 14px;
+border:1px solid var(--line);
+border-radius:14px;
+background:#fff;
+text-align:left;
+cursor:pointer
+}
+.story-choice:hover{background:var(--social-soft);border-color:var(--social)}
+.story-choice span{
+flex:none;
+width:38px;
+height:38px;
+border-radius:12px;
+display:grid;
+place-items:center;
+background:var(--social-soft);
+color:var(--social)
+}
+.story-choice span svg{width:20px;height:20px}
+.story-choice b{display:block;font-size:14px}
+.story-choice small{color:var(--mut);font-size:12px}
+.story-preview{
+width:100%;
+max-height:46vh;
+border-radius:14px;
+object-fit:contain;
+background:#05070d
+}
+.story-text-draft{
+width:100%;
+min-height:150px;
+border-radius:16px;
+padding:18px;
+color:#fff;
+font-size:19px;
+font-weight:800;
+text-align:center;
+display:grid;
+place-items:center
+}
+.story-text-draft textarea{
+width:100%;
+min-height:110px;
+border:0;
+background:transparent;
+color:#fff;
+font:inherit;
+text-align:center;
+resize:vertical
+}
+.story-text-draft textarea::placeholder{color:rgba(255,255,255,.7)}
+
+/* ===================== PANGGILAN ===================== */
+.call-overlay{
+position:fixed;
+inset:0;
+z-index:80;
+display:flex;
+flex-direction:column;
+background:linear-gradient(165deg,#0b1224,#141d33 55%,#0b1224);
+color:#fff
+}
+.call-overlay[hidden]{display:none}
+.call-head{
+flex:none;
+display:flex;
+align-items:center;
+gap:12px;
+padding:calc(14px + env(safe-area-inset-top,0px)) 16px 6px
+}
+.call-head-copy{flex:1;min-width:0}
+.call-head-copy b{display:block;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.call-head-copy span{font-size:12px;color:rgba(255,255,255,.72)}
+.call-media{
+position:relative;
+flex:1;
+min-height:0;
+display:grid;
+place-items:center;
+gap:12px;
+padding:10px 16px
+}
+.call-remote{
+width:100%;
+height:100%;
+object-fit:contain;
+background:#05070d;
+border-radius:18px
+}
+.call-local{
+position:absolute;
+right:8px;
+top:8px;
+width:104px;
+height:140px;
+border-radius:14px;
+object-fit:cover;
+background:#0b1224;
+border:2px solid rgba(255,255,255,.22)
+}
+.call-stage{
+display:flex;
+flex-direction:column;
+align-items:center;
+gap:14px;
+text-align:center
+}
+.call-avatar{
+width:104px;
+height:104px;
+border-radius:50%;
+display:grid;
+place-items:center;
+font-size:32px;
+font-weight:800;
+overflow:hidden;
+background:linear-gradient(145deg,#3158d8,#8b5cf6)
+}
+.call-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.call-avatar.ringing{animation:callPulse 1.8s ease-in-out infinite}
+@keyframes callPulse{0%,100%{box-shadow:0 0 0 0 rgba(29,155,240,.45)}50%{box-shadow:0 0 0 18px rgba(29,155,240,0)}}
+.call-name{font-size:20px;font-weight:800}
+.call-state{font-size:13px;color:rgba(255,255,255,.74)}
+.call-timer{font-variant-numeric:tabular-nums;font-size:13px;color:rgba(255,255,255,.8)}
+.call-foot{
+flex:none;
+display:flex;
+flex-direction:column;
+align-items:center;
+gap:12px;
+padding:12px 16px calc(22px + env(safe-area-inset-bottom,0px))
+}
+.call-controls{display:flex;gap:14px;justify-content:center;align-items:center;flex-wrap:wrap}
+.call-btn{
+width:52px;
+height:52px;
+border-radius:50%;
+border:0;
+display:grid;
+place-items:center;
+background:rgba(255,255,255,.14);
+color:#fff;
+cursor:pointer
+}
+.call-btn svg{width:22px;height:22px}
+.call-btn.on{background:#fff;color:#0b1224}
+.call-btn.end{width:60px;height:60px;background:var(--hot);color:#fff}
+.call-btn.pick{width:60px;height:60px;background:var(--deal);color:#fff}
+.call-hint{font-size:12px;color:rgba(255,255,255,.7);text-align:center;max-width:36ch}
+.call-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.call-actions .btn{min-width:150px;text-decoration:none}
+
+@media(max-width:620px){
+.story-ring{width:48px;height:48px}
+.story-item{width:62px}
+.call-local{width:86px;height:116px}
+}
+
+@media(prefers-reduced-motion:reduce){
+.story-viewer,.story-sheet-card,.call-avatar.ringing{animation:none!important}
+.story-bar.current i{animation:none!important;width:100%}
+}
+
 @media(prefers-reduced-motion:reduce){
 #app.view-in,.ov,.sheet,.nav button.on::before,.nav button .nav-badge,.chat-unread-badge,.btn::after{animation:none!important}
 .toast{transition:none}
@@ -2643,6 +3052,12 @@ transition:opacity .22s ease,transform .32s cubic-bezier(.22,1,.36,1)
 <header id="appHeader" class="app-topbar" hidden></header>
 <div id="tickerBar" class="ticker-bar" hidden></div>
 </div>
+
+<div class="story-viewer" id="storyViewer" hidden role="dialog" aria-modal="true" aria-label="Story tim"></div>
+<div class="story-sheet" id="storySheet" hidden role="dialog" aria-modal="true" aria-label="Buat story"></div>
+<div class="call-overlay" id="callOverlay" hidden role="dialog" aria-modal="true" aria-label="Panggilan"></div>
+<input type="file" id="storyImageInput" class="chat-file-input" accept="image/jpeg,image/png,image/webp,image/gif" onchange="handleStoryFile(this)" tabindex="-1">
+<input type="file" id="storyVideoInput" class="chat-file-input" accept="video/mp4,video/webm,video/quicktime" onchange="handleStoryFile(this)" tabindex="-1">
 
 <div id="app" aria-busy="true">
 <section class="boot-surface" aria-label="Memuat TPFX Sales Workspace">
@@ -2888,6 +3303,28 @@ GOLD_NEWS_FAIL_AT=0,
 GOLD_NEWS_TIMER=null,
 GOLD_PRICE=0,
 GOLD_PRICE_UPDATED=0,
+PROFILE_BIO='',
+PROFILE_WA='',
+STORIES=[],
+STORIES_LOADING=false,
+STORY_VIEW=null,
+STORY_TIMER=null,
+STORY_DRAFT=null,
+STORY_SHEET_MODE='',
+STORY_TEXT_BG=0,
+STORY_UPLOADING=false,
+SIGNAL_CURSOR=0,
+SIGNAL_POLLING=false,
+SIGNAL_ERROR_AT=0,
+CALL=null,
+CALL_PC=null,
+CALL_ICE=null,
+CALL_STREAM=null,
+CALL_REMOTE=null,
+CALL_POLL_TIMER=null,
+CALL_TICK=null,
+CALL_WATCHDOG=null,
+CALL_RING=null,
 LOGIN_PENDING=false;
 
 function seed(){
@@ -3230,6 +3667,8 @@ r.role ||
 TEAM_NAME=String(r.team||'TPFX');
 TEAM_ROOT=!!r.root;
 PROFILE_PHOTO=String(r.photoUrl||'');
+PROFILE_BIO=String(r.bio||'');
+PROFILE_WA=String(r.wa||'');
 
 renderAppHeader();
 
@@ -3593,6 +4032,13 @@ FEED_TEXT='';
 FEED_COMMENT_DRAFTS={};
 PROFILE_PHOTO='';
 PROFILE_PHOTO_DRAFT='';
+PROFILE_BIO='';
+PROFILE_WA='';
+STORIES=[];
+SIGNAL_CURSOR=0;
+closeStoryViewer();
+hideStorySheet();
+endCall('logout');
 TEAM=[];
 FEED_LOCAL_ECHOES=[];
 FEED_COMMENT_LOADING={};
@@ -4458,6 +4904,8 @@ CHAT_MESSAGES=[];
 
 updateChatUnreadIndicators();
 
+loadStories();
+
 }catch(e){
 toast('Chat gagal dimuat: '+String((e&&e.message)||e));
 }
@@ -4868,6 +5316,16 @@ loadSocialFeed();
 try{history.replaceState(null,'',location.pathname+location.search);}catch(e){}
 return true;
 }
+const callMatch=(url.hash||'').match(/call=personal[:=](.+)$/);
+if(callMatch&&TOK){
+const caller=decodeURIComponent(callMatch[1]||'');
+if(caller){
+openTeamChat(caller);
+setTimeout(()=>{pollSignals().catch(()=>{})},400);
+try{history.replaceState(null,'',location.pathname+location.search);}catch(e){}
+return true;
+}
+}
 const match=(url.hash||'').match(/chat=(personal|group|global)(?:[:=](.*))?$/);
 if(!match||!TOK)return false;
 const type=match[1];
@@ -5172,7 +5630,15 @@ send:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1
 arrow:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>',
 folder:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 7.5A1.5 1.5 0 0 1 5 6h4l2 2.5h8A1.5 1.5 0 0 1 20.5 10v7A1.5 1.5 0 0 1 19 18.5H5A1.5 1.5 0 0 1 3.5 17z"/></svg>',
 plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>',
-copy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M15.5 5.5h-8a2 2 0 0 0-2 2v8"/></svg>'
+copy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M15.5 5.5h-8a2 2 0 0 0-2 2v8"/></svg>',
+phone:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.4 3.6h3l1.4 3.6-1.9 1.3a11.8 11.8 0 0 0 5.6 5.6l1.3-1.9 3.6 1.4v3a1.8 1.8 0 0 1-2 1.8A15.6 15.6 0 0 1 4.6 5.6a1.8 1.8 0 0 1 1.8-2z"/></svg>',
+video:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6.5" width="12.5" height="11" rx="2.5"/><path d="m15 12.5 6.5-3.8v6.6L15 11.5z"/></svg>',
+videoOff:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6.5h8.5a2 2 0 0 1 2 2v2.2"/><path d="M14.5 15.4v-.4a2.5 2.5 0 0 0-2.5-2.5H6a2 2 0 0 0-2 2v3.5a2 2 0 0 0 2 2h6.5a2 2 0 0 0 1.6-.8L20.5 10"/><path d="m3 3 18 18"/></svg>',
+micOff:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5.6a3 3 0 0 0-6-.4V9"/><path d="M9 12.2a3 3 0 0 0 5.4 1.6"/><path d="M5.5 11a6.5 6.5 0 0 0 9.8 5.6"/><path d="M12 17.5V21"/><path d="M9 21h6"/><path d="m3 3 18 18"/></svg>',
+speaker:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5h3l4.5-3.8v12.6L7 14.5H4z"/><path d="M15.5 9a4.4 4.4 0 0 1 0 6"/><path d="M18.3 6.5a7.6 7.6 0 0 1 0 11"/></svg>',
+speakerOff:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5h3l4.5-3.8v12.6L7 14.5H4z"/><path d="m16.5 9.8 4.5 4.4"/><path d="m21 9.8-4.5 4.4"/></svg>',
+textType:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 19 12 5.2 19.5 19"/><path d="M7.8 13.6h8.4"/></svg>',
+trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 6.5h15"/><path d="M9 6.5V4.8a1.3 1.3 0 0 1 1.3-1.3h3.4A1.3 1.3 0 0 1 15 4.8v1.7"/><path d="M6.5 6.5 7.4 20a1.3 1.3 0 0 0 1.3 1.2h6.6A1.3 1.3 0 0 0 16.6 20l.9-13.5"/></svg>'
 };
 
 function chatIcon(name,extraClass){
@@ -6469,6 +6935,7 @@ ${chatNotificationBanner(notificationStatus)}
 
 <div class="chat-layout ${active?'has-peer':''}">
 <section class="chat-panel">
+<div class="story-tray" id="storyTray">${storyTrayHtml()}</div>
 <div class="chat-panel-head">Chat Global &amp; Personal</div>
 <div>
 <button class="chat-contact ${CHAT_ACTIVE&&CHAT_ACTIVE.type=='global'?'active':''}" data-global="global" onclick="openGlobalChat()">
@@ -6508,7 +6975,11 @@ ${active?`
 <div class="chat-panel-head row">
 <button class="btn sec chat-back" style="display:none;padding:7px 10px" onclick="CHAT_ACTIVE=null;CHAT_MESSAGES=[];render()">←</button>
 ${activeGlobal?'<div class="social-avatar">🌐</div>':activeGroup?'<div class="social-avatar">👥</div>':socialAvatar(active.nama,active.photoUrl)}
-<div>${esc(activeGlobal?'Chat Global':activeGroup?activeGroup.name:active.nama)}<div class="mut">${activeGlobal?'Semua anggota aktif':activeGroup?'Grup · '+(activeGroup.memberCount||0)+' anggota':esc(active.role)}</div></div>
+<div class="chat-peer-title">${esc(activeGlobal?'Chat Global':activeGroup?activeGroup.name:active.nama)}<div class="mut">${activeGlobal?'Semua anggota aktif':activeGroup?'Grup · '+(activeGroup.memberCount||0)+' anggota':esc(active.bio||active.role)}</div></div>
+${activeContact?`<div class="chat-call-actions">
+<button type="button" class="btn sec chat-icon-btn chat-call-btn" data-peer="${esc(activeContact.username)}" data-video="0" onclick="startCall(this.dataset.peer,this.dataset.video=='1')" aria-label="Telepon ${esc(active.nama)}" title="Telepon">${chatIcon('phone')}</button>
+<button type="button" class="btn sec chat-icon-btn chat-call-btn" data-peer="${esc(activeContact.username)}" data-video="1" onclick="startCall(this.dataset.peer,this.dataset.video=='1')" aria-label="Panggilan video dengan ${esc(active.nama)}" title="Video call">${chatIcon('video')}</button>
+</div>`:''}
 <button type="button" class="btn sec chat-icon-btn chat-search-toggle${CHAT_SEARCH_OPEN?' active':''}" onclick="chatToggleSearch()" aria-label="Cari pesan di percakapan" title="Cari pesan">${chatIcon('search')}</button>
 </div>
 <div class="chat-search-bar" id="chatSearchBar" ${CHAT_SEARCH_OPEN?'':'hidden'}>
@@ -6784,18 +7255,1217 @@ chatRenderAttachmentPreview();
 }
 
 
+// ============================================================
+// STORY 24 JAM
+// ============================================================
+
+function storySeenKey(){
+return'tpfx-story-seen-'+String(USER||'').toLowerCase();
+}
+
+
+function readStorySeen(){
+try{
+const value=JSON.parse(localStorage.getItem(storySeenKey())||'{}');
+return value&&typeof value=='object'?value:{};
+}catch(e){
+return{};
+}
+}
+
+
+function writeStorySeen(map){
+try{
+localStorage.setItem(storySeenKey(),JSON.stringify(map));
+}catch(e){}
+}
+
+
+function activeStories(){
+const now=Date.now();
+return(Array.isArray(STORIES)?STORIES:[]).filter(s=>{
+if(!s||!s.id)return false;
+if(Number(s.expires)<=now)return false;
+if(s.kind=='text')return!!s.text;
+return!!(s.file&&s.file.id);
+});
+}
+
+
+function storyGroups(){
+const seen=readStorySeen();
+const map=new Map();
+activeStories().forEach(s=>{
+const key=String(s.username||'').toLowerCase();
+if(!key)return;
+if(!map.has(key)){
+map.set(key,{
+username:String(s.username),
+nama:String(s.nama||s.username),
+photoUrl:String(s.photoUrl||''),
+items:[],
+last:0,
+seen:true
+});
+}
+const group=map.get(key);
+group.items.push(s);
+group.last=Math.max(group.last,Number(s.ts)||0);
+if(!group.photoUrl&&s.photoUrl)group.photoUrl=String(s.photoUrl);
+});
+const list=Array.from(map.values());
+list.forEach(g=>{
+g.items.sort((a,b)=>(Number(a.ts)||0)-(Number(b.ts)||0));
+g.seen=g.items.every(s=>!!seen[s.id]);
+});
+return list;
+}
+
+
+function storyViewerGroups(){
+const mine=String(USER||'').toLowerCase();
+const all=storyGroups();
+const mineGroup=all.find(g=>String(g.username).toLowerCase()==mine)||null;
+const others=all
+.filter(g=>String(g.username).toLowerCase()!=mine)
+.sort((a,b)=>a.seen==b.seen?(b.last-a.last):(a.seen?1:-1));
+return mineGroup?[mineGroup].concat(others):others;
+}
+
+
+function storyTrayHtml(){
+if(!TOK)return'';
+const mine=String(USER||'').toLowerCase();
+const all=storyViewerGroups();
+const myGroup=all[0]&&String(all[0].username).toLowerCase()==mine?all[0]:null;
+const others=myGroup?all.slice(1):all;
+const openMy=myGroup
+?`data-story-user="${esc(myGroup.username)}" onclick="openStoryGroup(this.dataset.storyUser)"`
+:'onclick="storySheetOpen(\'menu\')"';
+return`
+<button class="story-item" ${openMy} aria-label="Story saya">
+<span class="story-ring ${myGroup&&!myGroup.seen?'':'seen'}">
+${socialAvatar(myGroup?myGroup.nama:S.name,myGroup?myGroup.photoUrl:(PROFILE_PHOTO_DRAFT||PROFILE_PHOTO),'social-avatar small')}
+<i class="story-plus">${chatIcon('plus')}</i>
+</span>
+<b>Story saya</b>
+</button>
+${others.map(g=>`
+<button class="story-item" data-story-user="${esc(g.username)}" onclick="openStoryGroup(this.dataset.storyUser)">
+<span class="story-ring ${g.seen?'seen':''}">${socialAvatar(g.nama,g.photoUrl,'social-avatar small')}</span>
+<b>${esc(String(g.nama||g.username).split(' ')[0])}</b>
+</button>`).join('')}`;
+}
+
+
+function renderStoryTray(){
+const tray=$('#storyTray');
+if(!tray)return;
+tray.innerHTML=storyTrayHtml();
+}
+
+
+async function loadStories(){
+if(!TOK||STORIES_LOADING)return;
+STORIES_LOADING=true;
+try{
+const r=await rpc('listStories',TOK);
+if(!r||typeof r!='object')throw new Error('Format respons story tidak valid.');
+if(r.err){
+if(r.err=='AUTH'){logout();return;}
+throw new Error(typeof r.err=='string'?r.err:'Story gagal dimuat');
+}
+STORIES=Array.isArray(r.rows)?r.rows:[];
+renderStoryTray();
+if(STORY_VIEW)renderStoryViewer();
+}catch(e){
+console.warn('Story gagal dimuat:',e);
+}finally{
+STORIES_LOADING=false;
+}
+}
+
+
+function openStoryGroup(username){
+const key=String(username||'').toLowerCase();
+const groups=storyViewerGroups();
+if(!groups.length){storySheetOpen('menu');return;}
+let index=groups.findIndex(g=>String(g.username).toLowerCase()==key);
+if(index<0)index=0;
+STORY_VIEW={groups:groups,gi:index,ii:0};
+renderStoryViewer();
+}
+
+
+function storyDuration(item){
+if(item.kind=='video')return 20000;
+if(item.kind=='text'){
+const len=String(item.text||'').length;
+return Math.max(4200,Math.min(9000,3600+len*70));
+}
+return 5500;
+}
+
+
+function storyTime(ts){
+const value=Number(ts)||0;
+const diff=Date.now()-value;
+if(!value)return'Seharian ini';
+if(diff<90000)return'baru saja';
+if(diff<3600000)return Math.round(diff/60000)+' menit lalu';
+if(diff<86400000)return Math.round(diff/3600000)+' jam lalu';
+return socialTime(value);
+}
+
+
+function renderStoryViewer(){
+const el=$('#storyViewer');
+if(!el)return;
+clearTimeout(STORY_TIMER);
+if(!STORY_VIEW||!Array.isArray(STORY_VIEW.groups)||!STORY_VIEW.groups.length){
+STORY_VIEW=null;
+el.hidden=true;
+el.innerHTML='';
+return;
+}
+const group=STORY_VIEW.groups[STORY_VIEW.gi];
+if(!group||!group.items.length){
+STORY_VIEW.gi++;
+STORY_VIEW.ii=0;
+renderStoryViewer();
+return;
+}
+if(STORY_VIEW.ii>=group.items.length){
+STORY_VIEW.gi++;
+STORY_VIEW.ii=0;
+renderStoryViewer();
+return;
+}
+const item=group.items[STORY_VIEW.ii];
+const dur=storyDuration(item);
+const mine=String(item.username).toLowerCase()==String(USER).toLowerCase();
+const media=item.kind=='video'
+?`<video class="story-media" id="storyMediaVideo" src="${esc(chatMediaUrl(item.file))}" playsinline autoplay></video>`
+:item.kind=='image'
+?`<img class="story-media" src="${esc(chatMediaUrl(item.file))}" alt="Story dari ${esc(group.nama)}">`
+:`<div class="story-text-card bg${storyColorIndex(item.id)}"><p>${esc(item.text)}</p></div>`;
+el.hidden=false;
+el.innerHTML=`
+<div class="story-head">
+${socialAvatar(group.nama,item.photoUrl||group.photoUrl||group.nama,'social-avatar small')}
+<div class="story-who"><b>${esc(group.nama)}</b><span>${esc(storyTime(item.ts))}</span></div>
+<button type="button" class="story-close" onclick="closeStoryViewer()" aria-label="Tutup story">${chatIcon('close')}</button>
+</div>
+<div class="story-bars">
+${group.items.map((s,i)=>`<span class="story-bar ${i<STORY_VIEW.ii?'done':i==STORY_VIEW.ii?'current':''}" style="--dur:${dur}ms"><i></i></span>`).join('')}
+</div>
+<div class="story-body">
+${media}
+${item.kind!='text'&&item.text?`<div class="story-caption">${esc(item.text)}</div>`:''}
+<button type="button" class="story-nav left" onclick="prevStoryItem()" aria-label="Story sebelumnya"></button>
+<button type="button" class="story-nav right" onclick="nextStoryItem()" aria-label="Story berikutnya"></button>
+</div>
+<div class="story-foot">
+${mine?`
+<button type="button" class="btn sec story-reply" onclick="storySheetOpen('menu')">＋ Tambah story</button>
+<button type="button" class="btn sec story-reply" onclick="deleteCurrentStory()">Hapus</button>`:`
+<button type="button" class="btn sec story-reply" onclick="openStoryPeer('${esc(item.username)}')">Kirim pesan</button>`}
+</div>`;
+markStorySeen(item);
+if(item.kind=='video'){
+const video=$('#storyMediaVideo');
+if(video){
+video.addEventListener('ended',()=>nextStoryItem());
+video.play().catch(()=>{});
+}
+}
+STORY_TIMER=setTimeout(()=>nextStoryItem(),dur);
+}
+
+
+function storyColorIndex(id){
+const text=String(id||'');
+let sum=0;
+for(let i=0;i<text.length;i++)sum=(sum+text.charCodeAt(i))%6;
+return sum;
+}
+
+
+function markStorySeen(item){
+if(!item||!item.id)return;
+const seen=readStorySeen();
+if(seen[item.id])return;
+seen[item.id]=1;
+writeStorySeen(seen);
+}
+
+
+function nextStoryItem(){
+if(!STORY_VIEW)return;
+const group=STORY_VIEW.groups[STORY_VIEW.gi];
+if(group&&STORY_VIEW.ii+1<group.items.length)STORY_VIEW.ii++;
+else if(STORY_VIEW.gi+1<STORY_VIEW.groups.length){
+STORY_VIEW.gi++;
+STORY_VIEW.ii=0;
+}else{
+closeStoryViewer();
+return;
+}
+renderStoryViewer();
+}
+
+
+function prevStoryItem(){
+if(!STORY_VIEW)return;
+if(STORY_VIEW.ii>0)STORY_VIEW.ii--;
+else if(STORY_VIEW.gi>0){
+STORY_VIEW.gi--;
+STORY_VIEW.ii=Math.max(0,STORY_VIEW.groups[STORY_VIEW.gi].items.length-1);
+}else return;
+renderStoryViewer();
+}
+
+
+function closeStoryViewer(){
+clearTimeout(STORY_TIMER);
+STORY_TIMER=null;
+STORY_VIEW=null;
+const el=$('#storyViewer');
+if(el){
+el.hidden=true;
+el.innerHTML='';
+}
+renderStoryTray();
+}
+
+
+function openStoryPeer(username){
+closeStoryViewer();
+openTeamChat(username);
+}
+
+
+async function deleteCurrentStory(){
+if(!STORY_VIEW)return;
+const group=STORY_VIEW.groups[STORY_VIEW.gi];
+const item=group&&group.items[STORY_VIEW.ii];
+if(!item||!item.id)return;
+try{
+const r=await rpc('deleteStory',TOK,item.id);
+if(!r||typeof r!='object')throw new Error('Format respons penghapusan story tidak valid.');
+if(r.err)throw new Error(typeof r.err=='string'?r.err:'Story gagal dihapus');
+STORIES=STORIES.filter(s=>s.id!=item.id);
+const seen=readStorySeen();
+delete seen[item.id];
+writeStorySeen(seen);
+if(group.items.length<=1){
+if(STORY_VIEW.gi+1<STORY_VIEW.groups.length){
+STORY_VIEW.groups.splice(STORY_VIEW.gi,1);
+STORY_VIEW.ii=0;
+}else{
+closeStoryViewer();
+await loadStories();
+return;
+}
+}else if(STORY_VIEW.ii>=group.items.length-1)STORY_VIEW.ii=Math.max(0,group.items.length-2);
+await loadStories();
+renderStoryViewer();
+toast('Story dihapus');
+}catch(e){
+if(isAuthError(e)){logout('Sesi login berakhir. Silakan login kembali.');return;}
+toast('Story gagal dihapus: '+String((e&&e.message)||e));
+}
+}
+
+
+function storySheetOpen(mode){
+if(!TOK)return;
+STORY_SHEET_MODE=mode||'menu';
+if(STORY_SHEET_MODE=='text'&&!STORY_DRAFT)STORY_DRAFT={kind:'text',text:''};
+renderStorySheet();
+}
+
+
+function hideStorySheet(){
+STORY_SHEET_MODE='';
+STORY_DRAFT=null;
+const el=$('#storySheet');
+if(el){
+el.hidden=true;
+el.innerHTML='';
+}
+const image=$('#storyImageInput');
+const video=$('#storyVideoInput');
+if(image)image.value='';
+if(video)video.value='';
+}
+
+
+function renderStorySheet(){
+const el=$('#storySheet');
+if(!el)return;
+if(!STORY_SHEET_MODE){
+hideStorySheet();
+return;
+}
+const draft=STORY_DRAFT;
+let body='';
+if(STORY_SHEET_MODE=='menu'||!draft){
+body=`
+<h3>Bagikan story</h3>
+<div class="mut">Story tampil untuk anggota tim Anda dan hilang otomatis setelah 24 jam.</div>
+<button type="button" class="story-choice" onclick="$('#storyImageInput').click()">
+<span>${chatIcon('camera')}</span>
+<span><b>Foto</b><small>Ambil dari galeri atau kamera</small></span>
+</button>
+<button type="button" class="story-choice" onclick="$('#storyVideoInput').click()">
+<span>${chatIcon('video')}</span>
+<span><b>Video</b><small>Maksimal 8 MB</small></span>
+</button>
+<button type="button" class="story-choice" onclick="storySheetOpen('text')">
+<span>${chatIcon('textType')}</span>
+<span><b>Teks</b><small>Pesan singkat dengan latar warna</small></span>
+</button>`;
+}else if(draft.kind=='text'){
+body=`
+<h3>Story teks</h3>
+<div class="story-text-draft bg${STORY_TEXT_BG}">
+<textarea id="storyTextInput" maxlength="200" placeholder="Tulis pesan…" oninput="STORY_DRAFT.text=this.value">${esc(draft.text||'')}</textarea>
+</div>
+<div class="row" style="gap:8px">
+<button type="button" class="btn sec" onclick="STORY_TEXT_BG=(STORY_TEXT_BG+1)%6;renderStorySheet()">Ganti warna</button>
+<button type="button" class="btn" style="flex:1" onclick="shareStoryDraft()" ${String(draft.text||'').trim()?'':'disabled'}>Bagikan</button>
+</div>`;
+}else{
+const preview=draft.kind=='video'
+?`<video class="story-preview" src="${esc(draft.dataUrl)}" controls playsinline muted></video>`
+:`<img class="story-preview" src="${esc(draft.dataUrl)}" alt="Pratinjau story">`;
+body=`
+<h3>Tinjau story</h3>
+${preview}
+<input id="storyCaptionInput" maxlength="200" placeholder="Tulis keterangan (opsional)" value="${esc(draft.text||'')}">
+<div class="row" style="gap:8px">
+<button type="button" class="btn sec" onclick="storySheetOpen('menu')">Ganti file</button>
+<button type="button" class="btn" style="flex:1" onclick="shareStoryDraft()">Bagikan</button>
+</div>`;
+}
+el.hidden=false;
+el.innerHTML=`
+<div class="story-sheet-card">
+${body}
+<button type="button" class="btn sec" onclick="hideStorySheet()">Batal</button>
+</div>`;
+const caption=$('#storyCaptionInput');
+if(caption)caption.addEventListener('input',()=>{if(STORY_DRAFT)STORY_DRAFT.text=caption.value});
+}
+
+
+function readFileAsDataUrl(file){
+return new Promise((resolve,reject)=>{
+const reader=new FileReader();
+reader.onload=()=>resolve(String(reader.result||''));
+reader.onerror=()=>reject(new Error('File tidak dapat dibaca.'));
+reader.readAsDataURL(file);
+});
+}
+
+
+function resizeStoryImage(dataUrl){
+return new Promise((resolve,reject)=>{
+const image=new Image();
+image.onerror=()=>reject(new Error('Foto story tidak dapat dibaca.'));
+image.onload=()=>{
+const max=1600;
+const scale=Math.min(1,max/image.width,max/image.height);
+const canvas=document.createElement('canvas');
+canvas.width=Math.max(1,Math.round(image.width*scale));
+canvas.height=Math.max(1,Math.round(image.height*scale));
+const ctx=canvas.getContext('2d');
+if(!ctx){resolve(dataUrl);return;}
+ctx.drawImage(image,0,0,canvas.width,canvas.height);
+try{
+resolve(canvas.toDataURL('image/jpeg',.82));
+}catch(e){
+resolve(dataUrl);
+}
+};
+image.src=dataUrl;
+});
+}
+
+
+async function handleStoryFile(input){
+const file=input.files&&input.files[0];
+input.value='';
+if(!file)return;
+const type=String(file.type||'').toLowerCase();
+const kind=type.indexOf('video/')==0?'video':type.indexOf('image/')==0?'image':'';
+if(!kind){
+toast('Pilih foto atau video.');
+return;
+}
+if(file.size>8*1024*1024){
+toast('Ukuran story maksimal 8 MB.');
+return;
+}
+try{
+let dataUrl=await readFileAsDataUrl(file);
+let mime=type;
+if(kind=='image'){
+dataUrl=await resizeStoryImage(dataUrl);
+mime='image/jpeg';
+}
+STORY_DRAFT={
+kind:kind,
+text:'',
+dataUrl:dataUrl,
+mime:mime,
+name:String(file.name||(kind=='video'?'story.mp4':'story.jpg'))
+};
+STORY_SHEET_MODE='preview';
+renderStorySheet();
+}catch(e){
+toast('File story gagal disiapkan: '+String((e&&e.message)||e));
+}
+}
+
+
+async function shareStoryDraft(){
+if(STORY_UPLOADING)return;
+const draft=STORY_DRAFT;
+if(!draft){
+storySheetOpen('menu');
+return;
+}
+if(draft.kind=='text'&&!String(draft.text||'').trim()){
+toast('Tulis pesan dulu.');
+return;
+}
+STORY_UPLOADING=true;
+try{
+let file=null;
+if(draft.kind!='text'){
+toast('Mengunggah story…');
+const up=await rpcLong('uploadChatFile',TOK,draft.dataUrl,draft.name,draft.mime);
+if(!up||typeof up!='object')throw new Error('Format respons unggahan story tidak valid.');
+if(up.err)throw new Error(typeof up.err=='string'?up.err:'File story gagal diunggah');
+if(!up.file||!up.file.id)throw new Error('Server tidak mengembalikan data file story.');
+file=up.file;
+}
+const r=await rpc('addStory',TOK,draft.kind,String(draft.text||'').trim(),file);
+if(!r||typeof r!='object')throw new Error('Format respons penyimpanan story tidak valid.');
+if(r.err)throw new Error(typeof r.err=='string'?r.err:'Story gagal dibagikan');
+hideStorySheet();
+await loadStories();
+toast('Story dibagikan · hilang otomatis dalam 24 jam');
+}catch(e){
+if(isAuthError(e)){logout('Sesi login berakhir. Silakan login kembali.');return;}
+toast('Story gagal dibagikan: '+String((e&&e.message)||e));
+}finally{
+STORY_UPLOADING=false;
+}
+}
+
+
+// ============================================================
+// PANGGILAN SUARA & VIDEO DI DALAM APLIKASI
+// ============================================================
+
+const CALL_RING_TIMEOUT=45000;
+const CALL_CONNECT_TIMEOUT=30000;
+
+function callActive(){
+return!!CALL&&CALL.state!='idle'&&CALL.state!='ended'&&CALL.state!='failed';
+}
+
+
+function callPeerRow(){
+if(!CALL)return null;
+const key=String(CALL.peer||'').toLowerCase();
+return CHAT_CONTACTS.find(x=>String(x.username).toLowerCase()==key)||null;
+}
+
+
+function callPeerName(){
+const row=callPeerRow();
+if(row)return String(row.nama||row.username);
+return String((CALL&&CALL.peer)||'Anggota tim');
+}
+
+
+function callPeerWa(){
+const row=callPeerRow();
+return String(row&&row.wa||'').replace(/\D/g,'');
+}
+
+
+function callRoomId(){
+return'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,10);
+}
+
+
+function callParse(raw){
+try{
+const value=JSON.parse(String(raw||'{}'));
+return value&&typeof value=='object'?value:{};
+}catch(e){
+return{};
+}
+}
+
+
+function callNewState(values){
+return Object.assign({
+state:'idle',
+direction:'',
+peer:'',
+room:'',
+video:false,
+startedAt:0,
+connectingAt:0,
+muted:false,
+cameraOn:false,
+remoteHasVideo:false,
+offer:null,
+offerSent:false,
+iceRetried:false,
+error:'',
+reason:''
+},values||{});
+}
+
+
+function callReset(){
+clearTimeout(CALL_WATCHDOG);
+CALL_WATCHDOG=null;
+if(CALL&&CALL.state=='idle')return;
+CALL=callNewState({state:'idle'});
+const el=$('#callOverlay');
+if(el){
+el.hidden=true;
+el.innerHTML='';
+}
+}
+
+
+function fmtCallDuration(ms){
+const total=Math.max(0,Math.floor(ms/1000));
+const m=String(Math.floor(total/60)).padStart(2,'0');
+const s=String(total%60).padStart(2,'0');
+return m+':'+s;
+}
+
+
+function callStateLabel(){
+if(!CALL)return'';
+switch(CALL.state){
+case'calling':return CALL.video?'Memanggil untuk video…':'Memanggil…';
+case'incoming':return CALL.video?'Panggilan video masuk':'Panggilan masuk';
+case'connecting':return'Menyambungkan…';
+case'connected':return'Terhubung';
+case'failed':return CALL.error||'Panggilan gagal.';
+case'ended':return CALL.reason||'Panggilan berakhir.';
+default:return'';
+}
+}
+
+
+function renderCallOverlay(){
+const el=$('#callOverlay');
+if(!el)return;
+if(!CALL||CALL.state=='idle'){
+el.hidden=true;
+el.innerHTML='';
+return;
+}
+const state=CALL.state;
+const name=callPeerName();
+const peer=callPeerRow();
+const waNumber=callPeerWa();
+const live=state=='connected';
+const showRemoteVideo=live&&CALL.video&&CALL.remoteHasVideo;
+const stage=`
+<div class="call-stage">
+<div class="call-avatar ${state=='incoming'?'ringing':''}">${peer&&peer.photoUrl?`<img src="${esc(imageUrlForDisplay(peer.photoUrl))}" alt="">`:esc(initials(name))}</div>
+<div class="call-name">${esc(name)}</div>
+<div class="call-state">${esc(callStateLabel())}</div>
+${live?`<div class="call-timer" id="callTimer">${fmtCallDuration(Date.now()-CALL.startedAt)}</div>`:''}
+</div>`;
+let controls='';
+if(state=='incoming'){
+controls=`
+<div class="call-controls">
+<button type="button" class="call-btn end" onclick="declineIncomingCall()" aria-label="Tolak panggilan">${chatIcon('close')}</button>
+<button type="button" class="call-btn pick" onclick="acceptIncomingCall()" aria-label="Terima panggilan">${chatIcon('phone')}</button>
+</div>`;
+}else if(callActive()){
+controls=`
+<div class="call-controls">
+<button type="button" class="call-btn${CALL.muted?' on':''}" onclick="toggleCallMic()" aria-label="${CALL.muted?'Nyalakan mikrofon':'Matikan mikrofon'}">${chatIcon(CALL.muted?'micOff':'mic')}</button>
+${CALL.state!='failed'?`<button type="button" class="call-btn end" onclick="endCall()" aria-label="Akhiri panggilan">${chatIcon('close')}</button>`:''}
+${CALL.video?`<button type="button" class="call-btn${CALL.cameraOn?'':' on'}" onclick="toggleCallCamera()" aria-label="${CALL.cameraOn?'Matikan kamera':'Nyalakan kamera'}">${chatIcon(CALL.cameraOn?'video':'videoOff')}</button>`:''}
+</div>`;
+}else{
+controls=`
+<div class="call-actions">
+<button type="button" class="btn big" onclick="startCall('${esc(CALL.peer)}',${CALL.video?'true':'false'})">Hubungi lagi</button>
+${waNumber?`<a class="btn sec" href="${esc(wa(waNumber))}" target="_blank" rel="noopener">Buka WhatsApp</a>`:''}
+<button type="button" class="btn sec" onclick="callReset()">Tutup</button>
+</div>`;
+}
+el.hidden=false;
+el.innerHTML=`
+<div class="call-head">
+<div class="call-head-copy"><b>${esc(name)}</b><span>${esc(CALL.video?'Panggilan video':'Panggilan suara')} · ${esc(ROLE||'BDO')}</span></div>
+${live?`<span class="badge s-contacted" id="callBadgeTimer">${fmtCallDuration(Date.now()-CALL.startedAt)}</span>`:''}
+</div>
+<div class="call-media">
+<video class="call-remote" id="callRemoteVideo" autoplay playsinline ${showRemoteVideo?'':'hidden'}></video>
+<video class="call-local" id="callLocalVideo" autoplay muted playsinline ${CALL.video&&CALL_STREAM&&CALL.cameraOn?'':'hidden'}></video>
+${showRemoteVideo?'':stage}
+</div>
+<div class="call-foot">
+${controls}
+${state=='failed'||state=='ended'?'':`<div class="call-hint">${state=='calling'?'Bilang ke lawan bicara untuk membuka TPFX agar panggilan tersambung.':state=='connecting'?'Menunggu kedua perangkat siap…':live?'Sambungan langsung antar perangkat tim.':'Sedang berdering…'}</div>`}
+${(state=='failed'||(state=='ended'&&!waNumber))?`<div class="call-hint">Panggilan peer-to-peer belum tersambung. Coba lagi saat kedua pihak memakai aplikasi, atau hubungi lewat WhatsApp.</div>`:''}
+</div>`;
+callAttachStreams();
+}
+
+
+function callAttachStreams(){
+const remote=$('#callRemoteVideo');
+const local=$('#callLocalVideo');
+if(remote){
+if(CALL_REMOTE&&remote.srcObject!==CALL_REMOTE)remote.srcObject=CALL_REMOTE;
+if(CALL_REMOTE)remote.play().catch(()=>{});
+}
+if(local){
+if(CALL_STREAM&&local.srcObject!==CALL_STREAM)local.srcObject=CALL_STREAM;
+if(CALL_STREAM)local.play().catch(()=>{});
+}
+}
+
+
+function callTick(){
+if(!CALL)return;
+const now=Date.now();
+if(CALL.state=='connected'){
+const text=fmtCallDuration(now-CALL.startedAt);
+const timer=$('#callTimer');
+if(timer)timer.textContent=text;
+const badge=$('#callBadgeTimer');
+if(badge)badge.textContent=text;
+return;
+}
+if(CALL.state=='calling'&&now-CALL.startedAt>CALL_RING_TIMEOUT){
+callFinish('not-answered');
+return;
+}
+if((CALL.state=='connecting'||CALL.state=='calling')&&CALL.connectingAt&&now-CALL.connectingAt>CALL_CONNECT_TIMEOUT){
+callFinish('timeout');
+}
+}
+
+
+function startCallPolling(){
+clearInterval(CALL_POLL_TIMER);
+CALL_POLL_TIMER=setInterval(()=>{
+if(TOK&&document.visibilityState!='hidden')pollSignals();
+},2500);
+pollSignals();
+}
+
+
+function stopCallPolling(){
+clearInterval(CALL_POLL_TIMER);
+CALL_POLL_TIMER=null;
+}
+
+
+async function sendSignalTo(username,room,type,payload){
+if(!TOK||!username||!room)return;
+const r=await rpc('sendSignal',TOK,room,String(username),type,JSON.stringify(payload||{}));
+if(!r||typeof r!='object')throw new Error('Format respons sinyal tidak valid.');
+if(r.err)throw new Error(typeof r.err=='string'?r.err:'Sinyal panggilan gagal dikirim');
+}
+
+
+function sendSignalOut(type,payload){
+if(!CALL)return Promise.resolve();
+return sendSignalTo(CALL.peer,CALL.room,type,payload).catch(e=>{
+console.warn('Sinyal '+type+' gagal:',e);
+});
+}
+
+
+function callWaitIceComplete(pc,timeout){
+return new Promise(resolve=>{
+if(!pc||pc.iceGatheringState=='complete'){
+resolve();
+return;
+}
+let done=false;
+const finish=()=>{
+if(done)return;
+done=true;
+clearTimeout(timer);
+try{
+pc.removeEventListener('icegatheringstatechange',finish);
+}catch(e){}
+resolve();
+};
+pc.addEventListener('icegatheringstatechange',()=>{
+if(pc.iceGatheringState=='complete')finish();
+});
+const timer=setTimeout(finish,timeout);
+});
+}
+
+
+function callCreatePeer(){
+const pc=new RTCPeerConnection({
+iceServers:Array.isArray(CALL_ICE)?CALL_ICE:[],
+bundlePolicy:'max-bundle'
+});
+pc.ontrack=event=>{
+const stream=event.streams&&event.streams[0]?event.streams[0]:new MediaStream([event.track]);
+CALL_REMOTE=stream;
+if(event.track&&event.track.kind=='video')CALL.remoteHasVideo=true;
+callAttachStreams();
+};
+pc.onconnectionstatechange=()=>{
+if(!CALL)return;
+const state=pc.connectionState;
+if(state=='connected')callMarkConnected();
+else if(state=='failed')callIceFailure();
+};
+pc.oniceconnectionstatechange=()=>{
+if(!CALL||pc.iceConnectionState=='failed')callIceFailure();
+};
+if(CALL_STREAM){
+CALL_STREAM.getTracks().forEach(track=>{
+try{
+pc.addTrack(track,CALL_STREAM);
+}catch(e){}
+});
+}
+return pc;
+}
+
+
+function callIceFailure(){
+if(!CALL||!callActive())return;
+if(!CALL.iceRetried&&CALL_PC&&CALL_PC.restartIce){
+CALL.iceRetried=true;
+try{
+CALL_PC.restartIce();
+return;
+}catch(e){}
+}
+callFinish('webrtc-failed');
+}
+
+
+function callMarkConnected(){
+if(!CALL||CALL.state=='connected')return;
+CALL.state='connected';
+CALL.startedAt=Date.now();
+callRingStop();
+renderCallOverlay();
+if(navigator.vibrate)try{navigator.vibrate(60)}catch(e){}
+}
+
+
+async function callMakeOffer(){
+if(!CALL_PC||!CALL)return;
+const offer=await CALL_PC.createOffer({
+offerToReceiveAudio:true,
+offerToReceiveVideo:!!CALL.video
+});
+await CALL_PC.setLocalDescription(offer);
+await callWaitIceComplete(CALL_PC,4000);
+const local=CALL_PC.localDescription||offer;
+CALL.offerSent=true;
+await sendSignalTo(CALL.peer,CALL.room,'offer',{
+sdp:local.sdp,
+type:local.type,
+video:!!CALL.video
+});
+}
+
+
+async function callApplyOffer(data){
+if(!CALL_PC||!data||!data.sdp)return;
+await CALL_PC.setRemoteDescription({type:data.type||'offer',sdp:data.sdp});
+const answer=await CALL_PC.createAnswer();
+await CALL_PC.setLocalDescription(answer);
+await callWaitIceComplete(CALL_PC,2500);
+const local=CALL_PC.localDescription||answer;
+await sendSignalOut('answer',{sdp:local.sdp,type:local.type});
+CALL.state='connecting';
+CALL.connectingAt=Date.now();
+renderCallOverlay();
+}
+
+
+function callFinish(reason){
+if(!CALL)return;
+const room=CALL.room;
+const peer=CALL.peer;
+const wasConnected=CALL.state=='connected';
+CALL.reason={
+'declined':'Panggilan ditolak.',
+'busy':'Lawan bicara sedang dalam panggilan.',
+'not-answered':'Panggilan tidak dijawab.',
+'timeout':'Sambungan tidak terbentuk. Coba lagi atau hubungi lewat WhatsApp.',
+'webrtc-failed':'Panggilan gagal tersambung. Jaringan Anda mungkin memblokir koneksi langsung.',
+'remote':'Panggilan ditutup oleh lawan bicara.',
+'local':wasConnected?('Panggilan berakhir · '+fmtCallDuration(Date.now()-CALL.startedAt)):'Panggilan dibatalkan.',
+'unsupported':'Perangkat ini tidak mendukung panggilan di dalam aplikasi. Gunakan WhatsApp.',
+'auth':'Sesi login berakhir, panggilan dihentikan.'
+}[reason]||'Panggilan berakhir.';
+CALL.error='';
+CALL.state='ended';
+callTeardown();
+if(reason!='remote'&&reason!='declined'&&reason!='auth'&&peer&&room){
+sendSignalTo(peer,room,'hangup',{}).catch(()=>{});
+}
+renderCallOverlay();
+clearTimeout(CALL_WATCHDOG);
+CALL_WATCHDOG=setTimeout(callReset,12000);
+}
+
+
+function callFail(message){
+if(!CALL)return;
+CALL.state='failed';
+CALL.error=String(message||'Panggilan gagal tersambung.');
+CALL.reason=CALL.error;
+callTeardown();
+renderCallOverlay();
+clearTimeout(CALL_WATCHDOG);
+CALL_WATCHDOG=setTimeout(callReset,12000);
+}
+
+
+function callTeardown(){
+callRingStop();
+stopCallPolling();
+clearInterval(CALL_TICK);
+CALL_TICK=null;
+if(CALL_PC){
+try{CALL_PC.close()}catch(e){}
+CALL_PC=null;
+}
+if(CALL_STREAM){
+CALL_STREAM.getTracks().forEach(track=>{try{track.stop()}catch(e){}});
+CALL_STREAM=null;
+}
+CALL_REMOTE=null;
+}
+
+
+function callStartTick(){
+clearInterval(CALL_TICK);
+CALL_TICK=setInterval(callTick,1000);
+}
+
+
+async function startCall(username,video){
+if(!TOK){
+toast('Silakan login terlebih dahulu.');
+return;
+}
+if(callActive()){
+toast('Anda masih dalam panggilan.');
+return;
+}
+const peer=String(username||'').trim();
+if(!peer)return;
+if(!window.RTCPeerConnection||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+CALL=callNewState({state:'failed',direction:'out',peer:peer,video:!!video,reason:'Perangkat ini tidak mendukung panggilan di dalam aplikasi.',error:'Perangkat ini tidak mendukung panggilan di dalam aplikasi.'});
+renderCallOverlay();
+return;
+}
+CALL=callNewState({
+state:'calling',
+direction:'out',
+peer:peer,
+video:!!video,
+cameraOn:!!video,
+room:callRoomId(),
+startedAt:Date.now()
+});
+renderCallOverlay();
+callStartTick();
+startCallPolling();
+try{
+const cfg=await rpc('callConfig',TOK);
+if(!cfg||typeof cfg!='object')throw new Error('Format konfigurasi panggilan tidak valid.');
+if(cfg.err){
+if(cfg.err=='AUTH'){logout();return;}
+throw new Error(typeof cfg.err=='string'?cfg.err:'Konfigurasi panggilan tidak tersedia');
+}
+CALL_ICE=Array.isArray(cfg.ice)?cfg.ice:[];
+CALL_STREAM=await navigator.mediaDevices.getUserMedia(video
+?{audio:true,video:{width:{ideal:1280},height:{ideal:720},facingMode:'user'}}
+:{audio:true});
+CALL_PC=callCreatePeer();
+callAttachStreams();
+await sendSignalTo(peer,CALL.room,'invite',{video:!!video});
+callRingStart();
+await callMakeOffer();
+if(!CALL||CALL.state!='calling')return;
+renderCallOverlay();
+}catch(e){
+if(isAuthError(e)){logout('Sesi login berakhir. Silakan login kembali.');return;}
+callFail(String((e&&e.message)||e)||'Panggilan gagal dimulai.');
+}
+}
+
+
+async function acceptIncomingCall(){
+if(!CALL||CALL.state!='incoming')return;
+callRingStop();
+if(!window.RTCPeerConnection||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+callFinish('unsupported');
+return;
+}
+const video=!!CALL.video;
+CALL.cameraOn=video;
+try{
+const cfg=await rpc('callConfig',TOK);
+if(!cfg||cfg.err)throw new Error(typeof (cfg&&cfg.err)=='string'?cfg.err:'Konfigurasi panggilan tidak tersedia');
+CALL_ICE=Array.isArray(cfg.ice)?cfg.ice:[];
+CALL_STREAM=await navigator.mediaDevices.getUserMedia(video
+?{audio:true,video:{width:{ideal:1280},height:{ideal:720},facingMode:'user'}}
+:{audio:true});
+CALL_PC=callCreatePeer();
+CALL.state='connecting';
+CALL.connectingAt=Date.now();
+renderCallOverlay();
+callStartTick();
+await sendSignalOut('accept',{video:video});
+if(CALL.offer){
+const offer=CALL.offer;
+CALL.offer=null;
+await callApplyOffer(offer);
+}
+}catch(e){
+if(isAuthError(e)){logout('Sesi login berakhir. Silakan login kembali.');return;}
+callFail(String((e&&e.message)||e)||'Panggilan gagal diterima.');
+}
+}
+
+
+function declineIncomingCall(){
+if(!CALL||CALL.state!='incoming')return;
+sendSignalOut('decline',{});
+callFinish('declined');
+}
+
+
+function endCall(reason){
+if(!CALL||CALL.state=='idle'||CALL.state=='ended'||CALL.state=='failed')return;
+if(reason=='logout'){
+callTeardown();
+CALL=callNewState({state:'idle'});
+renderCallOverlay();
+return;
+}
+if(CALL.state=='incoming'){
+declineIncomingCall();
+return;
+}
+callFinish('local');
+}
+
+
+function toggleCallMic(){
+if(!CALL||!CALL_STREAM)return;
+CALL.muted=!CALL.muted;
+CALL_STREAM.getAudioTracks().forEach(track=>{
+track.enabled=!CALL.muted;
+});
+renderCallOverlay();
+}
+
+
+function toggleCallCamera(){
+if(!CALL||!CALL_STREAM)return;
+CALL.cameraOn=!CALL.cameraOn;
+CALL_STREAM.getVideoTracks().forEach(track=>{
+track.enabled=CALL.cameraOn;
+});
+renderCallOverlay();
+}
+
+
+function callRingStart(){
+if(CALL_RING)return;
+try{
+if(navigator.vibrate)navigator.vibrate([500,300,500,300,500]);
+const Context=window.AudioContext||window.webkitAudioContext;
+if(!Context)return;
+const ctx=new Context();
+const gain=ctx.createGain();
+gain.gain.value=.0001;
+gain.connect(ctx.destination);
+const osc=ctx.createOscillator();
+osc.type='sine';
+osc.frequency.value=720;
+osc.connect(gain);
+osc.start();
+if(ctx.state=='suspended')ctx.resume().catch(()=>{});
+let on=false;
+const pulse=setInterval(()=>{
+on=!on;
+try{
+gain.gain.setValueAtTime(on?.05:.0001,ctx.currentTime);
+}catch(e){}
+},560);
+CALL_RING={ctx:ctx,osc:osc,gain:gain,pulse:pulse};
+}catch(e){}
+}
+
+
+function callRingStop(){
+if(!CALL_RING)return;
+try{
+clearInterval(CALL_RING.pulse);
+CALL_RING.osc.stop();
+CALL_RING.ctx.close();
+}catch(e){}
+CALL_RING=null;
+if(navigator.vibrate)try{navigator.vibrate(0)}catch(e){}
+}
+
+
+async function handleSignal(row){
+const data=callParse(row.payload);
+const from=String(row.from||'');
+const type=String(row.type||'');
+const room=String(row.room||'');
+if(!from||!type)return;
+if(type=='invite'){
+if(callActive()){
+sendSignalTo(from,room,'busy',{}).catch(()=>{});
+return;
+}
+if(Date.now()-Number(row.ts||0)>60000)return;
+callResetSoft();
+CALL=callNewState({
+state:'incoming',
+direction:'in',
+peer:from,
+room:room,
+video:!!data.video,
+cameraOn:!!data.video,
+startedAt:Number(row.ts)||Date.now()
+});
+renderCallOverlay();
+callStartTick();
+startCallPolling();
+callRingStart();
+return;
+}
+if(!callActive()||!CALL||room!=String(CALL.room))return;
+if(String(from).toLowerCase()!=String(CALL.peer).toLowerCase())return;
+if(type=='accept'){
+callRingStop();
+CALL.state='connecting';
+CALL.connectingAt=Date.now();
+renderCallOverlay();
+if(!CALL.offerSent)await callMakeOffer();
+return;
+}
+if(type=='decline'){
+callFinish('declined');
+return;
+}
+if(type=='busy'){
+callFinish('busy');
+return;
+}
+if(type=='hangup'){
+callFinish('remote');
+return;
+}
+if(type=='offer'){
+if(CALL.state=='incoming'||!CALL_PC){
+CALL.offer=data;
+return;
+}
+await callApplyOffer(data);
+return;
+}
+if(type=='answer'){
+if(!CALL_PC||!data.sdp)return;
+await CALL_PC.setRemoteDescription({type:data.type||'answer',sdp:data.sdp});
+CALL.state='connecting';
+CALL.connectingAt=CALL.connectingAt||Date.now();
+renderCallOverlay();
+}
+}
+
+
+function callResetSoft(){
+callTeardown();
+CALL=callNewState({state:'idle'});
+}
+
+
+async function pollSignals(){
+if(!TOK||SIGNAL_POLLING)return;
+SIGNAL_POLLING=true;
+try{
+const room=callActive()?String(CALL.room||''):'';
+const r=await rpc('pullSignals',TOK,SIGNAL_CURSOR,room);
+if(!r||typeof r!='object')throw new Error('Format respons sinyal tidak valid.');
+if(r.err){
+if(r.err=='AUTH'){
+if(callActive())callFinish('auth');
+logout();
+return;
+}
+throw new Error(typeof r.err=='string'?r.err:'Sinyal panggilan tidak dapat dimuat');
+}
+if(Number.isFinite(Number(r.cursor)))SIGNAL_CURSOR=Number(r.cursor);
+const rows=Array.isArray(r.rows)?r.rows:[];
+for(const row of rows){
+try{
+await handleSignal(row);
+}catch(e){
+console.warn('Sinyal panggilan gagal diproses:',e);
+}
+}
+}catch(e){
+const now=Date.now();
+if(now-SIGNAL_ERROR_AT>60000){
+SIGNAL_ERROR_AT=now;
+console.warn('Sinyal panggilan gagal:',e);
+}
+}finally{
+SIGNAL_POLLING=false;
+}
+}
+
+
 CHAT_TIMER=setInterval(
 async()=>{
-if(TOK&&!CHAT_HISTORY_LOADING&&!CHAT_SENDING&&!CHAT_UPLOADING){
+if(!TOK||callActive())return;
+if(!CHAT_HISTORY_LOADING&&!CHAT_SENDING&&!CHAT_UPLOADING){
 await pollChatNotifications();
 }
+if(document.visibilityState!='hidden')await pollSignals();
 },
 8000
 );
 
 CHAT_SYNC_TIMER=setInterval(
 ()=>{
-if(TOK&&document.visibilityState!='hidden'&&(tab=='chat'||dmTab=='chat')&&CHAT_ACTIVE&&!CHAT_HISTORY_LOADING&&!CHAT_SENDING&&!CHAT_UPLOADING){
+if(TOK&&document.visibilityState!='hidden'&&!callActive()&&(tab=='chat'||dmTab=='chat')&&CHAT_ACTIVE&&!CHAT_HISTORY_LOADING&&!CHAT_SENDING&&!CHAT_UPLOADING){
 refreshChatHistory();
 }
 },
@@ -7852,6 +9522,88 @@ render();
 // PROFILE
 // ============================================================
 
+function profileDetailsHtml(){
+
+return`
+
+<div class="card" style="margin-top:12px">
+
+<label style="margin-top:0">
+Tentang
+</label>
+
+<input
+id="profileBio"
+maxlength="140"
+value="${esc(PROFILE_BIO)}"
+placeholder="Tulis singkat tentang Anda"
+oninput="$('#profileBioCount').textContent=this.value.length+'/140'"
+>
+
+<div class="mut" id="profileBioCount">${PROFILE_BIO.length}/140</div>
+
+<label style="margin-top:12px">
+Nomor WhatsApp
+</label>
+
+<input
+id="profileWa"
+type="tel"
+inputmode="tel"
+maxlength="20"
+value="${esc(PROFILE_WA)}"
+placeholder="08xx xxxx xxxx"
+>
+
+<div class="mut" style="margin-top:6px">
+Nomor ini dipakai tombol WhatsApp bila panggilan suara atau video di dalam aplikasi gagal tersambung. Hanya terlihat anggota tim Anda.
+</div>
+
+<button
+class="btn big"
+style="margin-top:14px"
+onclick="saveProfileDetails()"
+>
+Simpan Tentang &amp; Nomor
+</button>
+
+</div>`;
+
+}
+
+
+async function saveProfileDetails(){
+
+const bioField=$('#profileBio');
+const waField=$('#profileWa');
+if(!bioField||!waField)return;
+
+try{
+
+const r=await rpc('updateContactDetails',TOK,bioField.value,waField.value);
+if(!r||typeof r!='object')throw new Error('Format respons penyimpanan profil tidak valid.');
+if(r.err){
+if(r.err=='AUTH'){logout();return;}
+throw new Error(typeof r.err=='string'?r.err:'Profil gagal disimpan');
+}
+
+PROFILE_BIO=String(r.bio||'');
+PROFILE_WA=String(r.wa||'');
+
+const mine=CHAT_CONTACTS.find(x=>String(x.username).toLowerCase()==String(USER).toLowerCase());
+if(mine){mine.bio=PROFILE_BIO;mine.wa=PROFILE_WA;}
+
+render();
+toast('Profil diperbarui');
+
+}catch(e){
+if(isAuthError(e)){logout('Sesi login berakhir. Silakan login kembali.');return;}
+toast('Profil gagal disimpan: '+String((e&&e.message)||e));
+}
+
+}
+
+
 function profile(){
 
 return`
@@ -7869,6 +9621,8 @@ ${socialAvatar(S.name,PROFILE_PHOTO_DRAFT||PROFILE_PHOTO,'social-avatar profile-
 <button class="btn sec" type="button" onclick="saveProfilePhoto()" ${PROFILE_PHOTO_DRAFT?'':'disabled'}>Simpan foto</button>
 </div>
 </div>
+
+${profileDetailsHtml()}
 
 <div
 class="card"
@@ -10874,6 +12628,8 @@ ${socialAvatar(S.name,PROFILE_PHOTO_DRAFT||PROFILE_PHOTO,'social-avatar profile-
 </div>
 </div>
 
+${profileDetailsHtml()}
+
 <div
 class="card"
 style="margin-top:12px"
@@ -11167,10 +12923,29 @@ if('serviceWorker' in navigator){
 navigator.serviceWorker.addEventListener('message',event=>{
 const data=event.data||{};
 if(data.type==='open-chat'&&data.url)openChatFromUrl(data.url);
+if(data.type==='incoming-call'){
+if(TOK)pollSignals().catch(()=>{});
+}
 });
 registerServiceWorker();
 window.addEventListener('hashchange',()=>openChatFromUrl(location.href));
 }
+
+document.addEventListener('keydown',event=>{
+if(event.key=='Escape'){
+if(STORY_SHEET_MODE){hideStorySheet();return;}
+if(STORY_VIEW){closeStoryViewer();return;}
+}
+if(!STORY_VIEW)return;
+if(event.key=='ArrowRight')nextStoryItem();
+if(event.key=='ArrowLeft')prevStoryItem();
+});
+
+document.addEventListener('visibilitychange',()=>{
+if(document.visibilityState!='visible'||!TOK)return;
+if(callActive())startCallPolling();
+else pollSignals().catch(()=>{});
+});
 
 restoreGoldNews();
 boot();
