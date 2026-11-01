@@ -621,7 +621,7 @@ function ensureManager_(username, password, nama, role) {
 // API
 // ============================================================
 
-const API_VERSION = '2026-10-31-chatmedia';
+const API_VERSION = '2026-11-01-calls-stories';
 
 function doGet() {
   return out_({
