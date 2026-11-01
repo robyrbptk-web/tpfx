@@ -113,6 +113,23 @@ tr.table-more td{text-align:center;color:var(--mut);font-size:11.5px;white-space
 .dist-bar{flex:1;height:8px;background:#e8eef8;border-radius:999px;overflow:hidden}
 .dist-bar i{display:block;height:100%;width:0;background:var(--grad);border-radius:inherit;transition:width .85s cubic-bezier(.22,1,.36,1)}
 .dist-count{min-width:28px;text-align:right;font-weight:800;color:var(--pri);font-variant-numeric:tabular-nums}
+.pick-tools{display:flex;gap:9px;align-items:center;margin:12px 0}
+.pick-tools .search-wrap{flex:1;min-width:0}
+.pick-actions{display:flex;gap:7px;flex:none}
+.pick-list{border:1px solid var(--line);border-radius:14px;background:#fff;max-height:330px;overflow:auto}
+.pick-row{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid #f1f4fb;cursor:pointer;transition:background .15s}
+.pick-row:last-child{border-bottom:0}
+.pick-row:hover:not(.off){background:#fafbff}
+.pick-row.off{cursor:default;opacity:.72}
+.pick-row input[type=checkbox]{width:18px;height:18px;flex:none;accent-color:var(--pri);cursor:inherit}
+.pick-row.off input[type=checkbox]{cursor:default}
+.pick-info{min-width:0;flex:1}
+.pick-name{display:block;font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pick-phone{display:block;font-size:11.5px;color:var(--mut);font-variant-numeric:tabular-nums;margin-top:1px}
+.pick-tag{flex:none;font-size:10px;font-weight:800;letter-spacing:.03em;padding:4px 8px;border-radius:999px;background:#f0f4ff;color:var(--ink2)}
+.pick-tag.dup{background:#fff6e6;color:#8a5a08}
+.pick-tag.badn{background:#fdf3f3;color:#a12626}
+.pick-more{display:block;width:100%;border:0;border-top:1px solid #f1f4fb;background:#fbfcff;color:var(--pri);font-size:12px;font-weight:700;padding:11px;cursor:pointer}
 .tabs{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 14px;scrollbar-width:none}
 .tabs::-webkit-scrollbar,.chips::-webkit-scrollbar{display:none}
 .tab{flex:none;display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:#fff;color:var(--ink2);border-radius:999px;padding:9px 14px;font-size:12.5px;font-weight:700;box-shadow:var(--shadow-sm);transition:transform .18s,border-color .18s,box-shadow .18s,background .18s;animation:cardIn .35s both}
@@ -261,6 +278,10 @@ main{padding:16px 12px calc(38px + env(safe-area-inset-bottom,0px))}
 .item-phone{font-size:15px}
 .tabs{margin-right:-12px;padding-right:12px}
 .list-head{margin:16px 0 8px}
+.pick-tools{flex-wrap:wrap}
+.pick-tools .search-wrap{flex:1 1 100%}
+.pick-actions{flex:1 1 100%}
+.pick-actions .btn-quiet{flex:1}
 }
 @media (prefers-reduced-motion:no-preference){
 .btn-import:active:not(:disabled),.btn-wa:active,.btn-pipe:active:not(:disabled),.btn-quiet:active:not(:disabled),.btn-more:active,.empty .btn:active{transform:scale(.965)}
@@ -327,9 +348,50 @@ main{padding:16px 12px calc(38px + env(safe-area-inset-bottom,0px))}
 </table>
 </div>
 <button class="btn-import" id="importBtn" type="button" disabled><span class="btn-label">Impor <span id="importCount">0</span> kontak</span></button>
-<p class="hint">Hanya akun manager (BM/DM) yang dapat mengimpor. Nomor duplikat dan tidak valid dilewati otomatis.</p>
+<p class="hint">Impor massal hanya untuk akun manager (BM/DM). BDO dapat menambahkan kontak lewat kartu "Impor dari kontak HP". Nomor duplikat dan tidak valid dilewati otomatis.</p>
 </div>
 <div id="importSummary" hidden></div>
+</section>
+
+<section class="card import-card" id="phoneCard" aria-labelledby="phoneTitle" hidden>
+<div class="card-head">
+<span class="icon-badge" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.6"/><path d="M10.5 18.5h3"/><path d="m9.2 9.6 1.9 1.9 3.8-3.7"/></svg></span>
+<div>
+<h2 id="phoneTitle">Impor dari kontak HP</h2>
+<p>Ambil nomor dari daftar kontak HP Anda, centang yang mau dipakai, dan kontak masuk database sekaligus terbagi rata ke semua BDO aktif.</p>
+</div>
+</div>
+<button class="btn-import" id="phoneDetectBtn" type="button" style="margin-top:0"><span class="btn-label">Deteksi kontak di HP</span></button>
+<label class="dropzone" id="phoneDropzone" for="phoneFileInput" tabindex="0" role="button" aria-label="Unggah file kontak dari HP" style="margin-top:12px">
+<span class="dz-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v5h5"/><path d="M15 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-4-5Z"/><path d="M9 13h6"/><path d="M12 16V10"/></svg></span>
+<b>atau unggah file kontak</b>
+<span>.vcf hasil ekspor dari aplikasi Kontak / Google Contacts · maksimal 10 MB</span>
+<input id="phoneFileInput" type="file" accept=".vcf,text/vcard,text/x-vcard,.cnt" hidden>
+</label>
+<div class="status" id="phoneStatus" role="status" hidden></div>
+<div id="phonePick" hidden>
+<div class="stats">
+<div class="stat-pill good"><b id="phPicked">0</b><span>dicentang</span></div>
+<div class="stat-pill"><b id="phReady">0</b><span>siap diimpor</span></div>
+<div class="stat-pill warn"><b id="phDup">0</b><span>sudah ada</span></div>
+<div class="stat-pill bad"><b id="phBad">0</b><span>tidak valid</span></div>
+</div>
+<div class="pick-tools">
+<div class="search-wrap">
+<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
+<input type="search" id="phoneSearch" placeholder="Cari nama atau nomor" aria-label="Cari kontak HP" autocomplete="off">
+</div>
+<div class="pick-actions">
+<button class="btn-quiet" id="phoneAll" type="button">Centang semua</button>
+<button class="btn-quiet" id="phoneNone" type="button">Lepas centang</button>
+</div>
+</div>
+<div class="pick-list" id="phoneList" role="group" aria-label="Daftar kontak dari HP"></div>
+<label class="field"><span>Nama kelompok (opsional)</span><input id="phoneGroup" type="text" maxlength="80" placeholder="Contoh: Kontak HP Andi" autocomplete="off"></label>
+<button class="btn-import" id="phoneImportBtn" type="button" disabled><span class="btn-label">Impor <span id="phoneImportCount">0</span> kontak dan bagikan ke BDO</span></button>
+<p class="hint">Nomor yang sudah ada di database atau bukan nomor HP Indonesia dilewati otomatis. Kontak baru dibagikan ke BDO dengan beban paling sedikit.</p>
+</div>
+<div id="phoneSummary" hidden></div>
 </section>
 
 <section class="card maint-card" id="maintCard" aria-labelledby="maintTitle" hidden>
@@ -542,6 +604,7 @@ function showSkeleton(){
 }
 function showAuth(msg,label){
  $('importCard').hidden=true;
+ $('phoneCard').hidden=true;
  $('maintCard').hidden=true;
  $('tabs').replaceChildren();
  $('chips').replaceChildren();
@@ -605,6 +668,7 @@ async function loadDatabase(){
   }
   const isManager=ROLE==='BM'||ROLE==='DM';
   $('importCard').hidden=!isManager;
+  $('phoneCard').hidden=false;
   $('maintCard').hidden=!ROOT;
   $('roleBadge').hidden=false;
   $('roleBadge').textContent=isManager?'Manager':(ROLE||'BDO');
@@ -645,7 +709,7 @@ function render(){
   $('pbText').textContent='0%';
   $('stat').textContent='0 kontak';
   const box=el('div','empty');
-  box.append(el('b',null,'Belum ada kontak'),el('p',null,ROLE==='BM'||ROLE==='DM'?'Gunakan kartu impor di atas untuk memasukkan kontak dari Excel atau CSV.':'Database belum diisi manager.'));
+  box.append(el('b',null,'Belum ada kontak'),el('p',null,ROLE==='BM'||ROLE==='DM'?'Gunakan kartu impor di atas untuk memasukkan kontak dari Excel atau CSV.':'Gunakan kartu "Impor dari kontak HP" di atas untuk memasukkan nomor dari HP Anda.'));
   $('list').replaceChildren(box);
   return;
  }
@@ -1121,19 +1185,7 @@ function fmtBytes(n){
 function guessGroup(name){
  return String(name||'').replace(/\.[^.]+$/,'').replace(/[_]+/g,' ').trim().slice(0,80);
 }
-function setImportStatus(msg,kind){
- const node=$('importStatus');
- if(!msg){node.hidden=true;node.className='status';node.replaceChildren();return;}
- node.hidden=false;
- node.className='status'+(kind?' '+kind:'');
- node.replaceChildren();
- if(kind==='busy'){
-  const spinner=el('span','spinner');
-  spinner.setAttribute('aria-hidden','true');
-  node.appendChild(spinner);
- }
- node.appendChild(document.createTextNode(String(msg)));
-}
+function setImportStatus(msg,kind){setStatusNode($('importStatus'),msg,kind);}
 function effectiveGroup(record){
  return record.group||$('groupName').value.trim()||'Otomatis';
 }
@@ -1229,8 +1281,8 @@ async function handleFile(file){
   toast('Gagal membaca file: '+msg,'bad');
  }
 }
-function renderSummary(result){
- const wrap=$('importSummary');
+function renderSummary(result,node){
+ const wrap=node||$('importSummary');
  wrap.replaceChildren();
  wrap.hidden=false;
  const top=el('div','summary-top');
@@ -1433,8 +1485,309 @@ async function cleanCapacity(){
   btn.textContent=label;
  }
 }
-function initMaint(){
- $('capCheck').addEventListener('click',checkCapacity);
+const MAX_PHONE_ROWS=2000,MAX_PHONE_BYTES=10*1024*1024,PHONE_PAGE=200;
+let PHONE={items:[],limit:PHONE_PAGE,busy:false};
+
+function setStatusNode(node,msg,kind){
+ if(!node)return;
+ if(!msg){node.hidden=true;node.className='status';node.replaceChildren();return;}
+ node.hidden=false;
+ node.className='status'+(kind?' '+kind:'');
+ node.replaceChildren();
+ if(kind==='busy'){
+  const spinner=el('span','spinner');
+  spinner.setAttribute('aria-hidden','true');
+  node.appendChild(spinner);
+ }
+ node.appendChild(document.createTextNode(String(msg)));
+}
+function setPhoneStatus(msg,kind){setStatusNode($('phoneStatus'),msg,kind);}
+function phoneGroupDefault(){
+ const who=String(MY_NAME||MY_USER||'').trim().split(/\s+/)[0];
+ return ('Kontak HP'+(who?' '+who:'')).slice(0,80);
+}
+function vcfField(line){
+ const idx=line.indexOf(':');
+ if(idx<0)return null;
+ const head=line.slice(0,idx);
+ const value=line.slice(idx+1).trim();
+ const parts=head.split(';');
+ const id=parts[0].trim();
+ const field=id.indexOf('.')>=0?id.slice(id.indexOf('.')+1):id;
+ const params={};
+ parts.slice(1).forEach(p=>{
+  const e=p.indexOf('=');
+  if(e>0)params[p.slice(0,e).trim().toLowerCase()]=p.slice(e+1).trim().toLowerCase();
+ });
+ const type=String(params.type||'');
+ return {
+  name:field.toUpperCase(),
+  value:value,
+  cell:/cell|mobile|whatsapp|car/.test(type),
+  pref:/(^|["';, ])(pref|1|true)(["';, ]|$)/.test(String(params.type||''))||/^(1|true|yes)$/.test(String(params.pref||''))
+ };
+}
+function parseVcf(text){
+ const cards=[];
+ let current=null;
+ String(text||'').replace(/^\uFEFF/,'').replace(/\r\n?/g,'\n').replace(/\n[ \t]/g,'')
+  .split('\n').forEach(raw=>{
+   const line=raw.trim();
+   if(!line)return;
+   const up=line.toUpperCase();
+   if(up.indexOf('BEGIN:VCARD')===0){current={name:'',phones:[]};return;}
+   if(!current)return;
+   if(up.indexOf('END:VCARD')===0){cards.push(current);current=null;return;}
+   const field=vcfField(line);
+   if(!field)return;
+   if(field.name==='FN'&&!current.name)current.name=field.value;
+   else if(field.name==='N'&&!current.name){
+    const slots=field.value.split(';').filter(Boolean);
+    current.name=[slots[1],slots[0]].filter(Boolean).join(' ').trim();
+   }else if(field.name==='TEL'&&field.value){
+    current.phones.push(field);
+   }
+  });
+  return cards.slice(0,5000);
+}
+function phoneItemsFromCards(cards){
+  const items=[],seen=new Set();
+  cards.forEach(card=>{
+   if(!card||!Array.isArray(card.phones)||!card.phones.length)return;
+   const ordered=card.phones.slice().sort((a,b)=>(b.cell?1:0)-(a.cell?1:0)||(b.pref?1:0)-(a.pref?1:0));
+   const usable=ordered.map(p=>normalizePhone(p.value)).filter(p=>/^62\d{8,13}$/.test(p));
+   const phone=usable[0]||normalizePhone(ordered[0].value)||String(ordered[0].value||'').trim();
+   if(!phone||seen.has(phone))return;
+   seen.add(phone);
+   const name=String(card.name||'').replace(/\s+/g,' ').trim().slice(0,120);
+   items.push({name:name||('Kontak '+phone),phone:phone,valid:/^62\d{8,13}$/.test(phone),dup:false,checked:false});
+  });
+  return items;
+}
+function markPhoneItems(items){
+ const existing={};
+ DATA.forEach(d=>{
+  (Array.isArray(d&&d.r)?d.r:[]).forEach(r=>{
+   const p=normalizePhone(r&&r[2]);
+   if(p)existing[p]=true;
+  });
+ });
+ items.forEach(it=>{
+  it.dup=!!existing[it.phone];
+  it.checked=it.valid&&!it.dup;
+ });
+}
+function phoneFiltered(){
+ const q=String($('phoneSearch').value||'').trim().toLowerCase();
+ const qd=q.replace(/\D/g,'');
+ if(!q)return PHONE.items;
+ return PHONE.items.filter(it=>it.name.toLowerCase().indexOf(q)>=0||!!qd&&it.phone.indexOf(qd)>=0);
+}
+function renderPhoneList(){
+ const list=$('phoneList');
+ list.replaceChildren();
+ const visible=phoneFiltered();
+ if(!visible.length){
+  list.appendChild(el('div','empty','Tidak ada kontak yang cocok dengan pencarian.'));
+  return;
+ }
+ const frag=document.createDocumentFragment();
+ visible.slice(0,PHONE.limit).forEach(it=>{
+  const row=el('label','pick-row');
+  const box=document.createElement('input');
+  box.type='checkbox';
+  box.checked=!!it.checked;
+  box.disabled=!it.valid||it.dup;
+  box.setAttribute('aria-label','Centang kontak '+it.name+' '+fmt(it.phone));
+  box.onchange=()=>{it.checked=box.checked;updatePhoneCounts();};
+  const info=el('div','pick-info');
+  info.append(el('span','pick-name',it.name),el('span','pick-phone',fmt(it.phone)));
+  row.append(box,info);
+  if(it.dup)row.append(el('span','pick-tag dup','sudah ada'));
+  else if(!it.valid)row.append(el('span','pick-tag badn','tidak valid'));
+  if(!it.valid||it.dup)row.classList.add('off');
+  frag.appendChild(row);
+ });
+ list.appendChild(frag);
+ const left=visible.length-PHONE.limit;
+ if(left>0){
+  const more=el('button','pick-more','Tampilkan '+formatNum(Math.min(PHONE_PAGE,left))+' kontak lagi ('+formatNum(left)+' tersisa)');
+  more.type='button';
+  more.onclick=()=>{PHONE.limit+=PHONE_PAGE;renderPhoneList();};
+  list.appendChild(more);
+ }
+}
+function updatePhoneCounts(){
+ const items=PHONE.items;
+ const ready=items.filter(i=>i.valid&&!i.dup);
+ const picked=items.filter(i=>i.checked).length;
+ $('phReady').textContent=formatNum(ready.length);
+ $('phPicked').textContent=formatNum(picked);
+ $('phDup').textContent=formatNum(items.filter(i=>i.dup&&i.valid).length);
+ $('phBad').textContent=formatNum(items.filter(i=>!i.valid).length);
+ $('phoneImportCount').textContent=formatNum(picked);
+ const tooMany=picked>MAX_PHONE_ROWS;
+ if(tooMany)setPhoneStatus('Terlalu banyak kontak dicentang ('+formatNum(picked)+'). Maksimal 2.000 per impor — kurangi centangnya.','bad');
+ else if(!PHONE.busy&&items.length)setPhoneStatus(formatNum(ready.length)+' kontak siap diimpor. Centang yang mau dipakai, lalu tekan tombol di bawah.','ok');
+ $('phoneImportBtn').disabled=PHONE.busy||!picked||tooMany;
+}
+function setPhoneItems(items,label){
+ if(!items.length){
+  PHONE.items=[];
+  $('phonePick').hidden=true;
+  setPhoneStatus('Tidak ada nomor yang bisa dibaca dari '+label+'.','bad');
+  return;
+ }
+ PHONE.items=items;
+ PHONE.limit=PHONE_PAGE;
+ $('phoneSearch').value='';
+ if(!$('phoneGroup').value.trim())$('phoneGroup').value=phoneGroupDefault();
+ markPhoneItems(items);
+ $('phonePick').hidden=false;
+ renderPhoneList();
+ updatePhoneCounts();
+}
+function resetPhonePick(){
+ PHONE={items:[],limit:PHONE_PAGE,busy:false};
+ $('phonePick').hidden=true;
+ $('phoneList').replaceChildren();
+ $('phoneSearch').value='';
+ $('phoneDetectBtn').classList.remove('loading');
+ $('phoneImportBtn').classList.remove('loading');
+ $('phoneImportBtn').disabled=true;
+ setPhoneStatus('','');
+}
+function setPhoneBusy(busy){
+ PHONE.busy=busy;
+ $('phoneDetectBtn').classList.toggle('loading',busy);
+ $('phoneDetectBtn').disabled=busy;
+ $('phoneImportBtn').classList.toggle('loading',busy);
+ $('phoneFileInput').disabled=busy;
+ $('phoneGroup').disabled=busy;
+ $('phoneSearch').disabled=busy;
+ $('phoneAll').disabled=busy;
+ $('phoneNone').disabled=busy;
+ updatePhoneCounts();
+}
+async function detectPhoneContacts(){
+ if(PHONE.busy)return;
+ if(!(navigator.contacts&&typeof navigator.contacts.select==='function')){
+  setPhoneStatus('Browser ini belum bisa membuka daftar kontak HP. Ekspor kontak dari aplikasi Kontak ke file .vcf, lalu unggah lewat kotak di bawah.','bad');
+  return;
+ }
+ let picked;
+ try{
+  picked=await navigator.contacts.select(['name','tel','email'],{multiple:true});
+ }catch(e){
+  const name=String((e&&e.name)||'');
+  if(name==='AbortError')return;
+  if(name==='NotAllowedError'){setPhoneStatus('Izin membaca kontak HP ditolak. Izinkan akses Kontak untuk situs ini lalu tekan tombolnya lagi.','bad');return;}
+  setPhoneStatus('Kontak HP tidak terbaca. Ekspor kontak Anda ke file .vcf lalu unggah di bawah.','bad');
+  return;
+ }
+ if(!Array.isArray(picked)||!picked.length){
+  setPhoneStatus('Belum ada kontak yang dipilih dari HP.','');
+  return;
+ }
+ const cards=picked.map(entry=>{
+  const names=Array.isArray(entry&&entry.name)?entry.name:[entry&&entry.name];
+  const tels=Array.isArray(entry&&entry.tel)?entry.tel:[entry&&entry.tel];
+  return {
+   name:String(names.filter(Boolean)[0]||'').trim(),
+   phones:tels.filter(Boolean).map(v=>({value:String(v),cell:true,pref:false}))
+  };
+ });
+ $('phoneSummary').hidden=true;
+ $('phoneSummary').replaceChildren();
+ setPhoneItems(phoneItemsFromCards(cards),'HP Anda');
+}
+async function handlePhoneFile(file){
+ if(!file)return;
+ const name=String(file.name||'kontak.vcf');
+ const ext=(name.split('.').pop()||'').toLowerCase();
+ if(['vcf','cnt','txt'].indexOf(ext)<0){toast('File kontak harus berformat .vcf.','bad');return;}
+ if(file.size>MAX_PHONE_BYTES){toast('Ukuran file kontak maksimal 10 MB.','bad');return;}
+ $('phoneSummary').hidden=true;
+ $('phoneSummary').replaceChildren();
+ setPhoneStatus('Membaca '+name+'...','busy');
+ try{
+  const items=phoneItemsFromCards(parseVcf(await file.text()));
+  setPhoneItems(items,name);
+ }catch(e){
+  const msg=String((e&&e.message)||e);
+  PHONE.items=[];
+  $('phonePick').hidden=true;
+  setPhoneStatus('File kontak tidak dapat dibaca: '+msg,'bad');
+ }finally{
+  $('phoneFileInput').value='';
+ }
+}
+async function runPhoneImport(){
+ if(PHONE.busy)return;
+ const selected=PHONE.items.filter(i=>i.checked&&i.valid&&!i.dup);
+ if(!selected.length){setPhoneStatus('Centang dulu kontak yang mau diimpor.','bad');return;}
+ if(selected.length>MAX_PHONE_ROWS){setPhoneStatus('Maksimal 2.000 kontak per impor — kurangi centangnya.','bad');return;}
+ const token=localStorage.getItem('swt')||'';
+ if(!token){showAuth('Sesi login berakhir. Login kembali untuk mengimpor kontak HP.','Login kembali');return;}
+ const group=String($('phoneGroup').value||'').trim().slice(0,80);
+ setPhoneBusy(true);
+ setPhoneStatus('Mengimpor '+formatNum(selected.length)+' kontak dan membaginya ke BDO aktif...','busy');
+ try{
+  const result=await rpc('importPhoneContacts',token,group,selected.map(i=>[i.name,i.phone]));
+  if(!result||result.ok!==1){
+   const msg=String((result&&result.err)||'Impor tidak berhasil');
+   if(msg==='AUTH'){showAuth('Sesi login berakhir. Login kembali untuk mengimpor kontak HP.','Login kembali');toast('Sesi login berakhir.','bad');return;}
+   throw new Error(msg);
+  }
+  resetPhonePick();
+  renderSummary(result,$('phoneSummary'));
+  const targets=Array.isArray(result.perBdo)?result.perBdo.filter(b=>Number(b.count)>0).length:0;
+  toast(formatNum(result.added)+' kontak HP dibagikan ke '+targets+' BDO.','ok');
+  await loadDatabase();
+ }catch(e){
+  const msg=String((e&&e.message)||e);
+  if(msg.indexOf('tidak mengembalikan hasil')>=0)setPhoneStatus('Impor kontak HP belum aktif di server. Coba lagi beberapa saat atau hubungi admin.','bad');
+  else if(msg==='AUTH')setPhoneStatus('Sesi login berakhir. Silakan login kembali.','bad');
+  else setPhoneStatus('Impor gagal: '+msg,'bad');
+  toast('Impor gagal: '+String((e&&e.message)||e),'bad');
+ }finally{
+  setPhoneBusy(false);
+ }
+}
+function initPhone(){
+ const input=$('phoneFileInput'),dz=$('phoneDropzone');
+ input.addEventListener('change',()=>handlePhoneFile(input.files&&input.files[0]));
+ ['dragenter','dragover'].forEach(type=>{
+  dz.addEventListener(type,e=>{e.preventDefault();e.stopPropagation();dz.classList.add('drag');});
+ });
+ ['dragleave','dragend'].forEach(type=>{
+  dz.addEventListener(type,e=>{e.preventDefault();dz.classList.remove('drag');});
+ });
+ dz.addEventListener('drop',e=>{
+  e.preventDefault();
+  dz.classList.remove('drag');
+  const file=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];
+  if(file)handlePhoneFile(file);
+ });
+ dz.addEventListener('keydown',e=>{
+  if(e.key==='Enter'||e.key===' '){e.preventDefault();input.click();}
+ });
+ $('phoneDetectBtn').addEventListener('click',detectPhoneContacts);
+ $('phoneImportBtn').addEventListener('click',runPhoneImport);
+ $('phoneSearch').addEventListener('input',()=>{PHONE.limit=PHONE_PAGE;renderPhoneList();});
+ $('phoneAll').addEventListener('click',()=>{
+  PHONE.items.forEach(i=>{if(i.valid&&!i.dup)i.checked=true;});
+  renderPhoneList();
+  updatePhoneCounts();
+ });
+ $('phoneNone').addEventListener('click',()=>{
+  PHONE.items.forEach(i=>{i.checked=false;});
+  renderPhoneList();
+  updatePhoneCounts();
+ });
+}
+initPhone();
+function initMaint(){ $('capCheck').addEventListener('click',checkCapacity);
  $('capClean').addEventListener('click',cleanCapacity);
 }
 function initImport(){

@@ -621,7 +621,7 @@ function ensureManager_(username, password, nama, role) {
 // API
 // ============================================================
 
-const API_VERSION = '2026-11-01-calls-stories';
+const API_VERSION = '2026-11-01-phone-contacts';
 
 function doGet() {
   return out_({
@@ -659,6 +659,7 @@ function api_() {
     deleteUser: deleteUser,
     databaseData: databaseData,
     importContacts: importContacts,
+    importPhoneContacts: importPhoneContacts,
     setContactStatus: setContactStatus,
     addContactToPipeline: addContactToPipeline,
     storageReport: storageReport,
@@ -2192,6 +2193,34 @@ function importContacts(t, group, rows) {
     return { err: 'Impor kontak hanya untuk akun manager (BM/DM)' };
   }
 
+  return importContactRows_(session, group, rows, 5000);
+}
+
+// Kontak dari address book HP. BDO boleh menyumbang hasil kurasi mereka sendiri
+// ke database tim; baris [nama, nomor] diubah ke format impor yang sama supaya
+// pembagiannya memakai mesin pickLeastLoaded_ dan tetap merata ke semua BDO.
+function importPhoneContacts(t, group, rows) {
+  const session = loadState(t);
+  if (!session || session.err) return { err: session.err || 'AUTH' };
+
+  const role = String(session.role || '').toUpperCase();
+  if (role != 'BM' && role != 'DM' && role != 'BDO') {
+    return { err: 'Akun ini tidak dapat mengimpor kontak' };
+  }
+  if (!Array.isArray(rows)) return { err: 'Tidak ada kontak untuk diimpor' };
+
+  const pairs = rows.map(row => {
+    if (!Array.isArray(row)) return null;
+    const name = String(row[0] == null ? '' : row[0]).trim().slice(0, 120);
+    const phone = String(row[1] == null ? '' : row[1]).trim();
+    if (!name && !phone) return null;
+    return ['', name, '', '', phone];
+  }).filter(Boolean);
+
+  return importContactRows_(session, group, pairs, 2000);
+}
+
+function importContactRows_(session, group, rows, maxRows) {
   const bdos = activeBdos_(session.team);
   if (!bdos.length) {
     return { err: 'Belum ada akun BDO aktif untuk pembagian kontak' };
@@ -2200,8 +2229,8 @@ function importContacts(t, group, rows) {
   if (!Array.isArray(rows) || !rows.length) {
     return { err: 'Tidak ada kontak untuk diimpor' };
   }
-  if (rows.length > 5000) {
-    return { err: 'Maksimal 5000 kontak per impor' };
+  if (rows.length > maxRows) {
+    return { err: 'Maksimal ' + maxRows + ' kontak per impor' };
   }
 
   const groupName = String(group || '').trim().slice(0, 80) ||
