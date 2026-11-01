@@ -621,7 +621,7 @@ function ensureManager_(username, password, nama, role) {
 // API
 // ============================================================
 
-const API_VERSION = '2026-11-01-story-push';
+const API_VERSION = '2026-11-01-story-views';
 
 function doGet() {
   return out_({
@@ -695,6 +695,7 @@ function api_() {
     addStory: addStory,
     listStories: listStories,
     deleteStory: deleteStory,
+    viewStory: viewStory,
     sendSignal: sendSignal,
     pullSignals: pullSignals,
     callConfig: callConfig
@@ -4283,10 +4284,53 @@ const STORY_TEXT_MAX = 200;
 const STORY_CAPTION_MAX = 200;
 
 function stories_() {
-  return sheetEnsure_('Stories', [
+  const sh = sheetEnsure_('Stories', [
     'id', 'username', 'nama', 'kind', 'text',
-    'fileId', 'fileName', 'mimeType', 'size', 'ts', 'expires'
+    'fileId', 'fileName', 'mimeType', 'size', 'ts', 'expires', 'viewers'
   ]);
+  // Kolom viewers dipakai daftar "dilihat oleh" seperti story WhatsApp.
+  if (sh.getLastColumn() < 12) {
+    sh.getRange(1, 12).setValue('viewers');
+  }
+  return sh;
+}
+
+function storyViewerList_(value) {
+  return String(value || '')
+    .split(',')
+    .map(v => String(v || '').trim().toLowerCase())
+    .filter(Boolean)
+    .filter(function (v, i, all) { return all.indexOf(v) == i; })
+    .slice(0, 200);
+}
+
+function viewStory(t, id) {
+  const ctx = callerContext_(t);
+  if (!ctx) return { err: 'AUTH' };
+
+  id = String(id || '').trim();
+  if (!id) return { err: 'Story tidak ditemukan' };
+
+  const sheet = stories_();
+  const values = sheet.getDataRange().getValues();
+  const viewer = String(ctx.username || '').toLowerCase();
+
+  for (let i = values.length - 1; i >= 1; i--) {
+    if (String(values[i][0]) != id) continue;
+    const author = String(values[i][1] || '').toLowerCase();
+    // Story teks tidak punya statistik penonton, sama seperti di WhatsApp.
+    if (String(values[i][3] || 'text') == 'text' || author == viewer) {
+      return { ok: 1, views: storyViewerList_(values[i][11]).length };
+    }
+    const viewers = storyViewerList_(values[i][11]);
+    if (viewers.indexOf(viewer) < 0) {
+      viewers.push(viewer);
+      sheet.getRange(i + 1, 12).setValue(viewers.join(','));
+    }
+    return { ok: 1, views: viewers.length };
+  }
+
+  return { err: 'Story tidak ditemukan' };
 }
 
 function storyFileAllowed_(kind, mime) {
@@ -4365,7 +4409,7 @@ function addStory(t, kind, text, file) {
   sheet.appendRow([
     id, ctx.username, String(ctx.account[2] || ctx.username), kind, text,
     input ? input.id : '', input ? input.name : '', input ? input.mime : '',
-    input ? input.size : 0, now, now + STORY_TTL_MS
+    input ? input.size : 0, now, now + STORY_TTL_MS, ''
   ]);
 
   const storyText = text || (kind == 'text' ? '' : (kind == 'video' ? 'Video baru' : 'Foto baru'));
@@ -4404,7 +4448,7 @@ function listStories(t) {
   if (lastRow < 2) return { rows: [] };
 
   const start = Math.max(2, lastRow - 1999);
-  const values = sheet.getRange(start, 1, lastRow - start + 1, 11).getValues();
+  const values = sheet.getRange(start, 1, lastRow - start + 1, 12).getValues();
   const profiles = socialUsers_(ctx.root ? null : ctx.team);
   const now = Date.now();
   const expired = [];
@@ -4421,7 +4465,7 @@ function listStories(t) {
     if (!ctx.root && !profiles[author]) return;
 
     const profile = profiles[author] || {};
-    stories.push({
+    const story = {
       id: String(row[0]),
       username: String(row[1]),
       nama: String(row[2] || profile.nama || row[1]),
@@ -4431,7 +4475,12 @@ function listStories(t) {
       file: storyFileFromRow_(row),
       ts: Number(row[9]) || 0,
       expires: Number(row[10]) || 0
-    });
+    };
+    // Daftar "dilihat oleh" hanya boleh dibaca pembuatnya, sama seperti WhatsApp.
+    if (author == ctx.username.toLowerCase()) {
+      story.viewers = storyViewerList_(row[11]);
+    }
+    stories.push(story);
   });
 
   for (let i = expired.length - 1; i >= 0; i--) {

@@ -2715,6 +2715,18 @@ font-size:12px;
 line-height:1
 }
 .story-plus svg{width:11px;height:11px}
+/* Baris kedua tray story meniru label "Recently updated"/"Viewed" milik WhatsApp. */
+.story-item>i{
+font-style:normal;
+font-size:10.5px;
+color:var(--mut);
+opacity:.8;
+max-width:66px;
+overflow:hidden;
+text-overflow:ellipsis;
+white-space:nowrap
+}
+.story-item>i.new{color:var(--pri);opacity:1;font-weight:700}
 
 .story-viewer{
 position:fixed;
@@ -2871,6 +2883,75 @@ cursor:pointer
 }
 /* Kontrol bawaan video menempel di dasar pemutar, jadi keterangan naik ke atasnya. */
 .story-caption.above-controls{bottom:58px}
+/* Menahan story menjeda bar & media, persis menahan status di WhatsApp. */
+.story-viewer.holding .story-bar.current i{animation-play-state:paused}
+.story-viewer.holding .story-body{filter:brightness(.78)}
+.story-body{touch-action:none}
+.story-info{
+flex:none;
+height:28px;
+padding:0 10px;
+border-radius:99px;
+border:1px solid rgba(255,255,255,.34);
+background:rgba(255,255,255,.1);
+color:#fff;
+font-size:12px;
+font-weight:700;
+display:flex;
+align-items:center;
+gap:5px;
+cursor:pointer
+}
+.story-info svg{width:15px;height:15px}
+.story-reply-box{
+flex:1;
+min-width:0;
+display:flex;
+align-items:center;
+gap:8px;
+height:44px;
+border-radius:99px;
+border:1px solid rgba(255,255,255,.34);
+background:rgba(255,255,255,.08);
+padding:0 5px 0 14px
+}
+.story-reply-box input{
+flex:1;
+min-width:0;
+height:100%;
+border:0;
+background:transparent;
+color:#fff;
+font-size:14px;
+outline:none
+}
+.story-reply-box input::placeholder{color:rgba(255,255,255,.66)}
+.story-reply-box button{
+flex:none;
+width:34px;
+height:34px;
+border-radius:50%;
+border:0;
+background:#fff;
+color:#111826;
+display:grid;
+place-items:center;
+cursor:pointer
+}
+.story-reply-box button[disabled]{opacity:.45}
+.story-reply-box button svg{width:16px;height:16px}
+.story-view-row{
+display:flex;
+align-items:center;
+gap:10px;
+padding:9px 0;
+border-bottom:1px solid var(--line);
+font-size:14px
+}
+.story-view-row>div{flex:1;min-width:0}
+.story-view-row b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.story-view-row small{color:var(--mut);font-size:11.5px}
+.story-view-empty{color:var(--mut);font-size:13px;padding:12px 0;text-align:center}
 
 .story-sheet{
 position:fixed;
@@ -3333,6 +3414,11 @@ STORIES=[],
 STORIES_LOADING=false,
 STORY_VIEW=null,
 STORY_TIMER=null,
+STORY_DEADLINE=0,
+STORY_REMAIN=0,
+STORY_PAUSED=false,
+STORY_HOLD_SUPPRESS=false,
+STORY_VIDEO_WAS=false,
 STORY_DRAFT=null,
 STORY_SHEET_MODE='',
 STORY_TEXT_BG=0,
@@ -5675,6 +5761,7 @@ const CHAT_ICONS={
 play:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.14v13.72c0 .8.87 1.3 1.56.9l11.14-6.86a1.05 1.05 0 0 0 0-1.8L9.56 4.24A1.05 1.05 0 0 0 8 5.14z"/></svg>',
 pause:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="4.5" width="4.2" height="15" rx="1.2"/><rect x="13.8" y="4.5" width="4.2" height="15" rx="1.2"/></svg>',
 download:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="m7.5 10.5 4.5 4.5 4.5-4.5"/><path d="M5 20h14"/></svg>',
+eye:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.6 12s3.6-6.4 9.4-6.4S21.4 12 21.4 12s-3.6 6.4-9.4 6.4S2.6 12 2.6 12z"/><circle cx="12" cy="12" r="2.8"/></svg>',
 file:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg>',
 image:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="m4.5 17 4.4-4.2 3.1 2.8 3.3-3.4 4.2 4.6"/></svg>',
 paperclip:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 11.5 12 20a5.2 5.2 0 0 1-7.4-7.4l8.6-8.6a3.5 3.5 0 0 1 5 5l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l7.9-7.9"/></svg>',
@@ -7463,6 +7550,8 @@ const others=myGroup?all.slice(1):all;
 const openMy=myGroup
 ?`data-story-user="${esc(myGroup.username)}" onclick="openStoryGroup(this.dataset.storyUser)"`
 :'onclick="storySheetOpen(\'menu\')"';
+const myLabel=myGroup?esc(storyTime(myGroup.last)):'Ketuk untuk menambah';
+const myViews=myGroup?storyViewerEntries(myGroup.items.find(s=>s.kind!='text')||{}).length:0;
 return`
 <button class="story-item" ${openMy} aria-label="Story saya">
 <span class="story-ring ${myGroup&&!myGroup.seen?'':'seen'}">
@@ -7470,11 +7559,13 @@ ${socialAvatar(myGroup?myGroup.nama:S.name,myGroup?myGroup.photoUrl:(PROFILE_PHO
 <i class="story-plus">${chatIcon('plus')}</i>
 </span>
 <b>Story saya</b>
+<i>${myViews?esc(myViews+' melihat'):myLabel}</i>
 </button>
 ${others.map(g=>`
 <button class="story-item" data-story-user="${esc(g.username)}" onclick="openStoryGroup(this.dataset.storyUser)">
 <span class="story-ring ${g.seen?'seen':''}">${socialAvatar(g.nama,g.photoUrl,'social-avatar small')}</span>
 <b>${esc(String(g.nama||g.username).split(' ')[0])}</b>
+<i class="${g.seen?'':'new'}">${g.seen?'Dilihat':'Baru'}</i>
 </button>`).join('')}`;
 }
 
@@ -7519,12 +7610,12 @@ renderStoryViewer();
 
 
 function storyDuration(item){
-if(item.kind=='video')return 20000;
+if(item.kind=='video')return Math.max(3000,Math.min(90000,Number(item.videoMs)||15000));
 if(item.kind=='text'){
-const len=String(item.text||'').length;
-return Math.max(4200,Math.min(9000,3600+len*70));
+const lines=Math.max(1,Math.ceil(String(item.text||'').length/20));
+return Math.max(5000,Math.min(15000,3500+lines*1600));
 }
-return 5500;
+return 7000;
 }
 
 
@@ -7543,6 +7634,10 @@ function renderStoryViewer(){
 const el=$('#storyViewer');
 if(!el)return;
 clearTimeout(STORY_TIMER);
+STORY_TIMER=null;
+STORY_PAUSED=false;
+STORY_HOLD_SUPPRESS=false;
+el.classList.remove('holding');
 if(!STORY_VIEW||!Array.isArray(STORY_VIEW.groups)||!STORY_VIEW.groups.length){
 STORY_VIEW=null;
 el.hidden=true;
@@ -7571,11 +7666,13 @@ const media=isVideo
 :item.kind=='image'
 ?`<img class="story-media" src="${esc(chatMediaUrl(item.file))}" alt="Story dari ${esc(group.nama)}">`
 :`<div class="story-text-card bg${storyColorIndex(item.id)}"><p>${esc(item.text)}</p></div>`;
+const viewers=mine&&item.kind!='text'?storyViewerEntries(item):[];
 el.hidden=false;
 el.innerHTML=`
 <div class="story-head">
 ${socialAvatar(group.nama,item.photoUrl||group.photoUrl||group.nama,'social-avatar small')}
 <div class="story-who"><b>${esc(group.nama)}</b><span>${esc(storyTime(item.ts))}</span></div>
+${viewers.length?`<button type="button" class="story-info" onclick="storyViewersSheet()" aria-label="Lihat siapa yang menonton">${chatIcon('eye')}<b>${viewers.length}</b></button>`:''}
 <button type="button" class="story-close" onclick="closeStoryViewer()" aria-label="Tutup story">${chatIcon('close')}</button>
 </div>
 <div class="story-bars">
@@ -7592,21 +7689,227 @@ ${isVideo?'':`
 ${isVideo?`<button type="button" class="story-step" onclick="prevStoryItem()" aria-label="Story sebelumnya">&#8249;</button>`:''}
 ${mine?`
 <button type="button" class="btn sec story-reply" onclick="storySheetOpen('menu')">＋ Tambah story</button>
+${item.file?`<button type="button" class="btn sec story-reply" onclick="saveCurrentStory()">${chatIcon('download')} Simpan</button>`:''}
 <button type="button" class="btn sec story-reply" onclick="deleteCurrentStory()">Hapus</button>`:`
-<button type="button" class="btn sec story-reply" onclick="openStoryPeer('${esc(item.username)}')">Kirim pesan</button>`}
+<div class="story-reply-box">
+<input id="storyReplyInput" maxlength="400" placeholder="Balas story ${esc(String(group.nama||item.username).split(' ')[0])}" onkeydown="if(event.key==='Enter'){event.preventDefault();sendStoryReply();}" oninput="syncStoryReply()">
+<button type="button" id="storyReplySend" onclick="sendStoryReply()" aria-label="Kirim balasan" disabled>${chatIcon('send')}</button>
+</div>`}
 ${isVideo?`<button type="button" class="story-step" onclick="nextStoryItem()" aria-label="Story berikutnya">&#8250;</button>`:''}
 </div>`;
-markStorySeen(item);
+attachStoryGestures();
+if(!mine&&item.kind!='text')storyReportView(item);
 if(item.kind=='video'){
 const video=$('#storyMediaVideo');
 if(video){
-video.addEventListener('ended',()=>nextStoryItem());
+video.addEventListener('ended',()=>{
+markStorySeen(item);
+nextStoryItem();
+});
+video.addEventListener('loadedmetadata',()=>{
+const ms=Math.round((Number(video.duration)||0)*1000);
+if(ms>2500&&ms!==item.videoMs){
+item.videoMs=ms;
+renderStoryViewer();
+}
+});
 video.play().catch(()=>{});
 }
 // Video ditayangkan sampai selesai; timer tetap dipakai untuk foto dan teks.
 return;
 }
-STORY_TIMER=setTimeout(()=>nextStoryItem(),dur);
+startStoryTimer(dur);
+}
+
+
+// Timer story dihentikan hanya setelah item selesai, sama seperti status WhatsApp.
+function startStoryTimer(dur){
+clearTimeout(STORY_TIMER);
+STORY_PAUSED=false;
+STORY_REMAIN=dur;
+STORY_DEADLINE=Date.now()+dur;
+const item=storyCurrentItem();
+STORY_TIMER=setTimeout(()=>{
+if(item)markStorySeen(item);
+nextStoryItem();
+},dur);
+const viewer=$('#storyViewer');
+if(viewer)viewer.classList.remove('holding');
+}
+
+
+function pauseStoryPlay(){
+if(STORY_PAUSED)return;
+const viewer=$('#storyViewer');
+const video=$('#storyMediaVideo');
+if(video){
+STORY_VIDEO_WAS=!video.paused&&!video.ended;
+if(STORY_VIDEO_WAS)video.pause();
+}else{
+clearTimeout(STORY_TIMER);
+STORY_TIMER=null;
+STORY_REMAIN=Math.max(0,STORY_DEADLINE-Date.now());
+}
+STORY_PAUSED=true;
+if(viewer)viewer.classList.add('holding');
+}
+
+
+function resumeStoryPlay(){
+if(!STORY_PAUSED)return;
+STORY_PAUSED=false;
+const viewer=$('#storyViewer');
+if(viewer)viewer.classList.remove('holding');
+const video=$('#storyMediaVideo');
+if(video){
+if(STORY_VIDEO_WAS)video.play().catch(()=>{});
+STORY_VIDEO_WAS=false;
+return;
+}
+startStoryTimer(STORY_REMAIN);
+}
+
+
+function storyCurrentItem(){
+if(!STORY_VIEW)return null;
+const group=STORY_VIEW.groups[STORY_VIEW.gi];
+return group&&group.items[STORY_VIEW.ii]||null;
+}
+
+
+// Ketuk-tahan menjeda, geser horizontal berpindah item, geser ke bawah menutup story.
+function attachStoryGestures(){
+const body=$('.story-body');
+const viewer=$('#storyViewer');
+if(!body||!viewer)return;
+let holdTimer=null;
+let origin=null;
+let held=false;
+const finishHold=()=>{
+if(holdTimer){clearTimeout(holdTimer);holdTimer=null;}
+if(held){
+held=false;
+resumeStoryPlay();
+STORY_HOLD_SUPPRESS=true;
+setTimeout(()=>{STORY_HOLD_SUPPRESS=false;},450);
+}
+};
+body.addEventListener('pointerdown',event=>{
+const video=event.target.closest('#storyMediaVideo');
+if(video){
+const box=video.getBoundingClientRect();
+if(event.clientY>box.bottom-64)return;
+}
+held=false;
+origin={x:event.clientX,y:event.clientY};
+holdTimer=setTimeout(()=>{
+held=true;
+pauseStoryPlay();
+},260);
+});
+body.addEventListener('pointerup',event=>{
+finishHold();
+if(!origin)return;
+const dx=event.clientX-origin.x;
+const dy=event.clientY-origin.y;
+origin=null;
+if(Math.abs(dx)<48&&Math.abs(dy)<48)return;
+STORY_HOLD_SUPPRESS=true;
+if(Math.abs(dx)>Math.abs(dy)){
+if(dx<0)nextStoryItem();
+else prevStoryItem();
+return;
+}
+if(dy>0){closeStoryViewer();return;}
+const box=$('#storyReplyInput');
+if(box){box.focus();}
+});
+body.addEventListener('pointercancel',()=>{
+origin=null;
+finishHold();
+});
+}
+
+
+function storyViewerEntries(item){
+const list=Array.isArray(item&&item.viewers)?item.viewers:[];
+return list.map(username=>{
+const key=String(username||'').toLowerCase();
+const contact=(Array.isArray(CHAT_CONTACTS)?CHAT_CONTACTS:[]).find(c=>String(c.username||'').toLowerCase()==key);
+return{
+username:String(username||''),
+nama:String(contact&&contact.nama||username||''),
+photoUrl:String(contact&&contact.photoUrl||'')
+};
+});
+}
+
+
+function storyViewersSheet(){
+const item=storyCurrentItem();
+if(!item)return;
+STORY_SHEET_MODE='viewers';
+renderStorySheet();
+}
+
+
+async function storyReportView(item){
+if(!item||!item.id||!TOK)return;
+try{
+await rpc('viewStory',TOK,item.id);
+}catch(e){
+if(isAuthError(e))logout('Sesi login berakhir. Silakan login kembali.');
+}
+}
+
+
+function saveCurrentStory(){
+const item=storyCurrentItem();
+if(!item||!item.file)return;
+const link=document.createElement('a');
+link.href=chatMediaUrl(item.file,{download:true});
+link.download=String(item.file.name||'story');
+document.body.appendChild(link);
+link.click();
+link.remove();
+toast('Story disimpan ke perangkat');
+}
+
+
+function syncStoryReply(){
+const box=$('#storyReplyInput');
+const send=$('#storyReplySend');
+if(send)send.disabled=!String(box?box.value:'').trim();
+}
+
+
+async function sendStoryReply(){
+const box=$('#storyReplyInput');
+const text=String(box?box.value:'').trim();
+const item=storyCurrentItem();
+if(!text||!item)return;
+const send=$('#storyReplySend');
+if(send)send.disabled=true;
+if(box)box.value='';
+const quoted=item.kind=='text'
+?String(item.text||'').slice(0,80)
+:String(item.text||'').trim()||'Media';
+const label=item.kind=='video'?'story video':item.kind=='image'?'story foto':'story teks';
+const body='↩️ Balasan '+label+': "'+quoted+'"\n'+text;
+try{
+const r=await rpc('sendChat',TOK,item.username,body,null);
+if(!r||typeof r!='object')throw new Error('Format respons balasan story tidak valid.');
+if(r.err)throw new Error(typeof r.err=='string'?r.err:'Balasan gagal dikirim');
+if(r.ok!==1)throw new Error('Server belum mengonfirmasi balasan story.');
+const contact=CHAT_CONTACTS.find(c=>String(c.username).toLowerCase()==String(item.username).toLowerCase());
+if(contact){contact.lastText=body;contact.lastTs=Date.now();contact.lastFrom=USER;}
+toast('Balasan terkirim ke '+String(item.nama||item.username));
+}catch(e){
+if(box)box.value=text;
+syncStoryReply();
+if(isAuthError(e)){logout('Sesi login berakhir. Silakan login kembali.');return;}
+toast('Balasan gagal dikirim: '+String((e&&e.message)||e));
+}
 }
 
 
@@ -7627,8 +7930,15 @@ writeStorySeen(seen);
 }
 
 
+function storyTapSuppressed(){
+if(!STORY_HOLD_SUPPRESS)return false;
+STORY_HOLD_SUPPRESS=false;
+return true;
+}
+
+
 function nextStoryItem(){
-if(!STORY_VIEW)return;
+if(!STORY_VIEW||storyTapSuppressed())return;
 const group=STORY_VIEW.groups[STORY_VIEW.gi];
 if(group&&STORY_VIEW.ii+1<group.items.length)STORY_VIEW.ii++;
 else if(STORY_VIEW.gi+1<STORY_VIEW.groups.length){
@@ -7643,7 +7953,7 @@ renderStoryViewer();
 
 
 function prevStoryItem(){
-if(!STORY_VIEW)return;
+if(!STORY_VIEW||storyTapSuppressed())return;
 if(STORY_VIEW.ii>0)STORY_VIEW.ii--;
 else if(STORY_VIEW.gi>0){
 STORY_VIEW.gi--;
@@ -7656,6 +7966,8 @@ renderStoryViewer();
 function closeStoryViewer(){
 clearTimeout(STORY_TIMER);
 STORY_TIMER=null;
+STORY_PAUSED=false;
+STORY_HOLD_SUPPRESS=false;
 STORY_VIEW=null;
 const el=$('#storyViewer');
 if(el){
@@ -7663,12 +7975,6 @@ el.hidden=true;
 el.innerHTML='';
 }
 renderStoryTray();
-}
-
-
-function openStoryPeer(username){
-closeStoryViewer();
-openTeamChat(username);
 }
 
 
@@ -7737,6 +8043,25 @@ return;
 }
 const draft=STORY_DRAFT;
 let body='';
+if(STORY_SHEET_MODE=='viewers'){
+const item=storyCurrentItem();
+const viewers=storyViewerEntries(item||{});
+body=`
+<h3>Dilihat oleh</h3>
+<div class="mut">${viewers.length?viewers.length+' rekan menonton story ini':'Story masih belum ditonton siapa pun.'}</div>
+${viewers.map(v=>`
+<div class="story-view-row">
+${socialAvatar(v.nama,v.photoUrl||v.username,'social-avatar small')}
+<div><b>${esc(v.nama)}</b><small>${esc(v.username)}</small></div>
+</div>`).join('')}`;
+el.hidden=false;
+el.innerHTML=`
+<div class="story-sheet-card">
+${body}
+<button type="button" class="btn sec" onclick="hideStorySheet()">Tutup</button>
+</div>`;
+return;
+}
 if(STORY_SHEET_MODE=='menu'||!draft){
 body=`
 <h3>Bagikan story</h3>
@@ -13132,6 +13457,10 @@ if(event.key=='ArrowLeft')prevStoryItem();
 });
 
 document.addEventListener('visibilitychange',()=>{
+if(STORY_VIEW){
+if(document.visibilityState=='visible')resumeStoryPlay();
+else pauseStoryPlay();
+}
 if(document.visibilityState!='visible'||!TOK)return;
 if(callActive())startCallPolling();
 else pollSignals().catch(()=>{});
