@@ -621,7 +621,7 @@ function ensureManager_(username, password, nama, role) {
 // API
 // ============================================================
 
-const API_VERSION = '2026-11-01-phone-contacts';
+const API_VERSION = '2026-11-01-story-push';
 
 function doGet() {
   return out_({
@@ -3824,8 +3824,38 @@ function chatNotificationSummary(t) {
       .sort((a, b) => b.lastTs - a.lastTs || a.nama.localeCompare(b.nama)),
     groups: Object.keys(groups).map(key => groups[key])
       .sort((a, b) => b.lastTs - a.lastTs || a.name.localeCompare(b.name)),
-    global: global
+    global: global,
+    story: latestTeamStory_(ctx)
   };
+}
+
+
+// Story terbaru yang terlihat oleh pemanggil, untuk notifikasi saat aplikasi terbuka.
+
+function latestTeamStory_(ctx) {
+  const sheet = stories_();
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return null;
+  const start = Math.max(2, lastRow - 39);
+  const values = sheet.getRange(start, 1, lastRow - start + 1, 11).getValues();
+  const visible = socialUsers_(ctx.root ? null : ctx.team);
+  const now = Date.now();
+  const me = String(ctx.username || '').toLowerCase();
+  let newest = null;
+  values.forEach(row => {
+    const author = String(row[1] || '').toLowerCase();
+    if (!author || author == me || !visible[author]) return;
+    if ((Number(row[10]) || 0) <= now) return;
+    if (!newest || (Number(row[9]) || 0) > newest.ts) {
+      newest = {
+        id: String(row[0]),
+        username: String(row[1]),
+        nama: String(row[2] || author),
+        ts: Number(row[9]) || 0
+      };
+    }
+  });
+  return newest;
 }
 
 
@@ -4337,6 +4367,18 @@ function addStory(t, kind, text, file) {
     input ? input.id : '', input ? input.name : '', input ? input.mime : '',
     input ? input.size : 0, now, now + STORY_TTL_MS
   ]);
+
+  const storyText = text || (kind == 'text' ? '' : (kind == 'video' ? 'Video baru' : 'Foto baru'));
+  const recipients = teamRecipients_(ctx.team)
+    .filter(name => name && name.toLowerCase() != ctx.username.toLowerCase());
+  pushQuiet_(function () {
+    pushToUsers_(recipients, {
+      title: String(ctx.account[2] || ctx.username) + ' menambahkan story',
+      body: storyText,
+      url: './index.html#story=' + encodeURIComponent(ctx.username),
+      tag: 'tpfx-story-' + id
+    });
+  });
 
   return {
     ok: 1,

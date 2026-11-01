@@ -3701,6 +3701,7 @@ $('#app').setAttribute('aria-busy','false');
 document.body.classList.remove('booting');
 
 initPush();
+loadStories();
 setTimeout(()=>openChatFromUrl(location.href),450);
 
 if(manager){
@@ -5018,12 +5019,12 @@ const button=document.querySelector('#nav button[data-nav-key="chat"]');
 if(!button)return;
 const old=button.querySelector('.nav-badge');
 if(old)old.remove();
-const count=unreadChatCount();
+const count=unreadChatCount()+unseenStoryCount();
 if(!count)return;
 const badge=document.createElement('b');
 badge.className='nav-badge';
 badge.textContent=count>99?'99+':String(count);
-badge.setAttribute('aria-label',count+' percakapan belum dibaca');
+badge.setAttribute('aria-label',count+' percakapan atau story belum dibaca');
 button.appendChild(badge);
 }
 
@@ -5117,7 +5118,27 @@ sub=await SW_REG.pushManager.subscribe({userVisibleOnly:true,applicationServerKe
 }
 const result=await sendPushSubscription(sub);
 if(result&&result.err)throw new Error(typeof result.err==='string'?result.err:'Langganan push ditolak server.');
+handPushCredsToWorker(sub,key);
 return sub;
+}
+
+
+// Chrome mengganti endpoint push tanpa memberi tahu halaman, jadi worker
+// menyimpan kredensialnya sendiri agar bisa menyambung ulang langganan
+// walaupun aplikasinya tidak pernah dibuka.
+function handPushCredsToWorker(sub,key){
+if(!SW_REG||!TOK)return;
+const worker=SW_REG.active||SW_REG.waiting||SW_REG.installing;
+if(!worker)return;
+try{
+worker.postMessage({
+type:'tpfx-push-creds',
+token:TOK,
+key:String(key||PUSH_PUBLIC_KEY||''),
+api:API,
+endpoint:sub&&sub.endpoint?String(sub.endpoint):''
+});
+}catch(e){}
 }
 
 
@@ -5161,6 +5182,7 @@ try{
 const sub=await SW_REG.pushManager.getSubscription();
 if(sub){
 PUSH_SUBSCRIBED=true;
+handPushCredsToWorker(sub,pushKey);
 sendPushSubscription(sub).catch(()=>{});
 }else if(Notification.permission=='granted'){
 await subscribePushManager();
@@ -5326,6 +5348,18 @@ try{history.replaceState(null,'',location.pathname+location.search);}catch(e){}
 return true;
 }
 }
+const storyMatch=(url.hash||'').match(/story=([^&]+)$/);
+if(storyMatch&&TOK){
+const author=decodeURIComponent(storyMatch[1]||'');
+if(author){
+try{history.replaceState(null,'',location.pathname+location.search);}catch(e){}
+(async()=>{
+if(!activeStories().length)await loadStories();
+openStoryGroup(author);
+})();
+return true;
+}
+}
 const match=(url.hash||'').match(/chat=(personal|group|global)(?:[:=](.*))?$/);
 if(!match||!TOK)return false;
 const type=match[1];
@@ -5399,6 +5433,7 @@ notified[message.key]=Math.max(Number(notified[message.key])||0,message.lastTs);
 }
 writeChatNotified(notified);
 }
+handleStoryNotice(result.story).catch(()=>{});
 updateChatUnreadIndicators();
 }catch(e){
 const now=Date.now();
@@ -7278,6 +7313,68 @@ function writeStorySeen(map){
 try{
 localStorage.setItem(storySeenKey(),JSON.stringify(map));
 }catch(e){}
+}
+
+
+function storyNotifiedKey(){
+return'tpfx-story-notified-'+String(USER||'').toLowerCase();
+}
+
+
+function readStoryNotified(){
+try{
+const value=JSON.parse(localStorage.getItem(storyNotifiedKey())||'{}');
+return value&&typeof value=='object'?value:{};
+}catch(e){
+return{};
+}
+}
+
+
+function writeStoryNotified(map){
+try{
+const keys=Object.keys(map).slice(-200);
+const trimmed={};
+keys.forEach(key=>{trimmed[key]=map[key]});
+localStorage.setItem(storyNotifiedKey(),JSON.stringify(trimmed));
+}catch(e){}
+}
+
+
+function unseenStoryCount(){
+try{
+const mine=String(USER||'').toLowerCase();
+return storyGroups().filter(g=>String(g.username).toLowerCase()!=mine&&!g.seen).length;
+}catch(e){
+return 0;
+}
+}
+
+
+// Story baru harus memberi notifikasi juga, bukan hanya pesan chat.
+async function handleStoryNotice(story){
+if(!story||!story.id)return;
+if(String(story.username||'').toLowerCase()==String(USER||'').toLowerCase())return;
+const notified=readStoryNotified();
+const id=String(story.id);
+if(notified[id])return;
+const ts=Number(story.ts)||Date.now();
+const firstRun=!Object.keys(notified).length;
+notified[id]=ts;
+writeStoryNotified(notified);
+if(firstRun&&ts<Date.now()-60000)return;
+await loadStories();
+if('Notification' in window&&Notification.permission=='granted'){
+const pushHandles=PUSH_ENABLED&&PUSH_SUBSCRIBED&&document.visibilityState!='visible';
+if(!pushHandles){
+await showLocalNotification(String(story.nama||'Tim')+' menambahkan story',{
+body:'Lihat story baru dari '+(story.nama||'teman Anda')+' di tim Anda.',
+tag:'tpfx-story-'+id,
+renotify:false
+},'./index.html#story='+encodeURIComponent(String(story.username||'')));
+}
+}
+updateChatUnreadIndicators();
 }
 
 
@@ -9567,6 +9664,22 @@ onclick="saveProfileDetails()"
 Simpan Tentang &amp; Nomor
 </button>
 
+<div class="mut" style="margin-top:16px"><b>Notifikasi HP</b></div>
+
+<div class="mut" style="margin-top:4px" id="profilePushStatus">${esc(chatNotificationStatus())}</div>
+
+<button
+class="btn sec big"
+style="margin-top:10px"
+onclick="testPhoneNotification(this)"
+>
+Uji notifikasi sekarang
+</button>
+
+<div class="mut" style="margin-top:6px">
+Pesan, panggilan, dan story baru dikirim ke layar HP walaupun aplikasi ditutup. Tekan tombol di atas untuk memastikan notifikasinya benar-benar masuk.
+</div>
+
 </div>`;
 
 }
@@ -9601,6 +9714,45 @@ if(isAuthError(e)){logout('Sesi login berakhir. Silakan login kembali.');return;
 toast('Profil gagal disimpan: '+String((e&&e.message)||e));
 }
 
+}
+
+
+// Menguji jalur aslinya: Apps Script -> relay Vercel -> FCM -> service worker,
+// jadi hasilnya membuktikan notifikasi benar-benar sampai ke HP.
+async function testPhoneNotification(button){
+if(!TOK){toast('Login dulu untuk menguji notifikasi.');return;}
+if(!('Notification' in window)){toast('Browser ini tidak mendukung notifikasi.');return;}
+if(!PUSH_ENABLED){
+await initPush();
+if(!PUSH_ENABLED){toast('Notifikasi HP belum aktif di server. Hubungi manager.');return;}
+}
+if(Notification.permission!='granted'){
+await enablePushNotifications();
+if(Notification.permission!='granted')return;
+}
+if(!PUSH_SUBSCRIBED){
+try{
+if(!SW_REG)await registerServiceWorker();
+await subscribePushManager();
+PUSH_SUBSCRIBED=true;
+}catch(e){
+toast('Notifikasi HP belum tersambung: '+String((e&&e.message)||e));
+return;
+}
+}
+if(button){button.disabled=true;button.classList.add('loading');}
+try{
+const r=await rpc('testPush',TOK);
+if(!r||typeof r!='object')throw new Error('Uji notifikasi tidak mengembalikan hasil');
+if(r.err)throw new Error(typeof r.err==='string'?r.err:'Uji notifikasi ditolak server');
+if(!Number(r.subscriptions))toast('Server belum punya langganan push untuk akun ini. Buka aplikasi di HP yang ingin diuji, izinkan notifikasi, lalu coba lagi.');
+else if(Number(r.sent))toast('Notifikasi uji terkirim ke '+r.subscriptions+' perangkat. Cek layar notifikasi HP Anda.');
+else toast('Server mengirim tapi perangkat menolak. Buka aplikasi sekali lalu uji lagi.');
+}catch(e){
+toast('Uji notifikasi gagal: '+String((e&&e.message)||e));
+}finally{
+if(button){button.disabled=false;button.classList.remove('loading');}
+}
 }
 
 
