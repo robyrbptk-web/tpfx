@@ -2855,6 +2855,22 @@ font-size:13px;
 font-weight:700;
 padding:0 14px
 }
+.story-step{
+flex:none;
+width:40px;
+height:40px;
+border-radius:50%;
+border:1px solid rgba(255,255,255,.34);
+background:transparent;
+color:#fff;
+font-size:22px;
+line-height:1;
+display:grid;
+place-items:center;
+cursor:pointer
+}
+/* Kontrol bawaan video menempel di dasar pemutar, jadi keterangan naik ke atasnya. */
+.story-caption.above-controls{bottom:58px}
 
 .story-sheet{
 position:fixed;
@@ -7549,8 +7565,9 @@ return;
 const item=group.items[STORY_VIEW.ii];
 const dur=storyDuration(item);
 const mine=String(item.username).toLowerCase()==String(USER).toLowerCase();
-const media=item.kind=='video'
-?`<video class="story-media" id="storyMediaVideo" src="${esc(chatMediaUrl(item.file))}" playsinline autoplay></video>`
+const isVideo=item.kind=='video';
+const media=isVideo
+?`<video class="story-media" id="storyMediaVideo" src="${esc(chatMediaUrl(item.file))}" playsinline autoplay controls></video>`
 :item.kind=='image'
 ?`<img class="story-media" src="${esc(chatMediaUrl(item.file))}" alt="Story dari ${esc(group.nama)}">`
 :`<div class="story-text-card bg${storyColorIndex(item.id)}"><p>${esc(item.text)}</p></div>`;
@@ -7566,15 +7583,18 @@ ${group.items.map((s,i)=>`<span class="story-bar ${i<STORY_VIEW.ii?'done':i==STO
 </div>
 <div class="story-body">
 ${media}
-${item.kind!='text'&&item.text?`<div class="story-caption">${esc(item.text)}</div>`:''}
+${item.kind!='text'&&item.text?`<div class="story-caption ${isVideo?'above-controls':''}">${esc(item.text)}</div>`:''}
+${isVideo?'':`
 <button type="button" class="story-nav left" onclick="prevStoryItem()" aria-label="Story sebelumnya"></button>
-<button type="button" class="story-nav right" onclick="nextStoryItem()" aria-label="Story berikutnya"></button>
+<button type="button" class="story-nav right" onclick="nextStoryItem()" aria-label="Story berikutnya"></button>`}
 </div>
 <div class="story-foot">
+${isVideo?`<button type="button" class="story-step" onclick="prevStoryItem()" aria-label="Story sebelumnya">&#8249;</button>`:''}
 ${mine?`
 <button type="button" class="btn sec story-reply" onclick="storySheetOpen('menu')">＋ Tambah story</button>
 <button type="button" class="btn sec story-reply" onclick="deleteCurrentStory()">Hapus</button>`:`
 <button type="button" class="btn sec story-reply" onclick="openStoryPeer('${esc(item.username)}')">Kirim pesan</button>`}
+${isVideo?`<button type="button" class="story-step" onclick="nextStoryItem()" aria-label="Story berikutnya">&#8250;</button>`:''}
 </div>`;
 markStorySeen(item);
 if(item.kind=='video'){
@@ -7583,6 +7603,8 @@ if(video){
 video.addEventListener('ended',()=>nextStoryItem());
 video.play().catch(()=>{});
 }
+// Video ditayangkan sampai selesai; timer tetap dipakai untuk foto dan teks.
+return;
 }
 STORY_TIMER=setTimeout(()=>nextStoryItem(),dur);
 }
@@ -7735,11 +7757,11 @@ body=`
 body=`
 <h3>Story teks</h3>
 <div class="story-text-draft bg${STORY_TEXT_BG}">
-<textarea id="storyTextInput" maxlength="200" placeholder="Tulis pesan…" oninput="STORY_DRAFT.text=this.value">${esc(draft.text||'')}</textarea>
+<textarea id="storyTextInput" maxlength="200" placeholder="Tulis pesan…" oninput="syncStoryShare()">${esc(draft.text||'')}</textarea>
 </div>
 <div class="row" style="gap:8px">
 <button type="button" class="btn sec" onclick="STORY_TEXT_BG=(STORY_TEXT_BG+1)%6;renderStorySheet()">Ganti warna</button>
-<button type="button" class="btn" style="flex:1" onclick="shareStoryDraft()" ${String(draft.text||'').trim()?'':'disabled'}>Bagikan</button>
+<button type="button" class="btn" id="storyShareBtn" style="flex:1" onclick="shareStoryDraft()" ${String(draft.text||'').trim()?'':'disabled'}>Bagikan</button>
 </div>`;
 }else{
 const preview=draft.kind=='video'
@@ -7751,7 +7773,7 @@ ${preview}
 <input id="storyCaptionInput" maxlength="200" placeholder="Tulis keterangan (opsional)" value="${esc(draft.text||'')}">
 <div class="row" style="gap:8px">
 <button type="button" class="btn sec" onclick="storySheetOpen('menu')">Ganti file</button>
-<button type="button" class="btn" style="flex:1" onclick="shareStoryDraft()">Bagikan</button>
+<button type="button" class="btn" id="storyShareBtn" style="flex:1" onclick="shareStoryDraft()">Bagikan</button>
 </div>`;
 }
 el.hidden=false;
@@ -7762,6 +7784,14 @@ ${body}
 </div>`;
 const caption=$('#storyCaptionInput');
 if(caption)caption.addEventListener('input',()=>{if(STORY_DRAFT)STORY_DRAFT.text=caption.value});
+}
+
+
+function syncStoryShare(){
+const box=$('#storyTextInput');
+if(STORY_DRAFT&&box)STORY_DRAFT.text=box.value;
+const btn=$('#storyShareBtn');
+if(btn)btn.disabled=!String(box?box.value:'').trim();
 }
 
 

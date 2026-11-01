@@ -4462,8 +4462,9 @@ function deleteStory(t, id) {
     if (String(values[i][0]) != id) continue;
     const author = String(values[i][1] || '').toLowerCase();
     const isMine = author == ctx.username.toLowerCase();
-    if (!isMine && !canManageAccount_(ctx.account, findUser_(values[i][1]))) {
-      return { err: 'Anda tidak dapat menghapus story ini' };
+    // Hanya pemilik story (atau manajer root) yang boleh menghapus, seperti di WhatsApp.
+    if (!isMine && !ctx.root) {
+      return { err: 'Hanya pembuatnya yang dapat menghapus story ini' };
     }
     const fileId = String(values[i][5] || '').trim();
     sheet.deleteRow(i + 1);
