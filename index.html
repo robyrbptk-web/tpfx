@@ -45,11 +45,12 @@ box-sizing:border-box;
 margin:0
 }
 
-html,body{
+html{
 height:100%
 }
 
 body{
+min-height:100%;
 background:var(--bg);
 color:var(--ink);
 font:14px/1.45 'Plus Jakarta Sans',system-ui,sans-serif;
@@ -163,20 +164,23 @@ animation:boot-shimmer 1.4s ease infinite
 .boot-skeleton{animation:none}
 }
 
-.app-topbar{
+.app-topstack{
 position:sticky;
-top:0;
-z-index:4;
+top:env(safe-area-inset-top,0px);
+z-index:6;
+border-bottom:1px solid rgba(232,235,242,.9);
+background:rgba(255,255,255,.96);
+backdrop-filter:blur(14px)
+}
+
+.app-topbar{
 display:flex;
 align-items:center;
 justify-content:space-between;
 gap:12px;
 max-width:900px;
 margin:0 auto;
-padding:12px 20px;
-border-bottom:1px solid rgba(232,235,242,.9);
-background:rgba(255,255,255,.96);
-backdrop-filter:blur(14px)
+padding:12px 20px
 }
 
 .app-brand{
@@ -826,11 +830,18 @@ background:linear-gradient(110deg,#fff 0%,#fff 74%,#f5f7ff 100%)
 color:var(--pri)
 }
 
+.ticker-bar{
+max-width:900px;
+margin:0 auto;
+padding:0 16px 10px
+}
+
+.ticker-bar[hidden]{display:none}
+
 .deposit-ticker{
 display:flex;
 align-items:center;
 gap:10px;
-margin-top:14px;
 padding:8px 10px 8px 12px;
 border:1px solid rgba(56,189,248,.28);
 border-radius:16px;
@@ -1025,31 +1036,36 @@ to{transform:translateX(-50%)}
 }
 
 @media (max-width:640px){
+.ticker-bar{padding:0 12px 9px}
+
 .deposit-ticker{
-flex-direction:column;
-align-items:stretch;
-gap:6px;
-margin-top:12px;
-padding:8px 11px 9px;
-border-radius:14px
+gap:8px;
+padding:6px 9px 6px 10px;
+border-radius:12px
 }
 
 .deposit-ticker-head{
-width:100%;
-justify-content:space-between;
-padding-bottom:6px;
-border-bottom:1px solid rgba(125,211,252,.16)
+flex:0 1 auto;
+gap:7px
 }
 
 .deposit-ticker-label{
-font-size:9px;
-padding:4px 9px
+font-size:8.5px;
+padding:3px 8px;
+letter-spacing:.06em
 }
 
 .deposit-ticker-market{
-margin-left:auto;
-padding:2px 8px 2px 7px
+padding:2px 7px 2px 6px
 }
+
+.deposit-ticker-symbol{font-size:8px}
+
+.deposit-ticker-price{font-size:11px}
+
+.deposit-ticker-live{font-size:7.5px;gap:3px}
+
+.deposit-ticker-caption{font-size:9px}
 
 .deposit-ticker-window{
 -webkit-mask-image:linear-gradient(90deg,transparent,#000 10px,#000 calc(100% - 10px),transparent);
@@ -2355,7 +2371,6 @@ line-height:1.4
 @media(max-width:620px){
 #app{padding:14px 12px calc(100px + env(safe-area-inset-bottom,0px))}
 .app-topbar{
-top:env(safe-area-inset-top,0px);
 padding:9px 12px;
 gap:7px
 }
@@ -2397,6 +2412,12 @@ gap:7px
 body.chat-focus{overflow:hidden}
 body.chat-focus .app-topbar,
 body.chat-focus .nav{display:none}
+body.chat-focus .app-topstack{
+top:0;
+margin-top:calc(-1 * env(safe-area-inset-top,0px));
+padding-top:env(safe-area-inset-top,0px)
+}
+body.chat-focus .ticker-bar{padding-bottom:8px}
 body.chat-focus #app{
 max-width:none;
 height:100vh;
@@ -2405,9 +2426,14 @@ margin:0;
 padding:0;
 overflow:hidden
 }
+/* Transform dari animasi view-in menjadikan #app containing block,
+   sehingga panel chat fixed tidak lagi relatif ke viewport. */
+body.chat-focus #app.view-in{
+animation:none
+}
 body.chat-focus .social-wrap{
 position:fixed;
-inset:0;
+inset:var(--ticker-h,0px) 0 0 0;
 width:auto;
 height:auto;
 max-width:none;
@@ -2419,7 +2445,7 @@ z-index:40
 }
 body.chat-focus .social-top{
 flex:none;
-padding:calc(10px + env(safe-area-inset-top,0px)) 14px 10px;
+padding:10px 14px;
 background:var(--card)
 }
 body.chat-focus .social-brand{font-size:20px}
@@ -2477,7 +2503,7 @@ body.chat-focus .chat-layout{grid-template-columns:1fr}
 body.chat-focus .chat-layout.has-peer .chat-panel:first-child{display:none}
 body.chat-focus .chat-layout:not(.has-peer) .chat-panel:last-child{display:none}
 body.chat-focus .chat-panel:first-child{border-right:0}
-body.chat-focus .chat-panel-head{padding-top:calc(12px + env(safe-area-inset-top,0px))}
+body.chat-focus .chat-panel-head{padding-top:12px}
 body.chat-focus .social-wrap.chat-active .social-top{display:none}
 }
 
@@ -2613,7 +2639,10 @@ transition:opacity .22s ease,transform .32s cubic-bezier(.22,1,.36,1)
 
 <body class="booting">
 
+<div class="app-topstack" id="appTopStack" hidden>
 <header id="appHeader" class="app-topbar" hidden></header>
+<div id="tickerBar" class="ticker-bar" hidden></div>
+</div>
 
 <div id="app" aria-busy="true">
 <section class="boot-surface" aria-label="Memuat TPFX Sales Workspace">
@@ -2746,6 +2775,9 @@ const header=$('#appHeader');
 if(!header)return;
 
 $('#app').classList.remove('login-screen');
+
+const stack=$('#appTopStack');
+if(stack)stack.hidden=!TOK;
 
 header.hidden=!TOK;
 
@@ -3283,6 +3315,7 @@ document
 .style.display='none';
 
 $('#appHeader').hidden=true;
+$('#appTopStack').hidden=true;
 
 $('#app').classList.add('login-screen');
 
@@ -3359,6 +3392,7 @@ document
 .style.display='none';
 
 $('#appHeader').hidden=true;
+$('#appTopStack').hidden=true;
 
 $('#app').classList.add('login-screen');
 
@@ -3585,6 +3619,7 @@ PUSH_CHECKED=false;
 PUSH_SUBSCRIBED=false;
 PUSH_AUTO_ARMED=false;
 $('#appHeader').hidden=true;
+$('#appTopStack').hidden=true;
 
 const layer=$('#layer');
 if(layer)layer.innerHTML='';
@@ -6769,7 +6804,7 @@ refreshChatHistory();
 
 GOLD_NEWS_TIMER=setInterval(
 ()=>{
-if(TOK&&document.visibilityState!='hidden'&&(tab=='home'||((ROLE=='DM'||ROLE=='BM')&&dmTab=='dash')))loadGoldNews();
+if(TOK&&document.visibilityState!='hidden')loadGoldNews();
 },
 60000
 );
@@ -6847,9 +6882,29 @@ GOLD_NEWS_LOADING=false;
 }
 
 function refreshDepositTicker(){
-const el=document.getElementById('depositTicker');
-if(el)el.outerHTML=depositTicker();
+syncTickerBar();
 }
+
+function syncTickerBar(){
+const bar=$('#tickerBar');
+const stack=$('#appTopStack');
+if(!bar||!stack)return;
+const show=!!TOK;
+stack.hidden=!show;
+bar.hidden=!show;
+if(!show){bar.dataset.sig='';return;}
+const html=depositTicker();
+if(bar.dataset.sig!==html){
+bar.dataset.sig=html;
+bar.innerHTML=html;
+}
+document.documentElement.style.setProperty('--ticker-h',Math.round(stack.getBoundingClientRect().bottom)+'px');
+}
+
+window.addEventListener('resize',()=>{
+const stack=$('#appTopStack');
+if(stack&&!stack.hidden)document.documentElement.style.setProperty('--ticker-h',Math.round(stack.getBoundingClientRect().bottom)+'px');
+});
 
 function depositTicker(){
 loadGoldNews();
@@ -6989,8 +7044,6 @@ year:'numeric'
 </div>
 </div>
 </div>
-
-${depositTicker()}
 
 <div class="card home-progress" style="margin-top:14px">
 
@@ -9693,8 +9746,6 @@ aria-label="Muat ulang"
 
 ${perChips()}
 
-${depositTicker()}
-
 <div class="grid">
 
 ${dmStat(
@@ -10996,6 +11047,7 @@ ${n[1]}
 .join('');
 
 syncChatFocus();
+syncTickerBar();
 chatAfterRender();
 
 }
@@ -11101,6 +11153,7 @@ ${n[1]}
 .join('');
 
 syncChatFocus();
+syncTickerBar();
 chatAfterRender();
 
 }
